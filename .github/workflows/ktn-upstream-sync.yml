@@ -1,4 +1,4 @@
-# Keeps main an exact mirror of upstream and opens a PR merging it into ktn.
+# Weekly: keeps main an exact mirror of upstream and opens a PR merging it into ktn.
 # See docs/ktn/ci-cd.md.
 # Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and
 # approve pull requests".
