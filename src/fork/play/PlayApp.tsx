@@ -5,15 +5,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FactionIcon from "../../components/FactionIcon/FactionIcon";
-import { useActionLog, useCurrentTurn, useGameId, usePlanets, useStrategyCards } from "../../context/dataHooks";
-import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
+import { useAbilities, useActionLog, useAgenda, useCurrentTurn, useGameId, usePlanets, useStrategyCards } from "../../context/dataHooks";
+import { useFactionHasTech, useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOnDeckFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useGameState } from "../../context/stateDataHooks";
 import { getSelectedActionFromLog } from "../../util/api/data";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { actorOf, claimablePlanets, fmtDuration, newestGroup, pointsBySource, sentence, subjectOf, turnOwners, turnStartedAt } from "./logic";
+import { sortStrategyCards } from "../../util/strategyCards";
+import { actorOf, checksAndBalancesTargets, claimablePlanets, fmtDuration, groupKey, newestGroup, pointsBySource, sentence, subjectOf, turnOwners, turnStartedAt } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
@@ -28,7 +29,7 @@ type Sheet =
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }
-  | { kind: "card"; card: StrategyCardId };
+  | { kind: "card"; card: StrategyCardId; pickFor?: FactionId };
 
 function useSeat(gameId: string) {
   const key = `play-seat-${gameId}`;
@@ -115,7 +116,7 @@ export default function PlayApp() {
       {tab === "now" ? (
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
-            {phase === "ACTION" ? <NowAction {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -190,7 +191,17 @@ function NowAction(ctx: Ctx) {
   const strategyCards = useStrategyCards();
   const log = useActionLog();
   const now = useNow();
-  if (!active) return <section className={styles.card}><h2 className={styles.title}>Waiting for the next turn</h2></section>;
+  if (!active) {
+    return (
+      <section className={styles.card} aria-label="Everyone has passed">
+        <p className={styles.eyebrow}><span>Action phase</span></p>
+        <h2 className={styles.title}>Everyone has passed</h2>
+        <p className={styles.sub}>The status phase is next: scoring, then cleanup.</p>
+        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
+          onClick={() => w.write([Events.AdvancePhaseEvent()], "The status phase started")}>Start the status phase</button>
+      </section>
+    );
+  }
 
   const f = factions[active];
   const mine = active === seat || active === helping;
@@ -214,12 +225,7 @@ function NowAction(ctx: Ctx) {
     <>
       {mine ? (
         <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Your turn">
-          {helping && helping !== seat ? (
-            <div className={styles.banner}>
-              <span className={styles.grow}>You're helping <b>{short(active)}</b>. Everything you do is logged as you, for {short(active)}.</span>
-              <button className={cx(styles.btn, styles.smallBtn)} onClick={() => setHelping(undefined)}>Stop</button>
-            </div>
-          ) : null}
+          {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
           <p className={styles.eyebrow}><span>{active === seat ? "Your turn" : `${short(active)}'s turn`}</span><span className={styles.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
           {!selected ? (
             <>
@@ -269,6 +275,93 @@ function NowAction(ctx: Ctx) {
             <button className={cx(styles.btn, styles.primary)} disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>Follow</button>
             <button className={styles.btn} disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</button>
           </div>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+function HelpBanner({ who, short, stop }: { who: FactionId; short: Ctx["short"]; stop: () => void }) {
+  return (
+    <div className={styles.banner}>
+      <span className={styles.grow}>You're helping <b>{short(who)}</b>. Everything you do is logged as you, for {short(who)}.</span>
+      <button className={cx(styles.btn, styles.smallBtn)} onClick={stop}>Stop</button>
+    </div>
+  );
+}
+
+// ---------- Now: strategy phase ----------
+
+// Abilities that change cards after everyone has picked. The frame leaves them to
+// upstream's table screen (main/phase/strategy/StrategyPhase.tsx).
+function useEndOfStrategyAbilities(factions: Ctx["factions"]) {
+  const arbiter = useAgenda("Imperial Arbiter");
+  const abilities = useAbilities();
+  const hacan = useFactionHasTech("Emirates of Hacan", "Quantum Datahub Node");
+  const nekro = useFactionHasTech("Nekro Virus", "Quantum Datahub Node");
+  const out: string[] = [];
+  if (factions["Naalu Collective"]) out.push("Gift of Prescience");
+  if (hacan || nekro || abilities["Quantum Datahub Node"]?.owner) out.push("Quantum Datahub Node");
+  if (arbiter?.resolved && arbiter.target) out.push("Imperial Arbiter");
+  return out;
+}
+
+function NowStrategy(ctx: Ctx) {
+  const { factions, short, seat, helping, setHelping, w, open, gameId } = ctx;
+  const active = useActiveFactionId();
+  const order = useOrderedFactionIds("SPEAKER");
+  const strategyCards = useStrategyCards();
+  const endAbilities = useEndOfStrategyAbilities(factions);
+  const cards = sortStrategyCards(Object.values(strategyCards).filter((c): c is StrategyCard => !!c), true);
+  const picks = (id: FactionId) => cards.filter((c) => c.faction === id);
+  const mine = !!active && (active === seat || active === helping);
+
+  return (
+    <>
+      {active && mine ? (
+        <section className={styles.card} aria-label="Pick a card">
+          {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
+          <p className={styles.eyebrow}><span>{active === seat ? "Your pick" : `${short(active)}'s pick`}</span></p>
+          <div>
+            {cards.map((c) => (
+              <button key={c.id} className={styles.opt} disabled={!!c.faction || !!c.invalid} onClick={() => open({ kind: "card", card: c.id, pickFor: active })}>
+                <span className={styles.num} style={{ color: "var(--faint)", minWidth: "1.5ch" }}>{c.order}</span>
+                <b>{c.name}</b>{c.faction ? <span className={styles.sub}>{short(c.faction)}</span> : null}
+                <span className={styles.meta}>{c.tradeGoods ? `${c.tradeGoods} trade good${c.tradeGoods > 1 ? "s" : ""}` : ""}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className={cx(styles.card, styles.hero)} style={active ? { ["--c" as string]: pcolor(factions[active]?.color) } : undefined} aria-label="Pick order">
+        <p className={styles.eyebrow}><span>Pick order</span><span className={styles.num}>{order.filter((id) => picks(id).length).length} of {order.length}</span></p>
+        <ul className={styles.list}>
+          {order.map((id, i) => (
+            <li key={id} className={styles.row}>
+              <span className={styles.num} style={{ color: "var(--faint)" }}>{i + 1}</span>
+              <Chip faction={id} factions={factions} short={short} small />
+              <span className={styles.grow} />
+              {picks(id).map((c) => <span key={c.id} className={styles.pill}>{c.name}</span>)}
+              {id === active ? <span className={cx(styles.pill, styles.pillNow)}>Picking</span> : !picks(id).length ? <span className={styles.sub}>Waiting</span> : null}
+            </li>
+          ))}
+        </ul>
+        {active && !mine ? <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(active)}>Pick for {short(active)}</button> : null}
+      </section>
+
+      {!active ? (
+        <section className={styles.card} aria-label="Everyone has picked">
+          <p className={styles.eyebrow}><span>Strategy phase</span></p>
+          <h2 className={styles.title}>Everyone has picked</h2>
+          {endAbilities.length ? (
+            <p className={styles.sub}>
+              {endAbilities.join(", ")} can still change cards before the action phase. {endAbilities.length > 1 ? "They're" : "It's"} on the table screen.{" "}
+              <Link href={`/game/${gameId}/main`} style={{ color: "var(--accent)" }}>Open the table screen</Link>
+            </p>
+          ) : null}
+          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
+            onClick={() => w.write([Events.AdvancePhaseEvent()], "The action phase started")}>Start the action phase</button>
         </section>
       ) : null}
     </>
@@ -409,7 +502,7 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
       {group.length ? (
         <div className={styles.banner}>
           <span className={styles.grow}>Newest: {ctx.describe(group)}</span>
-          <button className={cx(styles.btn, styles.smallBtn)} disabled={ctx.w.pending} onClick={() => ctx.w.undoNewest(true)}>Undo</button>
+          <button className={cx(styles.btn, styles.smallBtn)} disabled={ctx.w.pending} onClick={() => ctx.w.undoNewest(groupKey(group))}>Undo</button>
         </div>
       ) : null}
       <div className={styles.row} style={{ overflowX: "auto", gap: 6, paddingBottom: 4 }}>
@@ -443,7 +536,9 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
   const strategyCards = useStrategyCards();
   const objectives = useObjectives();
   const order = useOrderedFactionIds("SPEAKER");
+  const checksAndBalances = useAgenda("Checks and Balances");
   const [q, setQ] = useState("");
+  const [to, setTo] = useState<Optional<FactionId>>();
   switch (sheet.kind) {
     case "seat":
       return (
@@ -485,10 +580,38 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       );
     case "card": {
       const c = strategyCards[sheet.card];
+      const picker = sheet.pickFor;
+      const canPick = !!picker && !!c && !c.faction && !c.invalid;
+      const giving = canPick && !!checksAndBalances?.passed;
+      const targets = giving ? checksAndBalancesTargets(Object.values(strategyCards).filter((x): x is StrategyCard => !!x), order, picker) : [];
+      const pick = async (target: FactionId) => {
+        if (!picker || !c) return;
+        const label = target === picker ? `${short(picker)} picked ${c.name}` : `${short(picker)} gave ${c.name} to ${short(target)}`;
+        if (await w.write([Events.AssignStrategyCardEvent(target, c.id, picker)], label, picker)) { ctx.setHelping(undefined); setTo(undefined); close(); }
+      };
       return (
         <SheetFrame title={c?.name ?? sheet.card} close={close}>
           <p className={styles.eyebrow}><span>Primary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.primary}</p>
           <p className={styles.eyebrow}><span>Secondary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.secondary}</p>
+          {canPick && !giving ? (
+            <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={() => pick(picker)}>
+              {picker === ctx.seat ? `Pick ${c.name}` : `Pick ${c.name} for ${short(picker)}`}
+            </button>
+          ) : null}
+          {giving ? (
+            <>
+              <p className={styles.eyebrow}><span>Checks and Balances: who gets it?</span></p>
+              <div className={styles.pick}>
+                {targets.map((id) => <button key={id} aria-pressed={to === id} onClick={() => setTo(id)}><Chip faction={id} factions={factions} short={short} small /></button>)}
+              </div>
+              {to ? (
+                <>
+                  <p className={styles.title} style={{ fontWeight: 400 }}>{to === picker ? `${short(picker)} keeps ${c.name}, since nobody else has room for a card.` : `${short(picker)} gives ${c.name} to ${short(to)}.`}</p>
+                  <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={() => pick(to)}>Confirm</button>
+                </>
+              ) : null}
+            </>
+          ) : null}
         </SheetFrame>
       );
     }

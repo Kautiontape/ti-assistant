@@ -1,13 +1,15 @@
 "use client";
 // The fork's layer around upstream's useDataUpdate: every event carries who did it,
 // one action can send several events, a second tap waits for the first, a failed
-// write says so, and undo only reverses the newest action, which it names first.
+// write says so, and undo only reverses the action the phone showed.
+import { collection, getDocsFromServer, limit, orderBy, query } from "firebase/firestore";
 import { useRef, useState } from "react";
+import DBConnection from "../../data/DBConnection";
 import { useActionLog, useGameId, useViewOnly } from "../../context/dataHooks";
 import { useDataUpdate } from "../../util/api/dataUpdate";
 import { useUndo } from "../../util/api/undo";
 import { ActionLog, Optional } from "../../util/types/types";
-import { Actor, actorOf, newestGroup } from "./logic";
+import { Actor, groupKey, newestGroup } from "./logic";
 
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
@@ -49,23 +51,43 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     return ok;
   }
 
-  // Undo the newest action. If someone else acted since this phone's last
-  // action, say what the newest action is instead of undoing it blind.
-  async function undoNewest(confirmOthers = false) {
-    const group = newestGroup(log);
-    if (!group.length || busy.current) return;
-    const newestId = actorOf(group[0])?.id;
-    if (!confirmOthers && lastId.current && newestId !== lastId.current) {
-      show({ text: `Someone acted since. Newest: ${describe(group)}` });
-      return "someone-else" as const;
-    }
+  // The newest entries as the server has them. Upstream's UNDO removes the
+  // server's newest entry, which can be newer than what this phone has shown.
+  async function serverNewest(): Promise<ActionLog> {
+    const snap = await getDocsFromServer(query(collection(DBConnection.get(), "games", gameId, "actionLog"), orderBy("timestampMillis", "desc"), limit(10)));
+    const fresh = snap.docs.map((d) => d.data() as ActionLogEntry<GameUpdateData>);
+    // Prefer the store's copies, which other helpers (whose turn it was) know.
+    return fresh.map((e) => log.find((l) => l.timestampMillis === e.timestampMillis && l.data.action === e.data.action) ?? e);
+  }
+
+  // Undo this phone's last action (from the toast), or the action a button was
+  // drawn with (`shown`, from groupKey). Only if it is still the server's newest
+  // action; otherwise say what the newest action is and leave it.
+  async function undoNewest(shown?: string) {
+    const target = shown ?? lastId.current;
+    if (!target || busy.current) return;
     busy.current = true;
     setPending(true);
-    for (let i = 0; i < group.length; i++) await undo(gameId);
-    busy.current = false;
-    setPending(false);
-    if (newestId === lastId.current) lastId.current = undefined;
-    show({ text: `Undid: ${describe(group)}` });
+    try {
+      let group: ActionLog;
+      try {
+        group = newestGroup(await serverNewest());
+      } catch {
+        show({ text: "Couldn't check the game for newer changes, so nothing was undone. Try again.", tone: "error" });
+        return;
+      }
+      if (!group.length) return;
+      if (groupKey(group) !== target) {
+        show({ text: `Someone acted since. Newest: ${describe(group)}` });
+        return "someone-else" as const;
+      }
+      for (let i = 0; i < group.length; i++) await undo(gameId);
+      if (target === lastId.current) lastId.current = undefined;
+      show({ text: `Undid: ${describe(group)}` });
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
   }
 
   return { write, undoNewest, pending, toast, setToast };

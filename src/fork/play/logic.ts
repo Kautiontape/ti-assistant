@@ -27,6 +27,7 @@ export function subjectOf(e: Entry, turn?: FactionId): Optional<FactionId> {
   if (actor?.as) return actor.as;
   if (TABLE_EVENTS.has(e.data.action)) return undefined;
   if (e.data.action === "SET_SPEAKER") return ev.newSpeaker as FactionId;
+  if (e.data.action === "ASSIGN_STRATEGY_CARD") return (ev.pickedBy ?? ev.assignedTo) as FactionId;
   return (ev.faction ?? ev.factionId ?? ev.assignedTo ?? turn ?? actor?.seat) as Optional<FactionId>;
 }
 
@@ -65,7 +66,9 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       return ev.objective === "Support for the Throne" && ev.key ? `received Support for the Throne from ${name(ev.key)}` : `scored ${ev.objective}`;
     case "UNSCORE_OBJECTIVE": return `lost ${ev.objective}`;
     case "REVEAL_OBJECTIVE": return `Objective revealed: ${ev.objective}`;
-    case "ASSIGN_STRATEGY_CARD": return `picked ${ev.id}`;
+    case "ASSIGN_STRATEGY_CARD":
+      return ev.pickedBy && ev.pickedBy !== ev.assignedTo ? `gave ${ev.id} to ${name(ev.assignedTo)}` : `picked ${ev.id}`;
+    case "ADVANCE_PHASE": return ev.state?.phase ? `The ${String(ev.state.phase).toLowerCase()} phase ended` : "The game moved to the next phase";
     case "MARK_PRIMARY": return ev.completed ? "finished the primary" : null;
     case "MARK_SECONDARY": return ev.state === "DONE" ? "followed the secondary" : ev.state === "SKIPPED" ? "skipped the secondary" : null;
     case "SET_SPEAKER": return "became speaker";
@@ -95,6 +98,13 @@ export function newestGroup(log: ActionLog): Entry[] {
     out.push(e);
   }
   return out;
+}
+
+// What identifies one action: its actor id, or, for entries sent from upstream's
+// screens, the newest entry's timestamp.
+export function groupKey(group: Entry[]): Optional<string> {
+  const first = group[0];
+  return first ? actorOf(first)?.id ?? `t:${first.timestampMillis}` : undefined;
 }
 
 export interface PointGroup { label: string; points: number; items: string[] }
@@ -145,6 +155,14 @@ export function claimablePlanets(planets: Partial<Record<PlanetId, Planet>>, fac
     }
     return true;
   });
+}
+
+// Checks and Balances: the picker gives the card to a player who still has room
+// for one (upstream's ChecksAndBalancesMenu rule), or keeps it if nobody does.
+export function checksAndBalancesTargets(cards: StrategyCard[], players: FactionId[], picker: FactionId): FactionId[] {
+  const limit = players.length > 4 ? 1 : 2;
+  const room = players.filter((id) => id !== picker && cards.filter((c) => c.faction === id).length < limit);
+  return room.length ? room : [picker];
 }
 
 export function fmtDuration(ms: number) {
