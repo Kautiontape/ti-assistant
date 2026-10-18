@@ -25,15 +25,11 @@ listed below, so an upstream merge can only conflict in those spots.
 | S1 | `src/util/server.ts` (`getAdminCredential`) | Use `GOOGLE_APPLICATION_CREDENTIALS` when set; otherwise read upstream's key file at runtime instead of importing it, so builds don't need the key. | Candidate |
 | S2 | `src/data/DBConnection.ts` | Firebase web config from `NEXT_PUBLIC_FIREBASE_*`, defaulting to upstream's project. `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST` overrides the dev emulator address (`off` disables it). | Candidate |
 | S3 | `src/components/Header/Header.tsx`, `src/components/QRCode/QRCodeButtonWrapper.tsx`, `app/[locale]/archive/[gameId]/layout.tsx` | `NEXT_PUBLIC_BASE_URL` for share links and QR codes, falling back to upstream's URLs. | Candidate |
+| S4 | `app/api/[gameId]/dataUpdate/route.ts`, `src/util/api/gameLog.ts` (`getHandler`), `src/util/api/opposite.ts` (`getOppositeHandler`), `src/components/LogEntry.tsx`, `src/util/types/api.d.ts` (`GameUpdateData`) | Fork action registry: each switch falls back to `src/fork/actions/registry.ts` for actions it doesn't know, LogEntry draws them with `ForkLogEntry`, and the union gains `ForkUpdateData` (`src/fork/actions/types.d.ts`). One import and one line per file, marked `ktn seam S4`. A new fork action never touches these files again. | No (fork-only actions) |
 | S7 | `app/[locale]/inner-layout.tsx` | Wraps upstream's NavBar in `HideOnPlay` (`src/fork/play/HideOnPlay.tsx`), so `/play` can use its own top bar. Three lines: one import and the wrapper's open and close tags. | No (fork-only screen) |
 
 Planned, not yet added:
 
-- **S4, fork action registry.** One `default:` fallback in the action switches
-  (`app/api/[gameId]/dataUpdate/route.ts`, `src/util/api/gameLog.ts`,
-  `src/util/api/opposite.ts`, `src/components/LogEntry.tsx`) and one union member
-  in `src/util/types/api.d.ts`. When it lands, also check `cleanLogData`,
-  `TURN_BOUNDARIES` and the `REPLACE`/`REWIND` paths pass unknown actions through.
 - **S6, archive fix.** `processGames` in `app/[locale]/stats/processor.ts` fires
   every game at once with unawaited writes. Better sent upstream than carried here.
 

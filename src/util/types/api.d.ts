@@ -19,6 +19,7 @@ interface Handler {
 }
 
 type GameUpdateData =
+  | ForkUpdateData // ktn seam S4: src/fork/actions/types.d.ts
   | (AddTechData | RemoveTechData)
   | (PurgeTechData | UnpurgeTechData)
   | (RevealObjectiveData | HideObjectiveData)

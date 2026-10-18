@@ -1,3 +1,4 @@
+import { getForkHandler } from "../../fork/actions/registry"; // ktn seam S4
 import {
   AddAttachmentHandler,
   RemoveAttachmentHandler,
@@ -278,4 +279,5 @@ export function getHandler(gameData: StoredGameData, data: GameUpdateData) {
     case "UNPLAY_LEADER":
       return new UnplayLeaderHandler(gameData, data);
   }
+  return getForkHandler(gameData, data); // ktn seam S4
 }

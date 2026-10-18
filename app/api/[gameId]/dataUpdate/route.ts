@@ -1,3 +1,4 @@
+import { getForkHandler } from "../../../../src/fork/actions/registry"; // ktn seam S4
 import {
   DocumentData,
   DocumentReference,
@@ -733,6 +734,7 @@ function updateInTransaction(
       }
     }
 
+    handler ??= getForkHandler(gameData, data); // ktn seam S4
     if (!handler) {
       throw new Error(`Action ${data.action} not implemented`);
     }
