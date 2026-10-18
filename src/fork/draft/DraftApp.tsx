@@ -23,13 +23,23 @@ type Sheet = { kind: "me" } | { kind: PickKind; value: number | string };
 function useMe(id: string) {
   const key = `draft-me-${id}`;
   const [me, setMeState] = useState<Optional<number>>();
-  useEffect(() => { try { const v = localStorage.getItem(key); setMeState(v === null ? undefined : Number(v)); } catch {} }, [key]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { try { const v = localStorage.getItem(key); setMeState(v === null ? undefined : Number(v)); } catch {} setLoaded(true); }, [key]);
   const setMe = (v: Optional<number>) => { setMeState(v); try { v === undefined ? localStorage.removeItem(key) : localStorage.setItem(key, String(v)); } catch {} };
-  return [me, setMe] as const;
+  return [me, setMe, loaded] as const;
 }
 
 export default function DraftApp({ id }: { id: string }) {
-  const { draft, missing } = useDraft(id);
+  const { draft, missing, error } = useDraft(id);
+  if (error) {
+    return (
+      <div className={styles.root}><main className={styles.main}>
+        <section className={styles.card}><h2 className={styles.title}>The draft couldn't be read</h2>
+          <p className={styles.sub}>The server refused to send it. On a new install this usually means the Firestore rules for drafts haven't been deployed yet (docs/ktn/ci-cd.md).</p>
+          <Link className={cx(styles.btn, styles.block)} href="/draft">Make or join a draft</Link></section>
+      </main></div>
+    );
+  }
   if (missing) {
     return (
       <div className={styles.root}><main className={styles.main}>
@@ -46,7 +56,7 @@ function Live({ draft: d }: { draft: Draft }) {
   const router = useRouter();
   const base = useBase();
   const api = useDraftApi(d.id);
-  const [me, setMe] = useMe(d.id);
+  const [me, setMe, meLoaded] = useMe(d.id);
   const [helping, setHelping] = useState<Optional<number>>();
   const [view, setView] = useState<View>("slice");
   const [sheet, setSheet] = useState<Optional<Sheet>>();
@@ -62,8 +72,8 @@ function Live({ draft: d }: { draft: Draft }) {
   // Helping is for one pick: it ends when the pick count moves.
   useEffect(() => setHelping(undefined), [d.picks.length]);
 
-  // First time on a phone: ask who's holding it.
-  useEffect(() => { if (me === undefined && !done) setSheet((s) => s ?? { kind: "me" }); }, [me, done]);
+  // First time on a phone: ask who's holding it (once the stored answer has loaded).
+  useEffect(() => { if (meLoaded && me === undefined && !done) setSheet((s) => s ?? { kind: "me" }); }, [meLoaded, me, done]);
 
   const last = d.picks.at(-1);
   const describe = (kind: PickKind, value: number | string) => kind === "slice" ? `Slice ${Number(value) + 1}` : kind === "faction" ? fname(String(value)) : `${POSITIONS[Number(value)]} position`;
@@ -106,8 +116,9 @@ function Live({ draft: d }: { draft: Draft }) {
         <div className={styles.col}>
           {d.gameId ? (
             <section className={cx(styles.card, styles.hero)} aria-label="Game ready">
-              <p className={styles.eyebrow}><span>Draft done</span><span>Game {d.gameId}</span></p>
+              <p className={styles.eyebrow}><span>Draft done</span></p>
               <h2 className={styles.title}>The game is ready</h2>
+              <p className={styles.sub}>Game code <b className={styles.num}>{d.gameId}</b></p>
               <p className={styles.sub}>Setup (starting technologies and the like) happens on the table screen. Then everyone plays from their phone.</p>
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} onClick={() => openGame(d.gameId!)}>Open the game{mine?.faction ? ` as ${fname(mine.faction)}` : ""}</button>
               <Link className={cx(styles.btn, styles.block)} href={`/game/${d.gameId}/main`}>Open the table screen</Link>

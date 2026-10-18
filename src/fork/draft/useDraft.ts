@@ -8,10 +8,11 @@ import { Optional } from "../../util/types/types";
 import { fromStored, tileInfo, type Draft, type DraftPlanet, type DraftSystem, type StoredDraft, type TileInfo } from "./milty";
 
 export function useDraft(id: string) {
-  const [state, setState] = useState<{ draft?: Draft; missing?: boolean }>({});
+  const [state, setState] = useState<{ draft?: Draft; missing?: boolean; error?: boolean }>({});
+  // A refused read (rules not deployed) is an error, not a missing draft.
   useEffect(() => onSnapshot(doc(DBConnection.get(), "forkDrafts", id),
     (snap) => setState(snap.exists() ? { draft: fromStored(snap.data() as StoredDraft) } : { missing: true }),
-    () => setState({ missing: true })), [id]);
+    () => setState({ error: true })), [id]);
   return state;
 }
 
