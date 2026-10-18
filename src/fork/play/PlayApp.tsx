@@ -28,7 +28,7 @@ import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
-import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
+import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, TextSizeChoice, rootAttrs, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
 
@@ -96,7 +96,7 @@ export default function PlayApp() {
 
   return (
     <DockContext.Provider value={dockInfo}>
-    <div className={cx(kit.root, styles.root)} data-accent={prefs.accent === "neutral" ? "neutral" : undefined} data-docked={docked || undefined}>
+    <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)} data-docked={docked || undefined}>
     <PlayPopouts>
       <header className={styles.top}>
         <div className={styles.phase}>
@@ -340,6 +340,9 @@ function DeviceSheet({ close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & De
       </div>
       <div className={kit.section}>
         <Choices label="Theme" value={theme} onChange={setTheme} options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]} />
+      </div>
+      <div className={kit.section}>
+        <TextSizeChoice prefs={prefs} setPrefs={setPrefs} />
       </div>
       {wide ? (
         <div className={kit.section}>

@@ -70,6 +70,10 @@
   --display: var(--play-display), "Eurostile", sans-serif;
   --body: var(--play-body), "Segoe UI", system-ui, sans-serif;
   --mono: var(--play-mono), ui-monospace, monospace;
+  // Text size. Upstream's site.css sizes rem by the window's width
+  // (clamp(16px, 1.25vw, 32px)), so the fork sizes text from --fs instead:
+  // 16px, a little smaller on a desktop window, or the device's Text size setting.
+  --fs: 16px;
   --tabs-h: 62px;
   --top-h: 57px;
   --gutter: 16px;
@@ -81,7 +85,7 @@
   background: var(--bg);
   color: var(--ink);
   font-family: var(--body);
-  font-size: 16px;
+  font-size: var(--fs);
   line-height: 1.45;
   display: flex;
   flex-direction: column;
@@ -90,6 +94,10 @@
   button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
   button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   &[data-accent="neutral"] { @include neutral-accent-dark; }
+  @media (min-width: 1024px) and (pointer: fine) { --fs: 15px; }
+  &[data-text="small"] { --fs: 14px; }
+  &[data-text="normal"] { --fs: 16px; }
+  &[data-text="large"] { --fs: 18px; }
 }
 @media (prefers-color-scheme: light) {
   :global(:root:not([data-theme="dark"])) .root { @include light; &[data-accent="neutral"] { @include neutral-accent-light; } }
@@ -100,14 +108,14 @@
   // ---------- Text ----------
   .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .eyebrow {
-    font-family: var(--display); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+    font-family: var(--display); font-size: calc(var(--fs) * 0.62); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
     margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   }
-  .title { margin: 0; font-size: 1.12rem; line-height: 1.25; text-wrap: balance; }
-  .sub { color: var(--muted); font-size: 0.9rem; margin: 0; }
+  .title { margin: 0; font-size: calc(var(--fs) * 1.12); line-height: 1.25; text-wrap: balance; }
+  .sub { color: var(--muted); font-size: calc(var(--fs) * 0.9); margin: 0; }
   // The question a group of choices answers ("Whose points changed?").
-  .label { margin: 0; font-weight: 700; font-size: 0.95rem; }
-  .confirm { margin: 0; font-size: 1.08rem; line-height: 1.35; text-wrap: balance; }
+  .label { margin: 0; font-weight: 700; font-size: calc(var(--fs) * 0.95); }
+  .confirm { margin: 0; font-size: calc(var(--fs) * 1.08); line-height: 1.35; text-wrap: balance; }
 
   // ---------- Containers ----------
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
@@ -128,7 +136,7 @@
     &:hover:not(:disabled) { border-color: var(--accent); }
     &:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
     &:disabled { opacity: 0.45; cursor: not-allowed; }
-    small { font-weight: 400; font-size: 0.78rem; opacity: 0.85; }
+    small { font-weight: 400; font-size: calc(var(--fs) * 0.78); opacity: 0.85; }
   }
   .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   // Acting on another player's behalf: the same button, dashed.
@@ -139,8 +147,8 @@
     font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
     &:disabled { opacity: 0.45; cursor: not-allowed; }
   }
-  .tall { min-height: 64px; font-size: 1.05rem; }
-  .small { min-height: 44px; padding: 0 12px; font-size: 0.9rem; }
+  .tall { min-height: 64px; font-size: calc(var(--fs) * 1.05); }
+  .small { min-height: 44px; padding: 0 12px; font-size: calc(var(--fs) * 0.9); }
   .block { width: 100%; }
   .buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .buttons.big .btn { min-height: 72px; }
@@ -163,10 +171,10 @@
   }
   .rowBtn.noLead { grid-template-columns: minmax(0, 1fr) auto; }
   .rowText { display: grid; gap: 2px; min-width: 0; b { font-weight: 700; } }
-  .rowDetail { color: var(--muted); font-size: 0.86rem; }
-  .rowEnd { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+  .rowDetail { color: var(--muted); font-size: calc(var(--fs) * 0.86); }
+  .rowEnd { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: calc(var(--fs) * 0.85); white-space: nowrap; }
   .chev { width: 18px; height: 18px; flex: none; color: var(--muted); }
-  .verb { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+  .verb { color: var(--accent); font-weight: 700; font-size: calc(var(--fs) * 0.9); }
 
   // ---------- Choose: pills with a radio mark ----------
   // Sets something on this screen; never writes to the game by itself.
@@ -175,7 +183,7 @@
   .choice {
     display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 14px 4px 10px;
     border-radius: 999px; border: 1.5px solid var(--line-strong); background: transparent; cursor: pointer; color: var(--ink);
-    font-weight: 600; font-size: 0.92rem; text-align: left;
+    font-weight: 600; font-size: calc(var(--fs) * 0.92); text-align: left;
     &:hover:not(:disabled) { border-color: var(--accent); }
     &[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
     &:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -186,13 +194,24 @@
   .radio { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); display: grid; place-items: center; }
   .choice[aria-checked="true"] > .radio { border-color: var(--accent); }
   .choice[aria-checked="true"] > .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-  .choiceNote { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+  .choiceNote { color: var(--muted); font-weight: 400; font-size: calc(var(--fs) * 0.8); }
+
+  .switchRow {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 52px;
+    padding: 6px 0; border: 0; background: none; cursor: pointer; text-align: left; color: var(--ink);
+  }
+  .switch {
+    position: relative; width: 48px; height: 28px; border-radius: 999px; background: var(--raise); border: 1.5px solid var(--line-strong);
+    &::after { content: ""; position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: var(--muted); transition: transform 0.15s; }
+  }
+  .switchRow[aria-checked="true"] .switch { background: var(--accent-soft); border-color: var(--accent); }
+  .switchRow[aria-checked="true"] .switch::after { transform: translateX(20px); background: var(--accent); }
 
   .stepper {
     display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 10px;
-    button { display: grid; place-items: center; min-height: 56px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise); font-size: 1.5rem; font-weight: 700; cursor: pointer; }
+    button { display: grid; place-items: center; min-height: 56px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise); font-size: calc(var(--fs) * 1.5); font-weight: 700; cursor: pointer; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-    output { text-align: center; font-family: var(--mono); font-size: 2rem; font-variant-numeric: tabular-nums; }
+    output { text-align: center; font-family: var(--mono); font-size: calc(var(--fs) * 2); font-variant-numeric: tabular-nums; }
   }
   .search { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); padding: 0 14px; font: inherit; }
 
@@ -207,7 +226,7 @@
   // Flat, borderless and never tappable.
   .tag {
     display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: var(--raise);
-    color: var(--muted); font-size: 0.76rem; font-weight: 700; white-space: nowrap;
+    color: var(--muted); font-size: calc(var(--fs) * 0.76); font-weight: 700; white-space: nowrap;
   }
   // "Up now": a dot, not a fill, so it can't pass for a button.
   .tagNow { background: var(--accent-soft); color: var(--ink); }
@@ -220,17 +239,17 @@
   .sc {
     --sc: var(--raise); --sc-ink: var(--ink); --sc-line: var(--line-strong);
     display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 10px 2px 4px; border-radius: 8px;
-    border: 2px solid var(--sc-line); background: var(--sc); color: var(--sc-ink); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
+    border: 2px solid var(--sc-line); background: var(--sc); color: var(--sc-ink); font-weight: 700; font-size: calc(var(--fs) * 0.88); white-space: nowrap;
     &[data-used] { background: transparent; color: var(--ink); }
     &[data-used] .scNum { background: transparent; color: var(--sc-line); }
   }
   button.sc { cursor: pointer; }
   button.sc .scName { text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
   .scNum {
-    display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; font-family: var(--mono); font-size: 0.85rem;
+    display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; font-family: var(--mono); font-size: calc(var(--fs) * 0.85);
     background: color-mix(in oklch, var(--sc-ink) 18%, transparent);
   }
-  .scLarge { min-height: 44px; font-size: 1rem; padding-right: 14px; .scNum { min-width: 28px; height: 28px; } }
+  .scLarge { min-height: 44px; font-size: calc(var(--fs) * 1); padding-right: 14px; .scNum { min-width: 28px; height: 28px; } }
   @each $c in red, orange, yellow, green, turquoise, blue, darkblue, purple, magenta {
     .sc[data-c="#{$c}"] { --sc: var(--sc-#{$c}); --sc-ink: var(--sc-#{$c}-ink); --sc-line: var(--sc-#{$c}-line); }
   }
@@ -257,7 +276,7 @@
     box-shadow: var(--shadow); display: grid; gap: 12px; align-content: start;
     &:focus { outline: none; }
     > header { display: flex; align-items: center; gap: 10px; position: sticky; top: -10px; z-index: 1; margin: -10px calc(-1 * var(--gutter)) 0; padding: 10px var(--gutter) 6px; background: var(--panel); }
-    h2 { flex: 1; margin: 0; font-size: 1.08rem; }
+    h2 { flex: 1; margin: 0; font-size: calc(var(--fs) * 1.08); }
   }
   @media (min-width: 700px) {
     .scrim { align-items: center; padding: 24px; }
@@ -272,26 +291,26 @@
     display: grid; gap: 12px; align-content: start;
     &:focus { outline: none; }
     > header { display: flex; align-items: center; gap: 10px; position: sticky; top: -10px; z-index: 1; margin: -10px calc(-1 * var(--gutter)) 0; padding: 10px var(--gutter) 6px; background: var(--panel); }
-    h2 { flex: 1; margin: 0; font-size: 1.08rem; }
+    h2 { flex: 1; margin: 0; font-size: calc(var(--fs) * 1.08); }
   }
-  .close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: none; cursor: pointer; font-size: 1rem; }
+  .close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: none; cursor: pointer; font-size: calc(var(--fs) * 1); }
 
   // ---------- Popout ----------
   // A card's text, beside the name that opened it (a bottom sheet on a phone).
   .popScrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); }
   .popScrimClear { background: transparent; }
   .popout {
-    position: fixed; z-index: 31; width: min(360px, calc(100vw - 16px)); max-height: min(70vh, 520px); overflow: auto;
+    position: fixed; z-index: 31; width: min(max(360px, 34vw), 600px, calc(100vw - 16px)); max-height: min(75vh, 640px); overflow: auto;
     background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow);
-    padding: 12px 14px; display: grid; gap: 8px; align-content: start; font-size: 0.94rem;
+    padding: 12px 14px; display: grid; gap: 8px; align-content: start; font-size: calc(var(--fs) * 0.94);
     &:focus { outline: none; }
     header { display: flex; align-items: flex-start; gap: 8px; }
-    h3 { flex: 1; margin: 0; font-size: 1.02rem; line-height: 1.3; }
+    h3 { flex: 1; margin: 0; font-size: calc(var(--fs) * 1.02); line-height: 1.3; }
     p { margin: 0; white-space: pre-line; }
   }
   .popPeek { pointer-events: none; }
   .popSheet { left: 0; right: 0; bottom: 0; width: 100%; max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
-  .popKind { font-family: var(--display); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .popKind { font-family: var(--display); font-size: calc(var(--fs) * 0.56); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   .popText { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 8px 8px 0; }
 
   // ---------- Toast ----------

@@ -5,13 +5,14 @@
 // gets Thunder's Edge. Upstream's handler (src/util/model/commitToExpedition.ts)
 // does all of that; this records who committed where, as upstream's
 // ExpeditionSelector (src/components/Expedition/) does.
+import { useState } from "react";
 import { useCurrentTurn, useExpedition, useOptions, usePlanet } from "../../context/dataHooks";
 import { getLatestExpedition, getNewOwner } from "../../util/actionLog";
 import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
-import { Chip, cx, SheetFrame, type Ctx } from "./ui";
-import { RowLink } from "../ui/kit";
+import type { Ctx } from "./ui";
+import { Button, Chip, Choices, kit, RowAction, RowLink, Rows, Sheet as KitSheet } from "../ui/kit";
 
 export const EXPEDITIONS: [ExpeditionId, string][] = [
   ["resources", "Resources"], ["influence", "Influence"], ["tradeGoods", "Trade goods"],
@@ -66,37 +67,45 @@ export function ExpeditionSheet({ faction, close, ctx }: { faction: FactionId; c
     if (await w.write([Events.ClaimPlanetEvent(to, "Thunder's Edge")], `${short(to)} took control of Thunder's Edge`, to)) close();
   };
   return (
-    <SheetFrame title="Thunder's Edge expedition" close={close}>
-      <p className={styles.sub}>Pay the cost on the board; this records who committed where. A player's first commit readies their breakthrough. When all six are taken, whoever committed most gets Thunder's Edge.</p>
+    <KitSheet title="Thunder's Edge expedition" close={close}>
+      <p className={kit.sub}>Pay the cost on the board; this records who committed where. A player's first commit readies their breakthrough. When all six are taken, whoever committed most gets Thunder's Edge.</p>
       {mine ? (
-        <div className={styles.banner}>
-          <span className={styles.grow}>{short(faction)} committed to <b>{nameOf(mine.expedition)}</b> this turn.</span>
-          <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={takeBack}>Take it back</button>
+        <div className={kit.banner}>
+          <span className={kit.grow}>{short(faction)} committed to <b>{nameOf(mine.expedition)}</b> this turn.</span>
+          <Button size="small" disabled={w.pending} onClick={takeBack}>Take it back</Button>
         </div>
       ) : null}
-      <div>
+      <Rows>
         {EXPEDITIONS.map(([id, label]) => {
           const who = expedition[id];
           return (
-            <button key={id} className={styles.opt} disabled={!!who || w.pending} onClick={() => commit(id)}>
-              <b>{label}</b>
-              <span className={styles.meta}>{who ? <Chip faction={who} factions={factions} short={short} small player={false} /> : mine ? "Move here" : "Open"}</span>
-            </button>
+            <RowAction key={id} disabled={!!who || w.pending} onClick={() => commit(id)} title={label} verb={who ? "" : mine ? "Move here" : "Commit"}
+              end={who ? <Chip faction={who} factions={factions} short={short} small player={false} /> : undefined} />
           );
         })}
-      </div>
+      </Rows>
       {complete && tied.length > 1 && (!thundersEdge?.owner || newOwner) ? (
+        <TieBreak tied={tied} current={newOwner} give={give} ctx={ctx} />
+      ) : complete && thundersEdge?.owner ? <p className={kit.sub}>{short(thundersEdge.owner)} controls Thunder's Edge.</p> : null}
+    </KitSheet>
+  );
+}
+
+function TieBreak({ tied, current, give, ctx }: { tied: FactionId[]; current: Optional<FactionId>; give: (id: FactionId) => void; ctx: Ctx }) {
+  const { factions, short, w } = ctx;
+  const [to, setTo] = useState<Optional<FactionId>>(current);
+  return (
+    <div className={kit.section}>
+      <p className={kit.eyebrow}><span>Tied for the most</span></p>
+      <Choices label="Who gets Thunder's Edge?" value={to} onChange={(v) => setTo(v as FactionId)}
+        options={tied.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small player={false} /> }))} />
+      {to && to !== current ? (
         <>
-          <p className={styles.eyebrow}><span>Tied for the most</span></p>
-          <p className={styles.sub}>Who gets Thunder's Edge?</p>
-          <div className={styles.pick}>
-            {tied.map((id) => (
-              <button key={id} aria-pressed={newOwner === id} disabled={w.pending} onClick={() => give(id)}><Chip faction={id} factions={factions} short={short} small player={false} /></button>
-            ))}
-          </div>
+          <p className={kit.confirm}>{short(to)} takes control of Thunder's Edge?</p>
+          <Button kind="primary" block disabled={w.pending} onClick={() => give(to)}>Confirm</Button>
         </>
-      ) : complete && thundersEdge?.owner ? <p className={styles.sub}>{short(thundersEdge.owner)} controls Thunder's Edge.</p> : null}
-    </SheetFrame>
+      ) : null}
+    </div>
   );
 }
 
@@ -107,12 +116,12 @@ export function ExpeditionCard({ ctx }: { ctx: Ctx }) {
   if (!on) return null;
   const taken = Object.keys(expedition).length;
   return (
-    <section className={styles.card} aria-label="Expedition">
-      <p className={styles.eyebrow}><span>Thunder's Edge expedition</span><span className={styles.num}>{taken} of 6</span></p>
+    <section className={kit.card} aria-label="Expedition">
+      <p className={kit.eyebrow}><span>Thunder's Edge expedition</span><span className={kit.num}>{taken} of 6</span></p>
       <ul className={styles.list}>
         {EXPEDITIONS.map(([id, label]) => {
           const who: Optional<FactionId> = expedition[id];
-          return <li key={id}><span className={styles.grow}>{label}</span>{who ? <Chip faction={who} factions={ctx.factions} short={ctx.short} small player={false} /> : <span className={styles.sub}>Open</span>}</li>;
+          return <li key={id}><span className={kit.grow}>{label}</span>{who ? <Chip faction={who} factions={ctx.factions} short={ctx.short} small player={false} /> : <span className={kit.sub}>Open</span>}</li>;
         })}
       </ul>
     </section>

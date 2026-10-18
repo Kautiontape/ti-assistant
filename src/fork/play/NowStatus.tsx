@@ -2,7 +2,6 @@
 // Now, status phase. Scoring, Support for the Throne and the objective reveal are
 // tracked; the rest of the phase happens on the board. Rules follow upstream's
 // main/phase/status/StatusPhase.tsx (see logic.ts).
-import Link from "next/link";
 import { useState } from "react";
 import { useCurrentTurn, useOptions, usePlanets, useRelics, useStrategyCards } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
@@ -16,7 +15,8 @@ import {
   scoredThisPhase, SFTT, throneHolder,
 } from "./logic";
 import styles from "./play.module.scss";
-import { Chip, cx, HelpBanner, pcolor, SheetFrame, type Ctx, type Sheet } from "./ui";
+import { HelpBanner, type Ctx, type Sheet } from "./ui";
+import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
 
 // Scoring goes in initiative order: by strategy card, then anyone without one.
 function useScoringOrder() {
@@ -55,97 +55,99 @@ export default function NowStatus(ctx: Ctx) {
   if (relics["The Crown of Emphidia"]?.owner) extras.push("The Crown of Emphidia");
   if (options.expansions.includes("THUNDERS EDGE") && !options.hide?.includes("TECHS")) extras.push("Entropic Scar", "Radical Advancement");
 
+  const stage = revealStage(round) === "STAGE ONE" ? "Stage I" : "Stage II";
+
   return (
     <>
       {who ? (
-        <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(factions[who]?.color) }} aria-label="Scoring">
+        <section className={cx(kit.card, styles.hero)} style={{ ["--c" as string]: pcolor(factions[who]?.color) }} aria-label="Scoring">
           {helping && helping !== seat ? <HelpBanner who={helping} short={short} stop={() => setHelping(undefined)} /> : null}
-          <p className={styles.eyebrow}><span>{who === seat ? "Your scoring" : `${short(who)}'s scoring`}</span></p>
-          <div className={styles.grid2}>
+          <p className={kit.eyebrow}><span>{who === seat ? "Your scoring" : `${short(who)}'s scoring`}</span></p>
+          <Rows>
             {(["public", "secret"] as const).map((which) => {
               const done = which === "public" ? scored(who).publics : scored(who).secrets;
               return (
-                <button key={which} className={cx(styles.btn, styles.tall, !done.length && which === "public" && styles.primary)} disabled={w.pending}
-                  onClick={() => open({ kind: "score", faction: who, which })}>
-                  {done.length ? `${which === "public" ? "Public" : "Secret"} ✓` : `Score ${which}`}
-                  <small>{done.length ? done.map(name).join(", ") : which === "public" ? "Revealed objectives" : "Public once scored"}</small>
-                </button>
+                <RowLink key={which} disabled={w.pending} onClick={() => open({ kind: "score", faction: who, which })}
+                  title={done.length ? `${which === "public" ? "Public" : "Secret"} ✓ scored` : `Score ${which === "public" ? "a public" : "a secret"} objective`}
+                  detail={done.length ? done.map(name).join(", ") : which === "public" ? "Revealed objectives" : "Public once scored"} />
               );
             })}
-          </div>
-          {objectives[SFTT] ? <ThroneRow giver={who} ctx={ctx} /> : null}
+            {objectives[SFTT] ? <ThroneRow giver={who} ctx={ctx} /> : null}
+          </Rows>
         </section>
       ) : (
-        <section className={styles.card} aria-label="Scoring">
-          <h2 className={styles.title}>Whose phone is this?</h2>
-          <p className={styles.sub}>Choose your seat to score, or tap a player below to score for them.</p>
-          <button className={cx(styles.btn, styles.primary, styles.block)} onClick={() => open({ kind: "seat" })}>Choose your seat</button>
+        <section className={kit.card} aria-label="Scoring">
+          {ctx.table ? (
+            <p className={kit.sub}>Choose a player below to score for them.</p>
+          ) : (
+            <>
+              <h2 className={kit.title}>Whose phone is this?</h2>
+              <p className={kit.sub}>Choose your seat to score, or choose a player below to score for them.</p>
+              <Rows><RowLink onClick={() => open({ kind: "seat" })} title="Choose your seat" /></Rows>
+            </>
+          )}
         </section>
       )}
 
-      <section className={styles.card} aria-label="Scoring this round">
-        <p className={styles.eyebrow}><span>This round</span><span>Tap to help</span></p>
-        <ul className={styles.list}>
-          {order.map((id) => {
+      <section className={kit.card} aria-label="Scoring this round">
+        <p className={kit.eyebrow}><span>This round</span><span>Choose one to score for them</span></p>
+        <Choices list hideLabel label="Whose scoring to show" value={who} onChange={(id) => setHelping(id === seat ? undefined : id as FactionId)}
+          options={order.map((id) => {
             const s = scored(id);
-            return (
-              <li key={id}>
-                <button className={styles.raceRow} onClick={() => setHelping(id === seat ? undefined : id)} aria-label={`Score for ${short(id)}`}>
-                  <Chip faction={id} factions={factions} short={short} small />
-                  <span className={styles.grow} />
-                  <span className={cx(styles.pill, !!s.publics.length && styles.pillOn)}>{s.publics.length ? "Public ✓" : "Public"}</span>
-                  <span className={cx(styles.pill, !!s.secrets.length && styles.pillOn)}>{s.secrets.length ? "Secret ✓" : "Secret"}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+            return {
+              value: id as string, name: `Score for ${short(id)}`,
+              label: <span className={kit.line} style={{ width: "100%" }}>
+                <Chip faction={id} factions={factions} short={short} small />
+                <span className={kit.grow} />
+                <Tag tone={s.publics.length ? "done" : undefined}>{s.publics.length ? "Public ✓" : "Public"}</Tag>
+                <Tag tone={s.secrets.length ? "done" : undefined}>{s.secrets.length ? "Secret ✓" : "Secret"}</Tag>
+              </span>,
+            };
+          })} />
       </section>
 
-      <section className={styles.card} aria-label="Table steps">
-        <p className={styles.eyebrow}><span>Table steps</span></p>
-        {hideObjectives ? null : (
-          <div className={styles.row}>
-            <span className={styles.grow}>
-              <b>{revealed.length ? `Revealed: ${revealed.map(name).join(", ")}` : `Reveal a ${revealStage(round) === "STAGE ONE" ? "Stage I" : "Stage II"} objective`}</b>
-              <br /><span className={styles.sub}>{speaker === seat ? "Your job as speaker" : `${short(speaker)}'s job as speaker`}</span>
-            </span>
-            {revealed.length ? <span className={cx(styles.pill, styles.pillOn)}>Done</span> : (
-              <button className={cx(styles.btn, styles.smallBtn, speaker !== seat && styles.help)} disabled={w.pending} onClick={() => open({ kind: "reveal", as: speaker })}>
-                {speaker === seat ? "Reveal" : `Do it for ${short(speaker)}`}
-              </button>
-            )}
+      <section className={kit.card} aria-label="Table steps">
+        <p className={kit.eyebrow}><span>Table steps</span></p>
+        {hideObjectives ? null : revealed.length ? (
+          <div className={kit.line}>
+            <span className={kit.grow}><b>Revealed: {revealed.map(name).join(", ")}</b></span>
+            <Tag tone="done">Done</Tag>
+          </div>
+        ) : (
+          <div className={kit.line}>
+            <span className={kit.grow}><b>Reveal a {stage} objective</b><br /><span className={kit.sub}>{speaker === seat ? "Your job as speaker" : `${short(speaker)}'s job as speaker`}</span></span>
+            <Button size="small" forOther={speaker !== seat} disabled={w.pending} onClick={() => open({ kind: "reveal", as: speaker })}>{speaker === seat ? "Reveal" : `Reveal for ${short(speaker)}`}</Button>
           </div>
         )}
         <details>
-          <summary className={styles.sub} style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer" }}>Then on the board (not tracked)</summary>
-          <p className={styles.sub}>
+          <summary className={kit.sub} style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer" }}>Then on the board (not tracked)</summary>
+          <p className={kit.sub}>
             Draw action cards (1 each; 2 with Neural Motivator; Yssaril draws 3 and discards 1). Remove command tokens from the board.
             Gain 2 command tokens (Sol 3; 1 more with Hyper Metabolism) and redistribute. Ready cards, repair units, return strategy cards.
           </p>
         </details>
         {extras.length ? (
-          <p className={styles.sub}>
-            {extras.join(", ")} {extras.length > 1 ? "are" : "is"} on the table screen.{" "}
-            <Link href={`/game/${gameId}/main`} className={styles.textLink}>Open the table screen</Link>
-          </p>
+          <>
+            <p className={kit.sub}>{extras.join(", ")} {extras.length > 1 ? "are" : "is"} on the table screen.</p>
+            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+          </>
         ) : null}
       </section>
 
-      <section className={styles.card} aria-label="Finish the status phase">
-        {!revealed.length && !hideObjectives ? <p className={styles.sub}>No objective has been revealed yet this round.</p> : null}
+      <section className={kit.card} aria-label="Finish the status phase">
+        {!revealed.length && !hideObjectives ? <p className={kit.sub}>No objective has been revealed yet this round.</p> : null}
         {options.expansions.includes("TWILIGHTS FALL") ? (
-          <Link className={cx(styles.btn, styles.block)} href={`/game/${gameId}/main`}>Finish the phase on the table screen</Link>
+          <Rows><RowLink href={`/game/${gameId}/main`} external title="Finish the phase on the table screen" /></Rows>
         ) : agendaUnlocked ? (
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-            onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase</button>
+          <Button kind="primary" size="tall" block disabled={w.pending}
+            onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase</Button>
         ) : (
           <>
-            <p className={styles.sub}>Nobody controls Mecatol Rex yet, so there's no agenda phase this round.</p>
-            <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-              onClick={() => w.write([Events.AdvancePhaseEvent(true)], `Round ${round + 1} started`)}>Start round {round + 1}</button>
-            <button className={cx(styles.btn, styles.block)} disabled={w.pending}
-              onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase anyway</button>
+            <p className={kit.sub}>Nobody controls Mecatol Rex yet, so there's no agenda phase this round.</p>
+            <Button kind="primary" size="tall" block disabled={w.pending}
+              onClick={() => w.write([Events.AdvancePhaseEvent(true)], `Round ${round + 1} started`)}>Start round {round + 1}</Button>
+            <Button block disabled={w.pending}
+              onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase anyway</Button>
           </>
         )}
       </section>
@@ -158,13 +160,8 @@ function ThroneRow({ giver, ctx }: { giver: FactionId; ctx: Ctx }) {
   const holder = throneHolder(objectives, giver);
   const { short, open, w, seat } = ctx;
   return (
-    <div className={styles.row}>
-      <span className={styles.grow}>
-        <b>Support for the Throne</b><br />
-        <span className={styles.sub}>{holder ? `In ${short(holder)}'s play area` : giver === seat ? "Still in your hand" : `Still in ${short(giver)}'s hand`}</span>
-      </span>
-      <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => open({ kind: "give", giver })}>{holder ? "Move" : "Give"}</button>
-    </div>
+    <RowLink disabled={w.pending} onClick={() => open({ kind: "give", giver })} end={holder ? "Move" : "Give"}
+      title="Support for the Throne" detail={holder ? `In ${short(holder)}'s play area` : giver === seat ? "Still in your hand" : `Still in ${short(giver)}'s hand`} />
   );
 }
 
@@ -177,7 +174,7 @@ export function StatusSheet({ sheet, close, ctx }: { sheet: Extract<Sheet, { kin
 }
 
 function Search({ q, setQ, placeholder }: { q: string; setQ: (q: string) => void; placeholder: string }) {
-  return <input className={styles.search} type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label={placeholder} />;
+  return <input className={kit.search} type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label={placeholder} />;
 }
 
 const matches = (o: Objective, q: string) => !q || o.name.toLowerCase().includes(q.toLowerCase());
@@ -202,27 +199,26 @@ export function ScoreSheet({ faction, which, anyPhase, phase = "STATUS", close, 
     if (await w.write([Events.UnscoreObjectiveEvent(faction, id)], `${short(faction)} took back ${o?.name ?? id}`, faction)) close();
   };
   return (
-    <SheetFrame title={`${short(faction)} scores a ${which} objective`} close={close}>
+    <KitSheet title={`${short(faction)} scores a ${which} objective`} close={close}>
       {done.map((id) => (
-        <div key={id} className={styles.banner}>
-          <span className={styles.grow}>Scored this round: <b>{objectives[id]?.name ?? id}</b></span>
-          <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => takeBack(id)}>Take it back</button>
+        <div key={id} className={kit.banner}>
+          <span className={kit.grow}>Scored this round: <b>{objectives[id]?.name ?? id}</b></span>
+          <Button size="small" disabled={w.pending} onClick={() => takeBack(id)}>Take it back</Button>
         </div>
       ))}
-      {done.length && phase === "STATUS" ? <p className={styles.sub}>{anyPhase ? "Imperial scores one public objective." : `Players normally score one ${which} objective each status phase.`}</p> : null}
-      {missing.length ? <p className={styles.sub}>{short(faction)} doesn't control {missing.map((p) => p.name).join(" and ")}. A player without all their home planets can't score public objectives.</p> : null}
-      {which === "secret" ? <p className={styles.sub}>Hands aren't tracked, so every unscored {phase === "STATUS" ? "" : `${phase.toLowerCase()}-phase `}secret is listed. It's public once scored.</p> : null}
+      {done.length && phase === "STATUS" ? <p className={kit.sub}>{anyPhase ? "Imperial scores one public objective." : `Players normally score one ${which} objective each status phase.`}</p> : null}
+      {missing.length ? <p className={kit.sub}>{short(faction)} doesn't control {missing.map((p) => p.name).join(" and ")}. A player without all their home planets can't score public objectives.</p> : null}
+      {which === "secret" ? <p className={kit.sub}>Hands aren't tracked, so every unscored {phase === "STATUS" ? "" : `${phase.toLowerCase()}-phase `}secret is listed. It's public once scored.</p> : null}
       <Search q={q} setQ={setQ} placeholder={which === "public" ? "Find an objective" : "Find a secret"} />
-      <div>
-        {list.map((o) => (
-          <button key={o.id} className={styles.opt} disabled={w.pending} onClick={() => score(o)}>
-            <span style={{ display: "grid", textAlign: "left", gap: 2 }}><b>{o.name}</b><span className={styles.sub}>{o.description}</span></span>
-            <span className={styles.meta}>{o.points} pt</span>
-          </button>
-        ))}
-        {!list.length ? <p className={styles.sub}>Nothing left to score.</p> : null}
-      </div>
-    </SheetFrame>
+      {list.length ? (
+        <Rows>
+          {list.map((o) => (
+            <RowAction key={o.id} verb="Score" disabled={w.pending} onClick={() => score(o)} title={o.name} detail={o.description}
+              end={<span className={kit.num}>{o.points} pt</span>} />
+          ))}
+        </Rows>
+      ) : <p className={kit.sub}>Nothing left to score.</p>}
+    </KitSheet>
   );
 }
 
@@ -249,23 +245,19 @@ function GiveSheet({ giver, close, ctx }: { giver: FactionId; close: () => void;
     if (await w.write(events, label, giver)) close();
   };
   return (
-    <SheetFrame title={`${g}'s Support for the Throne`} close={close}>
-      <p className={styles.sub}>{holder ? `It's in ${h}'s play area. Who should hold it instead?` : `Who receives it?`}</p>
-      <div className={styles.pick}>
-        {order.filter((id) => id !== giver).map((id) => (
-          <button key={id} aria-pressed={to === id} disabled={id === holder} onClick={() => setTo(id)}>
-            <Chip faction={id} factions={factions} short={short} small player={false} />{id === holder ? <span className={styles.sub}> holds it</span> : null}
-          </button>
-        ))}
-        {holder ? <button aria-pressed={to === giver} onClick={() => setTo(giver)}><b>Back to {g}</b></button> : null}
-      </div>
+    <KitSheet title={`${g}'s Support for the Throne`} close={close}>
+      <Choices label={holder ? `It's in ${h}'s play area. Who should hold it instead?` : "Who receives it?"} value={to} onChange={(v) => setTo(v as FactionId)}
+        options={[
+          ...order.filter((id) => id !== giver).map((id) => ({ value: id as string, disabled: id === holder, note: id === holder ? "holds it" : undefined, label: <Chip faction={id} factions={factions} short={short} small player={false} /> })),
+          ...(holder ? [{ value: giver as string, label: `Back to ${g}` }] : []),
+        ]} />
       {sentence ? (
         <>
-          <p className={styles.title} style={{ fontWeight: 400 }}>{sentence}</p>
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={confirm}>Confirm</button>
+          <p className={kit.confirm}>{sentence}</p>
+          <Button kind="primary" size="tall" block disabled={w.pending} onClick={confirm}>Confirm</Button>
         </>
       ) : null}
-    </SheetFrame>
+    </KitSheet>
   );
 }
 
@@ -277,19 +269,17 @@ function RevealSheet({ as, close, ctx }: { as?: FactionId; close: () => void; ct
   const stage = revealStage(round) === "STAGE ONE" ? "Stage I" : "Stage II";
   const list = revealableObjectives(objectives, round).filter((o) => matches(o, q)).sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <SheetFrame title={`Reveal a ${stage} objective`} close={close}>
-      <p className={styles.sub}>Flip the top card of the {stage} deck, then find it here.</p>
+    <KitSheet title={`Reveal a ${stage} objective`} close={close}>
+      <p className={kit.sub}>Flip the top card of the {stage} deck, then find it here.</p>
       <Search q={q} setQ={setQ} placeholder="Find the objective you flipped" />
-      <div>
+      <Rows>
         {list.map((o) => (
-          <button key={o.id} className={styles.opt} disabled={w.pending} onClick={async () => {
-            if (await w.write([Events.RevealObjectiveEvent(o.id)], `${stage} objective revealed: ${o.name}`, as)) close();
-          }}>
-            <span style={{ display: "grid", textAlign: "left", gap: 2 }}><b>{o.name}</b><span className={styles.sub}>{o.description}</span></span>
-            <span className={styles.meta}>{o.points} pt</span>
-          </button>
+          <RowAction key={o.id} verb="Reveal" disabled={w.pending} title={o.name} detail={o.description} end={<span className={kit.num}>{o.points} pt</span>}
+            onClick={async () => {
+              if (await w.write([Events.RevealObjectiveEvent(o.id)], `${stage} objective revealed: ${o.name}`, as)) close();
+            }} />
         ))}
-      </div>
-    </SheetFrame>
+      </Rows>
+    </KitSheet>
   );
 }

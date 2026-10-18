@@ -1,13 +1,13 @@
 "use client";
 // Now, strategy phase.
-import Link from "next/link";
 import { useAbilities, useAgenda, useStrategyCards } from "../../context/dataHooks";
 import { useFactionHasTech } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { Events } from "../../util/api/events";
 import { sortStrategyCards } from "../../util/strategyCards";
 import styles from "./play.module.scss";
-import { cx, pcolor, Chip, HelpBanner, type Ctx } from "./ui";
+import { HelpBanner, type Ctx } from "./ui";
+import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Tag } from "../ui/kit";
 
 // Abilities that change cards after everyone has picked. The frame leaves them to
 // upstream's table screen (main/phase/strategy/StrategyPhase.tsx).
@@ -31,54 +31,54 @@ export default function NowStrategy(ctx: Ctx) {
   const endAbilities = useEndOfStrategyAbilities(factions);
   const cards = sortStrategyCards(Object.values(strategyCards).filter((c): c is StrategyCard => !!c), true);
   const picks = (id: FactionId) => cards.filter((c) => c.faction === id);
-  const mine = !!active && (active === seat || active === helping);
+  const mine = ctx.controls(active);
 
   return (
     <>
       {active && mine ? (
-        <section className={styles.card} aria-label="Pick a card">
+        <section className={kit.card} aria-label="Pick a card">
           {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
-          <p className={styles.eyebrow}><span>{active === seat ? "Your pick" : `${short(active)}'s pick`}</span></p>
-          <div>
+          <p className={kit.eyebrow}><span>{active === seat ? "Your pick" : `${short(active)}'s pick`}</span></p>
+          {active !== seat && !helping ? <div className={kit.line}><Chip faction={active} factions={factions} short={short} large /></div> : null}
+          <Rows>
             {cards.map((c) => (
-              <button key={c.id} className={styles.opt} disabled={!!c.faction || !!c.invalid} onClick={() => open({ kind: "card", card: c.id, pickFor: active })}>
-                <span className={styles.num} style={{ color: "var(--faint)", minWidth: "1.5ch" }}>{c.order}</span>
-                <b>{c.name}</b>{c.faction ? <span className={styles.sub}>{short(c.faction)}</span> : null}
-                <span className={styles.meta}>{c.tradeGoods ? `${c.tradeGoods} trade good${c.tradeGoods > 1 ? "s" : ""}` : ""}</span>
-              </button>
+              <RowLink key={c.id} disabled={!!c.faction || !!c.invalid} onClick={() => open({ kind: "card", card: c.id, pickFor: active })}
+                label={`${c.name}${c.faction ? `, ${short(c.faction)}'s` : ""}`}
+                title={<CardTag card={c} used={!!c.faction || !!c.invalid} still />}
+                detail={c.faction ? `${short(c.faction)} has it` : c.tradeGoods ? `${c.tradeGoods} trade good${c.tradeGoods > 1 ? "s" : ""} on it` : undefined} />
             ))}
-          </div>
+          </Rows>
         </section>
       ) : null}
 
-      <section className={cx(styles.card, styles.hero)} style={active ? { ["--c" as string]: pcolor(factions[active]?.color) } : undefined} aria-label="Pick order">
-        <p className={styles.eyebrow}><span>Pick order</span><span className={styles.num}>{order.filter((id) => picks(id).length).length} of {order.length}</span></p>
+      <section className={cx(kit.card, styles.hero)} style={active ? { ["--c" as string]: pcolor(factions[active]?.color) } : undefined} aria-label="Pick order">
+        <p className={kit.eyebrow}><span>Pick order</span><span className={kit.num}>{order.filter((id) => picks(id).length).length} of {order.length}</span></p>
         <ul className={styles.list}>
           {order.map((id, i) => (
-            <li key={id} className={styles.row}>
-              <span className={styles.num} style={{ color: "var(--faint)" }}>{i + 1}</span>
+            <li key={id}>
+              <span className={kit.num} style={{ color: "var(--faint)" }}>{i + 1}</span>
               <Chip faction={id} factions={factions} short={short} small />
-              <span className={styles.grow} />
-              {picks(id).map((c) => <span key={c.id} className={styles.pill}>{c.name}</span>)}
-              {id === active ? <span className={cx(styles.pill, styles.pillNow)}>Picking</span> : !picks(id).length ? <span className={styles.sub}>Waiting</span> : null}
+              <span className={kit.grow} />
+              {picks(id).map((c) => <CardTag key={c.id} card={c} />)}
+              {id === active ? <Tag tone="now">Picking</Tag> : !picks(id).length ? <span className={kit.sub}>Waiting</span> : null}
             </li>
           ))}
         </ul>
-        {active && !mine ? <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(active)}>Pick for {short(active)}</button> : null}
+        {active && !mine ? <Button forOther block onClick={() => setHelping(active)}>Pick for {short(active)}</Button> : null}
       </section>
 
       {!active ? (
-        <section className={styles.card} aria-label="Everyone has picked">
-          <p className={styles.eyebrow}><span>Strategy phase</span></p>
-          <h2 className={styles.title}>Everyone has picked</h2>
+        <section className={kit.card} aria-label="Everyone has picked">
+          <p className={kit.eyebrow}><span>Strategy phase</span></p>
+          <h2 className={kit.title}>Everyone has picked</h2>
           {endAbilities.length ? (
-            <p className={styles.sub}>
-              {endAbilities.join(", ")} can still change cards before the action phase. {endAbilities.length > 1 ? "They're" : "It's"} on the table screen.{" "}
-              <Link href={`/game/${gameId}/main`} className={styles.textLink}>Open the table screen</Link>
-            </p>
+            <>
+              <p className={kit.sub}>{endAbilities.join(", ")} can still change cards before the action phase. {endAbilities.length > 1 ? "They're" : "It's"} on the table screen.</p>
+              <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+            </>
           ) : null}
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-            onClick={() => w.write([Events.AdvancePhaseEvent()], "The action phase started")}>Start the action phase</button>
+          <Button kind="primary" size="tall" block disabled={w.pending}
+            onClick={() => w.write([Events.AdvancePhaseEvent()], "The action phase started")}>Start the action phase</Button>
         </section>
       ) : null}
     </>

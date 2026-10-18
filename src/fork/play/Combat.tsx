@@ -8,8 +8,8 @@ import { getClaimedPlanets } from "../../util/actionLog";
 import { Optional } from "../../util/types/types";
 import { fmtDuration, openCombat } from "./logic";
 import styles from "./play.module.scss";
-import { Chip, cx, SheetFrame, useNow, type Ctx } from "./ui";
-import { RowLink } from "../ui/kit";
+import { useNow, type Ctx } from "./ui";
+import { Button, Chip, Choices, cx, kit, RowLink, Sheet as KitSheet } from "../ui/kit";
 
 export function useOpenCombat() {
   return openCombat(useActionLog());
@@ -21,15 +21,15 @@ export function CombatBanner({ ctx }: { ctx: Ctx }) {
   const now = useNow();
   if (!combat) return null;
   return (
-    <section className={cx(styles.card, styles.hero)} aria-label="Combat">
-      <p className={styles.eyebrow}><span>⚔ {combat.kind === "space" ? "Space combat" : `Ground combat${combat.planet ? ` on ${combat.planet}` : ""}`}</span><span className={styles.num}>{combat.end ? fmtDuration(combat.end - combat.start) : now ? fmtDuration(now - combat.start) : ""}</span></p>
-      <div className={styles.row} style={{ flexWrap: "wrap", gap: 8 }}>
+    <section className={cx(kit.card, styles.hero)} aria-label="Combat">
+      <p className={kit.eyebrow}><span>⚔ {combat.kind === "space" ? "Space combat" : `Ground combat${combat.planet ? ` on ${combat.planet}` : ""}`}</span><span className={kit.num}>{combat.end ? fmtDuration(combat.end - combat.start) : now ? fmtDuration(now - combat.start) : ""}</span></p>
+      <div className={kit.line} style={{ flexWrap: "wrap", gap: 8 }}>
         <Chip faction={combat.attacker} factions={factions} short={short} small player={false} />
-        <span className={styles.sub}>vs</span>
+        <span className={kit.sub}>vs</span>
         <Chip faction={combat.defender} factions={factions} short={short} small player={false} />
       </div>
-      <p className={styles.sub}>{combat.endedWithTurn ? "Its clock stopped when the turn ended. Record who won." : "The combat clock counts for both players, apart from their turns."}</p>
-      <button className={cx(styles.btn, styles.primary, styles.block)} onClick={() => open({ kind: "endCombat" })}>End combat</button>
+      <p className={kit.sub}>{combat.endedWithTurn ? "Its clock stopped when the turn ended. Record who won." : "The combat clock counts for both players, apart from their turns."}</p>
+      <Button kind="primary" block onClick={() => open({ kind: "endCombat" })}>End combat</Button>
     </section>
   );
 }
@@ -62,59 +62,49 @@ export function StartCombatSheet({ attacker, close, ctx }: { attacker: FactionId
     if (await w.write([{ action: "START_COMBAT", event } as unknown as GameUpdateData], label, attacker)) close();
   };
   return (
-    <SheetFrame title={`${short(attacker)} starts a combat`} close={close}>
-      <p className={styles.eyebrow}><span>Against</span></p>
-      <div className={styles.pick}>
-        {others.map((id) => <button key={id} aria-pressed={defender === id} onClick={() => setDefender(id)}><Chip faction={id} factions={factions} short={short} small player={false} /></button>)}
-      </div>
-      <p className={styles.eyebrow}><span>Where</span></p>
-      <div className={styles.pick}>
-        <button aria-pressed={kind === "space"} onClick={() => setKind("space")}><b>Space</b></button>
-        <button aria-pressed={kind === "ground"} onClick={() => setKind("ground")}><b>Ground</b></button>
-      </div>
+    <KitSheet title={`${short(attacker)} starts a combat`} close={close}>
+      <Choices label="Against whom?" value={defender} onChange={(v) => setDefender(v as FactionId)}
+        options={others.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small player={false} /> }))} />
+      <Choices label="Where?" value={kind} onChange={setKind} options={[{ value: "space", label: "Space" }, { value: "ground", label: "Ground" }]} />
       {kind === "ground" ? (
         <>
-          <input className={styles.search} type="search" placeholder="Find the planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the planet" />
-          <div>
-            {planetList.map((p) => (
-              <button key={p.id} className={styles.opt} aria-pressed={planet === p.id} style={planet === p.id ? { borderColor: "var(--accent)", boxShadow: "inset 0 0 0 2px var(--accent)" } : undefined} onClick={() => setPlanet(p.id)}>
-                <b>{p.name}</b><span className={styles.meta}>{claimed.includes(p.id) ? "taken this turn" : p.owner ? short(p.owner) : ""}</span>
-              </button>
-            ))}
-            {!planetList.length ? <p className={styles.sub}>{defender ? "Search for the planet." : "Choose the opponent, or search for the planet."}</p> : null}
-          </div>
+          <input className={kit.search} type="search" placeholder="Find the planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the planet" />
+          {planetList.length ? (
+            <Choices list label="On which planet?" value={planet} onChange={(v) => setPlanet(v as PlanetId)}
+              options={planetList.map((p) => ({ value: p.id as string, label: <b>{p.name}</b>, note: claimed.includes(p.id) ? "taken this turn" : p.owner ? short(p.owner) : undefined }))} />
+          ) : <p className={kit.sub}>{defender ? "Search for the planet." : "Choose the opponent, or search for the planet."}</p>}
         </>
       ) : null}
       {ready ? (
         <>
-          <p className={styles.title} style={{ fontWeight: 400 }}>
+          <p className={kit.confirm}>
             {short(attacker)} starts a {kind} combat with {short(defender)}{kind === "ground" && planet ? ` on ${planets[planet]?.name ?? planet}` : ""}?
           </p>
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={start}>Start the combat</button>
+          <Button kind="primary" size="tall" block disabled={w.pending} onClick={start}>Start the combat</Button>
         </>
       ) : null}
-    </SheetFrame>
+    </KitSheet>
   );
 }
 
 export function EndCombatSheet({ before, close, ctx }: { before?: string; close: () => void; ctx: Ctx }) {
   const { factions, short, w } = ctx;
   const combat = useOpenCombat();
-  if (!combat) return <SheetFrame title="End combat" close={close}><p className={styles.sub}>No combat is open.</p></SheetFrame>;
+  if (!combat) return <KitSheet title="End combat" close={close}><p className={kit.sub}>No combat is open.</p></KitSheet>;
   const end = async (winner: FactionId | "None") => {
     const event: EndCombatEvent = { faction: combat.attacker, defender: combat.defender, winner };
     const label = winner === "None" ? `${short(combat.attacker)} and ${short(combat.defender)}: no winner` : `${short(winner)} won the combat`;
     if (await w.write([{ action: "END_COMBAT", event } as unknown as GameUpdateData], label, combat.attacker)) close();
   };
   return (
-    <SheetFrame title="Who won?" close={close}>
-      {before ? <p className={styles.sub}>{short(combat.attacker)} vs {short(combat.defender)} is still open. Record who won before {before}, then carry on.</p> : null}
-      <div className={styles.pick}>
+    <KitSheet title="Who won?" close={close}>
+      {before ? <p className={kit.sub}>{short(combat.attacker)} vs {short(combat.defender)} is still open. Record who won before {before}, then carry on.</p> : null}
+      <div className={kit.buttons}>
         {[combat.attacker, combat.defender].map((id) => (
-          <button key={id} disabled={w.pending} onClick={() => end(id)}><Chip faction={id} factions={factions} short={short} small player={false} /> won</button>
+          <Button key={id} disabled={w.pending} onClick={() => end(id)}><span className={kit.line} style={{ gap: 6 }}><Chip faction={id} factions={factions} short={short} small player={false} /> won</span></Button>
         ))}
       </div>
-      <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => end("None")}>No winner (a retreat or a draw)</button>
-    </SheetFrame>
+      <Button block disabled={w.pending} onClick={() => end("None")}>No winner (a retreat or a draw)</Button>
+    </KitSheet>
   );
 }

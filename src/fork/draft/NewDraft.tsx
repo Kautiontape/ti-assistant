@@ -6,8 +6,7 @@ import { useState } from "react";
 import { BASE_OPTIONS } from "../../../server/data/options";
 import { getDefaultMapString } from "../../util/map";
 import styles from "../play/play.module.scss";
-import { cx } from "../play/ui";
-import { kit } from "../ui/kit";
+import { Button, Choices, cx, kit, Switch, rootAttrs, useDevicePrefs } from "../ui/kit";
 import { DEFAULT_LIMITS, draftOrder, generateSlices, newSeed, pickFactions, tilePool, wedges, type DraftLimits } from "./milty";
 import { useBase } from "./useDraft";
 
@@ -35,6 +34,7 @@ export function makeSlices(base: ReturnType<typeof useBase>, expansions: string[
 
 export default function NewDraft() {
   const router = useRouter();
+  const { prefs } = useDevicePrefs();
   const base = useBase();
   const [names, setNames] = useState<string[]>(Array(PLAYERS).fill(""));
   const [name, setName] = useState("");
@@ -83,49 +83,43 @@ export default function NewDraft() {
       </span>
     </label>
   );
-  const toggle = (label: string, value: boolean, set: (b: boolean) => void, sub?: string) => (
-    <button type="button" className={styles.opt} aria-pressed={value} onClick={() => set(!value)}>
-      <b>{label}</b>{sub ? <span className={styles.sub}>{sub}</span> : null}<span className={styles.meta}>{value ? "On" : "Off"}</span>
-    </button>
-  );
+  const toggle = (label: string, value: boolean, set: (b: boolean) => void, sub?: string) => <Switch label={label} detail={sub} checked={value} onChange={set} />;
 
   return (
-    <div className={cx(kit.root, styles.root)}>
+    <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}>
       <header className={styles.top}>
         <div className={styles.phase}><span className={styles.phaseName}>Milty draft</span><span className={styles.round}>6 players</span></div>
       </header>
       <main className={styles.main}>
-        <section className={styles.card} aria-label="Join a draft">
-          <p className={styles.eyebrow}><span>Join a draft</span></p>
-          <div className={styles.row}>
-            <input className={styles.search} placeholder="Draft code" value={code} onChange={(e) => setCode(e.target.value.trim())} aria-label="Draft code" autoCapitalize="off" autoCorrect="off" />
-            <button className={cx(styles.btn, styles.smallBtn)} disabled={!code} onClick={() => router.push(`/draft/${code}`)}>Join</button>
+        <section className={kit.card} aria-label="Join a draft">
+          <p className={kit.eyebrow}><span>Join a draft</span></p>
+          <div className={kit.line}>
+            <input className={kit.search} placeholder="Draft code" value={code} onChange={(e) => setCode(e.target.value.trim())} aria-label="Draft code" autoCapitalize="off" autoCorrect="off" />
+            <Button size="small" disabled={!code} onClick={() => router.push(`/draft/${code}`)}>Join</Button>
           </div>
         </section>
 
-        <section className={styles.card} aria-label="New draft">
-          <p className={styles.eyebrow}><span>New draft</span></p>
-          <p className={styles.sub}>Each player picks a slice of the map, a faction and a seat, one at a time in snake order, from their own phone or someone else's. When everyone has all three, the game is created with the map built.</p>
-          <input className={styles.search} placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} aria-label="Draft name" />
-          <p className={styles.eyebrow}><span>Players</span><span>Draft order is random</span></p>
+        <section className={kit.card} aria-label="New draft">
+          <p className={kit.eyebrow}><span>New draft</span></p>
+          <p className={kit.sub}>Each player picks a slice of the map, a faction and a seat, one at a time in snake order, from their own phone or someone else's. When everyone has all three, the game is created with the map built.</p>
+          <input className={kit.search} placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} aria-label="Draft name" />
+          <p className={kit.eyebrow}><span>Players</span><span>Draft order is random</span></p>
           <div className={styles.grid2}>
             {names.map((n, i) => (
-              <input key={i} className={styles.search} placeholder={`Player ${i + 1}`} value={n} aria-label={`Player ${i + 1}`}
+              <input key={i} className={kit.search} placeholder={`Player ${i + 1}`} value={n} aria-label={`Player ${i + 1}`}
                 onChange={(e) => setNames(names.map((x, k) => (k === i ? e.target.value : x)))} />
             ))}
           </div>
-          <p className={styles.eyebrow}><span>Game</span></p>
+          <p className={kit.eyebrow}><span>Game</span></p>
           {toggle("Prophecy of Kings", pok, setPok)}
           {toggle("Thunder's Edge", te, setTe)}
-          <div className={styles.seg} role="group" aria-label="Victory points">
-            {[10, 14].map((v) => <button key={v} aria-pressed={vp === v} onClick={() => setVp(v)}>{v} points</button>)}
-          </div>
-          <p className={styles.eyebrow}><span>Draft</span></p>
+          <Choices label="Victory points" value={String(vp)} onChange={(v) => setVp(Number(v))} options={[10, 14].map((v) => ({ value: String(v), label: `${v} points` }))} />
+          <p className={kit.eyebrow}><span>Draft</span></p>
           {num("Slices", slices, setSlices, PLAYERS, 9)}
           {num("Factions", factionCount, setFactionCount, PLAYERS, Math.max(PLAYERS, Math.min(available.length, 14)))}
           <details className={styles.item}>
             <summary>Slice limits and order</summary>
-            <p className={styles.sub}>Optimal value counts each planet's higher number, or half of each when they're equal, as on milty.shenanigans.be.</p>
+            <p className={kit.sub}>Optimal value counts each planet's higher number, or half of each when they're equal, as on milty.shenanigans.be.</p>
             {num("Minimum optimal influence", limits.minInfluence, (v) => setLimits({ ...limits, minInfluence: v }), 0, 10, 0.5)}
             {num("Minimum optimal resources", limits.minResources, (v) => setLimits({ ...limits, minResources: v }), 0, 10, 0.5)}
             {num("Minimum optimal total", limits.minTotal, (v) => setLimits({ ...limits, minTotal: v }), 0, 20, 0.5)}
@@ -134,10 +128,10 @@ export default function NewDraft() {
             {toggle("At least 2 alpha and 2 beta wormholes", limits.wormholePairs, (b) => setLimits({ ...limits, wormholePairs: b }))}
             {toggle("At most 1 wormhole per slice", limits.oneWormhole, (b) => setLimits({ ...limits, oneWormhole: b }))}
             {toggle("Keep the players' order", keepOrder, setKeepOrder, "Draft in the order above instead of a random one")}
-            <input className={styles.search} placeholder="Seed (optional)" value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed" />
+            <input className={kit.search} placeholder="Seed (optional)" value={seed} onChange={(e) => setSeed(e.target.value)} aria-label="Seed" />
           </details>
-          {error ? <p className={styles.banner} role="alert">{error}</p> : null}
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={pending} onClick={make}>Make the draft</button>
+          {error ? <p className={kit.banner} role="alert">{error}</p> : null}
+          <Button kind="primary" size="tall" block disabled={pending} onClick={make}>Make the draft</Button>
         </section>
       </main>
     </div>

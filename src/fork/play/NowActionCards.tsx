@@ -7,9 +7,8 @@ import { useActionCards, useActionLog } from "../../context/dataHooks";
 import { Events } from "../../util/api/events";
 import { ActionLog, Optional } from "../../util/types/types";
 import { actorOf } from "./logic";
-import styles from "./play.module.scss";
-import { Chip, cx, SheetFrame, type Ctx } from "./ui";
-import { RowLink } from "../ui/kit";
+import type { Ctx } from "./ui";
+import { Chip, Choices, kit, RowAction, RowLink, Rows, Sheet as KitSheet } from "../ui/kit";
 
 // Upstream reads the target of these as the player who played them (vote tallies).
 const TARGET_IS_PLAYER = new Set(["Distinguished Councilor", "Council Preserve", "Predictive Intelligence"]);
@@ -58,32 +57,28 @@ export function ActionCardSheet({ faction, close, ctx }: { faction?: FactionId; 
   };
   const recent = who ? playedActionCards(log, who, new Set(Object.values(actionCards).map((c) => c?.name ?? ""))).slice(-3).reverse() : [];
   return (
-    <SheetFrame title="Record an action card" close={close}>
-      <p className={styles.eyebrow}><span>Who played it?</span></p>
-      <div className={styles.pick}>
-        {order.map((id) => (
-          <button key={id} aria-pressed={who === id} onClick={() => setWho(id)}><Chip faction={id} factions={factions} short={short} small player={false} /></button>
-        ))}
-      </div>
-      {who && recent.length ? <p className={styles.sub}>{short(who)} played earlier: {recent.join(", ")}</p> : null}
-      <input className={styles.search} type="search" placeholder="Find the card" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the card" />
+    <KitSheet title="Record an action card" close={close}>
+      <Choices label="Who played it?" value={who} onChange={(v) => setWho(v as FactionId)}
+        options={order.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small player={false} /> }))} />
+      {who && recent.length ? <p className={kit.sub}>{short(who)} played earlier: {recent.join(", ")}</p> : null}
+      <input className={kit.search} type="search" placeholder="Find the card" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the card" />
       {TIMING_GROUPS.map(([label, timings]) => {
         const group = cards.filter((c) => timings.includes(c.timing));
         if (!group.length) return null;
         return (
-          <div key={label}>
-            <p className={styles.eyebrow}><span>{label}</span></p>
-            {group.map((c) => (
-              <button key={c.id} className={styles.opt} disabled={w.pending || !who} onClick={() => record(c)}>
-                <span style={{ display: "grid", textAlign: "left", gap: 2 }}><b>{c.name}</b><span className={styles.sub}>{c.description}</span></span>
-              </button>
-            ))}
+          <div key={label} style={{ display: "grid", gap: 6 }}>
+            <p className={kit.eyebrow}><span>{label}</span></p>
+            <Rows>
+              {group.map((c) => (
+                <RowAction key={c.id} verb="Record" disabled={w.pending || !who} onClick={() => record(c)} title={c.name} detail={c.description} />
+              ))}
+            </Rows>
           </div>
         );
       })}
-      <p className={styles.sub}>
+      <p className={kit.sub}>
         Cards that are an ACTION are recorded as a component action. Assassinate Representative and Ancient Burial Sites name another player, so they stay on the table screen.
       </p>
-    </SheetFrame>
+    </KitSheet>
   );
 }

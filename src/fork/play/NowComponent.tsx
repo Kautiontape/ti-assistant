@@ -7,8 +7,8 @@ import { useActionCards, useComponents, useCurrentTurn, useLeaders, usePlanets, 
 import { getLogEntries } from "../../util/actionLog";
 import { Events } from "../../util/api/events";
 import { hasTech } from "../../util/api/techs";
-import styles from "./play.module.scss";
-import { cx, SheetFrame, type Ctx } from "./ui";
+import type { Ctx } from "./ui";
+import { Button, kit, RowAction, Rows, Sheet as KitSheet } from "../ui/kit";
 
 // Upstream normalises names before sending them (ComponentAction.tsx, selectComponent).
 const normalise = (name: string) => name.replace(/\./g, "").replace(/,/g, "").replace(/ Ω/g, "");
@@ -75,22 +75,22 @@ export function ComponentControls({ active, ctx }: { active: FactionId; ctx: Ctx
   const usable = useUsableComponents(active, factions);
   if (!played) {
     return (
-      <button className={cx(styles.btn, styles.primary, styles.block)} disabled={w.pending} onClick={() => open({ kind: "component", faction: active })}>
-        Which component?<small>Ability, tech, leader, relic, promissory note or card</small>
-      </button>
+      <Button kind="primary" block disabled={w.pending} onClick={() => open({ kind: "component", faction: active })} detail="Ability, tech, leader, relic, promissory note or card">
+        Which component?
+      </Button>
     );
   }
   const info = usable.find((u) => normalise(u.name) === played);
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div className={styles.row}>
-        <span className={styles.grow}><b>{info?.name ?? played}</b></span>
-        <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending}
-          onClick={() => w.write([{ action: "UNPLAY_COMPONENT", event: { name: played, factionId: active } } as unknown as GameUpdateData], `${short(active)} took back ${info?.name ?? played}`, active)}>Take it back</button>
+      <div className={kit.line}>
+        <span className={kit.grow}><b>{info?.name ?? played}</b></span>
+        <Button size="small" disabled={w.pending}
+          onClick={() => w.write([{ action: "UNPLAY_COMPONENT", event: { name: played, factionId: active } } as unknown as GameUpdateData], `${short(active)} took back ${info?.name ?? played}`, active)}>Take it back</Button>
       </div>
-      {info?.description ? <p className={styles.sub} style={{ whiteSpace: "pre-line", margin: 0 }}>{info.description}</p> : null}
-      {RESEARCH.has(played) ? <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => open({ kind: "research", faction: active })}>Record the technology</button> : null}
-      {RELIC.has(played) ? <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => open({ kind: "relic", faction: active })}>Record the relic</button> : null}
+      {info?.description ? <p className={kit.sub} style={{ whiteSpace: "pre-line", margin: 0 }}>{info.description}</p> : null}
+      {RESEARCH.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "research", faction: active })}>Record the technology</Button> : null}
+      {RELIC.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "relic", faction: active })}>Record the relic</Button> : null}
     </div>
   );
 }
@@ -104,27 +104,25 @@ export function ComponentSheet({ faction, close, ctx }: { faction: FactionId; cl
     if (await w.write([{ action: "PLAY_COMPONENT", event: { name: normalise(u.name), factionId: faction } } as unknown as GameUpdateData], `${short(faction)} used ${u.name}`, faction)) close();
   };
   return (
-    <SheetFrame title={`${short(faction)}'s component action`} close={close}>
-      <input className={styles.search} type="search" placeholder="Find a component" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a component" />
+    <KitSheet title={`${short(faction)}'s component action`} close={close}>
+      <input className={kit.search} type="search" placeholder="Find a component" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a component" />
       {GROUPS.map((g) => {
         const list = shown.filter((u) => u.group === g);
         if (!list.length) return null;
         return (
-          <div key={g}>
-            <p className={styles.eyebrow}><span>{g}</span></p>
-            {list.map((u) => (
-              <button key={u.name} className={styles.opt} disabled={w.pending} onClick={() => play(u)} style={u.faded ? { opacity: 0.6 } : undefined}>
-                <span style={{ display: "grid", textAlign: "left", gap: 2 }}>
-                  <b>{u.name}</b>
-                  {u.faded ? <span className={styles.sub}>{g === "Action cards" ? "Discarded earlier" : "Exhausted"}</span> : null}
-                </span>
-              </button>
-            ))}
+          <div key={g} style={{ display: "grid", gap: 6 }}>
+            <p className={kit.eyebrow}><span>{g}</span></p>
+            <Rows>
+              {list.map((u) => (
+                <RowAction key={u.name} verb="Use" disabled={w.pending} onClick={() => play(u)} title={u.name}
+                  detail={u.faded ? (g === "Action cards" ? "Discarded earlier" : "Exhausted") : undefined} />
+              ))}
+            </Rows>
           </div>
         );
       })}
-      {!shown.length ? <p className={styles.sub}>Nothing matches.</p> : null}
-    </SheetFrame>
+      {!shown.length ? <p className={kit.sub}>Nothing matches.</p> : null}
+    </KitSheet>
   );
 }
 
@@ -133,16 +131,18 @@ export function RelicSheet({ faction, close, ctx }: { faction: FactionId; close:
   const relics = useRelics();
   const list = Object.values(relics).filter((r): r is Relic => !!r && !r.owner).sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <SheetFrame title={`${short(faction)} gains a relic`} close={close}>
-      <p className={styles.sub}>Draw the top relic, then find it here.</p>
-      {list.map((r) => (
-        <button key={r.id} className={styles.opt} disabled={w.pending} onClick={async () => {
-          if (await w.write([Events.GainRelicEvent(faction, r.id)], `${short(faction)} gained ${r.name}`, faction)) close();
-        }}>
-          <span style={{ display: "grid", textAlign: "left", gap: 2 }}><b>{r.name}</b><span className={styles.sub}>{r.description}</span></span>
-        </button>
-      ))}
-      {!list.length ? <p className={styles.sub}>Every relic has an owner.</p> : null}
-    </SheetFrame>
+    <KitSheet title={`${short(faction)} gains a relic`} close={close}>
+      <p className={kit.sub}>Draw the top relic, then find it here.</p>
+      {list.length ? (
+        <Rows>
+          {list.map((r) => (
+            <RowAction key={r.id} verb="Gain" disabled={w.pending} title={r.name} detail={r.description}
+              onClick={async () => {
+                if (await w.write([Events.GainRelicEvent(faction, r.id)], `${short(faction)} gained ${r.name}`, faction)) close();
+              }} />
+          ))}
+        </Rows>
+      ) : <p className={kit.sub}>Every relic has an owner.</p>}
+    </KitSheet>
   );
 }

@@ -6,6 +6,7 @@
 .root {
   .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
+  // ---------- Frame: top bar, columns, tabs ----------
   .top {
     position: sticky; top: 0; z-index: 5;
     display: flex; align-items: center; gap: 10px;
@@ -13,13 +14,13 @@
     background: var(--bg); border-bottom: 1px solid var(--line);
   }
   .phase { display: grid; line-height: 1.15; }
-  .phaseName { font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  .round { font-size: 0.74rem; color: var(--muted); }
+  .phaseName { font-family: var(--display); font-size: calc(var(--fs) * 0.74); letter-spacing: 0.08em; text-transform: uppercase; }
+  .round { font-size: calc(var(--fs) * 0.74); color: var(--muted); }
   .turn { flex: 1; min-width: 0; display: flex; justify-content: center; }
   .seatBtn {
     min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 10px 0 6px;
     border-radius: 999px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; text-align: left; line-height: 1.1;
-    small { display: block; font-size: 0.68rem; color: var(--muted); }
+    small { display: block; font-size: calc(var(--fs) * 0.68); color: var(--muted); }
   }
 
   .main {
@@ -28,158 +29,77 @@
     width: 100%; max-width: 720px; margin: 0 auto;
   }
   .col { display: grid; gap: 14px; align-content: start; min-width: 0; }
-  // A sheet docked beside the screen (kit .dock) takes the right-hand column.
-  &[data-docked] .main { max-width: none; margin: 0; padding-right: calc(var(--dock-w) + var(--gutter)); }
   @media (min-width: 760px) {
     .split { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; max-width: 1180px; }
   }
+  // A sheet docked beside the screen (kit .dock) takes the right-hand column.
+  &[data-docked] .main { max-width: none; margin: 0; padding-right: calc(var(--dock-w) + var(--gutter)); }
 
   .tabs {
     position: fixed; z-index: 6; left: 0; right: 0; bottom: 0;
     display: grid; grid-template-columns: repeat(4, 1fr);
     background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px);
-    button { min-height: var(--tabs-h); border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 0.85rem; text-align: center; }
+    button { min-height: var(--tabs-h); border: 0; background: none; cursor: pointer; color: var(--muted); font-size: calc(var(--fs) * 0.85); text-align: center; }
     button[aria-current="page"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 3px 0 var(--accent); }
   }
 
-  .card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
-    display: grid; gap: 10px; min-width: 0;
-  }
+  // The card for whoever a phase is about, edged in their colour (--c).
   .hero { border-color: color-mix(in oklch, var(--c, var(--accent)) 55%, var(--line)); box-shadow: inset 4px 0 0 var(--c, var(--accent)); }
-  .eyebrow {
-    font-family: var(--display); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
-    margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  }
-  .title { margin: 0; font-size: 1.12rem; line-height: 1.25; text-wrap: balance; }
-  .sub { color: var(--muted); font-size: 0.9rem; margin: 0; }
-  .row { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .grow { flex: 1; min-width: 0; }
   .list {
     display: grid; margin: 0; padding: 0; list-style: none;
     li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 0; border-top: 1px solid var(--line); min-width: 0; }
     li:first-child { border-top: 0; }
   }
-  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 0.76rem; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-  .pillOn { border-color: var(--accent); color: var(--accent); }
-  .pillNow { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
-
-  .btn {
-    min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--raise); cursor: pointer;
-    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; text-align: center;
-    &:disabled { opacity: 0.45; cursor: not-allowed; }
-    small { font-weight: 400; font-size: 0.78rem; opacity: 0.8; }
-  }
-  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .tall { min-height: 64px; font-size: 1.05rem; }
-  .block { width: 100%; }
-  .smallBtn { min-height: 44px; padding: 0 12px; font-size: 0.9rem; }
-  .help { border-style: dashed; color: var(--accent); background: none; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; .btn { min-height: 72px; } }
-  .stepper {
-    display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 10px;
-    button { min-height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--raise); font-size: 1.5rem; font-weight: 700; cursor: pointer; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    output { text-align: center; font-family: var(--mono); font-size: 2rem; font-variant-numeric: tabular-nums; }
-  }
-  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
-  // Draft (src/fork/draft): labelled steppers, slice cards and their tile art.
-  .field {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; border-top: 1px solid var(--line);
-    .stepper { grid-template-columns: 44px 4ch 44px; gap: 6px; button { min-height: 44px; font-size: 1.2rem; } b { text-align: center; } }
-  }
-  .opt[aria-pressed="true"] .meta { color: var(--accent); font-weight: 700; }
-  .slices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .slice {
-    display: grid; gap: 4px; justify-items: center; align-content: start; padding: 10px 8px; min-width: 0;
-    border-radius: 12px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; text-align: center;
-  }
-  .slice[data-taken] { opacity: 0.5; }
-  .sliceArt { position: relative; margin: 2px auto; img { position: absolute; } }
-  .hexHome {
-    position: absolute; display: grid; place-items: center; font-size: 0.62rem; color: var(--muted);
-    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: var(--line);
-  }
-  .item {
-    border-top: 1px solid var(--line);
-    summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
-    summary::-webkit-details-marker { display: none; }
-    p { margin: 0 0 10px; }
-  }
-  .textLink { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-weight: 700; }
-  .link { background: none; border: 0; min-height: 44px; padding: 0 4px; color: var(--accent); cursor: pointer; font-weight: 700; }
 
-  .chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
-  .chipName { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .chipPlayer { color: var(--muted); white-space: nowrap; }
-  .sw {
-    flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-    background: oklch(0.14 0.01 252); box-shadow: inset 0 0 0 3px var(--c, var(--line));
-  }
-  .swSmall { width: 22px; height: 22px; box-shadow: inset 0 0 0 2.5px var(--c, var(--line)); }
-  .swLarge { width: 42px; height: 42px; box-shadow: inset 0 0 0 4px var(--c, var(--line)); }
-
-  .raceRow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; border: 0; background: none; padding: 0; cursor: pointer; text-align: left; }
-  .vp { font-family: var(--mono); font-weight: 600; font-size: 1.15rem; min-width: 2ch; text-align: right; }
+  // ---------- Score race ----------
+  .vp { font-family: var(--mono); font-weight: 600; font-size: calc(var(--fs) * 1.15); min-width: 2ch; text-align: right; }
   .bar { position: relative; height: 8px; border-radius: 99px; background: var(--raise); overflow: hidden; i { position: absolute; inset: 0 auto 0 0; background: var(--c, var(--accent)); border-radius: 99px; } }
-  .srcs { display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.74rem; color: var(--muted); }
+  .srcs { display: flex; flex-wrap: wrap; gap: 4px; font-size: calc(var(--fs) * 0.74); color: var(--muted); }
 
-  .sc {
-    display: grid; grid-template-columns: 1.8ch minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%;
-    min-height: 44px; border: 0; border-top: 1px solid var(--line); background: none; padding: 4px 0; text-align: left;
-    &:first-child { border-top: 0; }
-  }
-  .scUsed .scName { color: var(--faint); }
-
+  // ---------- Log ----------
   .feed {
     display: grid; margin: 0; padding: 0; list-style: none;
     li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); }
     li:first-child { border-top: 0; }
   }
-  .feedTime { font-size: 0.74rem; color: var(--faint); font-family: var(--mono); }
-  .feedBy { display: block; font-size: 0.76rem; color: var(--accent); }
-  .feedHead { grid-column: 1 / -1; font-family: var(--display); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .feedTime { font-size: calc(var(--fs) * 0.74); color: var(--faint); font-family: var(--mono); }
+  .feedBy { display: block; font-size: calc(var(--fs) * 0.76); color: var(--accent); }
 
-  .scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
-  .sheet {
-    width: 100%; max-width: 640px; max-height: 88vh; overflow: auto; background: var(--panel);
-    border-radius: 18px 18px 0 0; border: 1px solid var(--line); padding: 10px var(--gutter) calc(18px + env(safe-area-inset-bottom, 0px));
-    box-shadow: var(--shadow); display: grid; gap: 12px;
-    header { display: flex; align-items: center; gap: 10px; }
-    h2 { flex: 1; margin: 0; font-size: 1.08rem; }
-  }
-  .close { min-width: 44px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: none; cursor: pointer; }
-  .search { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 0 14px; font: inherit; }
-  .opt {
-    display: flex; align-items: center; gap: 10px; min-height: 52px; width: 100%; text-align: left;
-    border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; padding: 6px 2px;
-    &:first-child { border-top: 0; }
-    &:disabled { opacity: 0.45; }
-  }
-  .meta { margin-left: auto; color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
-  .seg {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    button { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; font-size: 0.88rem; }
-    button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 700; }
-  }
+  // ---------- Map ----------
   // Upstream's GameMap places tiles by percentage, so it needs a square box.
   .board { width: 100%; max-width: 640px; aspect-ratio: 1; margin: 0 auto; overflow: auto; border-radius: 12px; background: var(--bg); overscroll-behavior: contain; }
   .boardInner { position: relative; width: 100%; height: 100%; cursor: pointer; }
   .boardZoom { width: 200%; height: 200%; }
-  .pick {
-    display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    button { min-height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
-    button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+
+  // ---------- Draft (src/fork/draft): labelled steppers, slice cards and their tile art ----------
+  .field {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; border-top: 1px solid var(--line);
   }
-  .toast {
-    position: fixed; z-index: 15; left: var(--gutter); right: var(--gutter);
-    bottom: calc(var(--tabs-h) + 12px + env(safe-area-inset-bottom, 0px));
-    max-width: 560px; margin: 0 auto; background: var(--ink); color: var(--bg); border-radius: 14px;
-    padding: 6px 6px 6px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow);
-    span { flex: 1; min-width: 0; }
-    button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 0; background: color-mix(in oklch, var(--bg) 18%, var(--ink)); color: var(--bg); font-weight: 700; cursor: pointer; }
+  .stepper {
+    display: grid; grid-template-columns: 44px 4ch 44px; align-items: center; gap: 6px;
+    button { display: grid; place-items: center; min-height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise); font-size: calc(var(--fs) * 1.2); font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    b { text-align: center; }
   }
-  .toastError { outline: 3px solid var(--accent); }
-  .banner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent); }
+  .slices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .slice {
+    display: grid; gap: 4px; justify-items: center; align-content: start; padding: 10px 8px; min-width: 0;
+    border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise); cursor: pointer; text-align: center; color: var(--ink);
+    &:hover { border-color: var(--accent); }
+  }
+  .slice[data-taken] { opacity: 0.5; }
+  .sliceArt { position: relative; margin: 2px auto; img { position: absolute; } }
+  .hexHome {
+    position: absolute; display: grid; place-items: center; font-size: calc(var(--fs) * 0.62); color: var(--muted);
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: var(--line);
+  }
+  .item {
+    border-top: 1px solid var(--line);
+    summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; font-weight: 700; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "›"; margin-left: auto; color: var(--muted); transition: transform 0.15s; }
+    &[open] summary::after { transform: rotate(90deg); }
+    p { margin: 0 0 10px; }
+  }
 }

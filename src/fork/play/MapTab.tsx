@@ -16,7 +16,8 @@ import { applyAllPlanetAttachments, fracturePlanetsOwned } from "../../util/plan
 import { Optional } from "../../util/types/types";
 import { attachableTo, claimablePlanets, planetsInSystem } from "./logic";
 import styles from "./play.module.scss";
-import { Chip, cx, SheetFrame, type Ctx } from "./ui";
+import type { Ctx } from "./ui";
+import { Button, Chip, Choices, Cite, cx, kit, RowAction, RowLink, Rows, Sheet as KitSheet } from "../ui/kit";
 
 const OVERLAYS: [OverlayDetails, string][] = [["OWNERS", "Owners"], ["NONE", "Tiles"], ["TYPES", "Types"], ["TECH_SKIPS", "Skips"], ["ATTACHMENTS", "Attachments"]];
 
@@ -52,9 +53,9 @@ export default function MapTab(ctx: Ctx) {
 
   if (!mapString) {
     return (
-      <section className={styles.card} aria-label="Map">
-        <p className={styles.eyebrow}><span>Map</span></p>
-        <p className={styles.sub}>This game has no map string, so there's no map to show. It's entered when the game is set up.</p>
+      <section className={kit.card} aria-label="Map">
+        <p className={kit.eyebrow}><span>Map</span></p>
+        <p className={kit.sub}>This game has no map string, so there's no map to show. It's entered when the game is set up.</p>
       </section>
     );
   }
@@ -63,11 +64,9 @@ export default function MapTab(ctx: Ctx) {
   const found = q ? Object.values(planets).filter((p): p is Planet => !!p && p.system !== undefined && p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 12) : [];
   return (
     <>
-      <section className={styles.card} aria-label="Map">
-        <p className={styles.eyebrow}><span>Map</span><span>Tap a system</span></p>
-        <div className={styles.seg} role="group" aria-label="Show on the map">
-          {OVERLAYS.map(([id, label]) => <button key={id} aria-pressed={overlay === id} onClick={() => setOverlay(id)}>{label}</button>)}
-        </div>
+      <section className={kit.card} aria-label="Map">
+        <p className={kit.eyebrow}><span>Map</span><span>Tap a system</span></p>
+        <Choices label="Show on the map" hideLabel value={overlay} onChange={setOverlay} options={OVERLAYS.map(([id, label]) => ({ value: id, label }))} />
         <div ref={box} className={styles.board}>
           <div className={cx(styles.boardInner, zoom && styles.boardZoom)}
             onClick={(e) => { const s = systemAt(e.target, e.currentTarget); if (s) open({ kind: "system", system: s }); }}>
@@ -85,16 +84,16 @@ export default function MapTab(ctx: Ctx) {
             />
           </div>
         </div>
-        <button className={cx(styles.btn, styles.block)} onClick={() => setZoom(!zoom)}>{zoom ? "Fit the map" : "Zoom in"}</button>
+        <Button block onClick={() => setZoom(!zoom)}>{zoom ? "Fit the map" : "Zoom in"}</Button>
       </section>
-      <section className={styles.card} aria-label="Find a planet">
-        <input className={styles.search} type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
-        {found.map((p) => (
-          <button key={p.id} className={styles.opt} onClick={() => open({ kind: "system", system: String(p.system) })}>
-            <b>{p.name}</b><span className={styles.meta}>{p.owner ? ctx.short(p.owner) : "Nobody"}</span>
-          </button>
-        ))}
-        {q && !found.length ? <p className={styles.sub}>No planet matches.</p> : null}
+      <section className={kit.card} aria-label="Find a planet">
+        <input className={kit.search} type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
+        {found.length ? (
+          <Rows>
+            {found.map((p) => <RowLink key={p.id} onClick={() => open({ kind: "system", system: String(p.system) })} title={p.name} end={p.owner ? ctx.short(p.owner) : "Nobody"} />)}
+          </Rows>
+        ) : null}
+        {q && !found.length ? <p className={kit.sub}>No planet matches.</p> : null}
       </section>
     </>
   );
@@ -120,9 +119,9 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
   const takeable = taker ? claimablePlanets(planets, taker, currentTurn).map((p) => p.id) : [];
   const title = inSystem.length ? inSystem.map((p) => p.name).join(" · ") : `System ${system}`;
   return (
-    <SheetFrame title={title} close={close}>
-      <p className={styles.eyebrow}><span>System {system}</span><span>{wormholes.join(" · ")}</span></p>
-      {!inSystem.length ? <p className={styles.sub}>No planets in this system.</p> : null}
+    <KitSheet title={title} close={close} dock>
+      <p className={kit.eyebrow}><span>System {system}</span><span>{wormholes.join(" · ")}</span></p>
+      {!inSystem.length ? <p className={kit.sub}>No planets in this system.</p> : null}
       {inSystem.map((p) => {
         const facts = [
           p.types.map((t) => t.charAt(0) + t.slice(1).toLowerCase()).join(", "),
@@ -132,30 +131,26 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
           p.state === "PURGED" ? "Destroyed" : "",
         ].filter(Boolean);
         return (
-          <div key={p.id} className={styles.card} style={{ background: "var(--bg)" }}>
-            <div className={styles.row}>
-              <b className={styles.grow}>{p.name}</b>
-              <span className={styles.num}>{p.resources}/{p.influence}</span>
+          <div key={p.id} className={kit.section}>
+            <div className={kit.line}>
+              <b className={kit.grow}>{p.name}</b>
+              <span className={kit.num}>{p.resources}/{p.influence}</span>
             </div>
-            {facts.length ? <p className={styles.sub}>{facts.join(" · ")}</p> : null}
-            {p.ability ? <p className={styles.sub}>{p.ability}</p> : null}
-            <div className={styles.row}>
-              {p.owner ? (
-                <button className={styles.raceRow} onClick={() => open({ kind: "player", faction: p.owner as FactionId })}>
-                  <span className={styles.sub}>Owner</span><Chip faction={p.owner} factions={factions} short={short} small player={false} />
-                </button>
-              ) : <span className={styles.sub}>Nobody controls it.</span>}
-            </div>
+            {facts.length ? <p className={kit.sub}>{facts.join(" · ")}</p> : null}
+            {p.ability ? <p className={kit.sub}>{p.ability}</p> : null}
+            {p.owner ? (
+              <Rows><RowLink onClick={() => open({ kind: "player", faction: p.owner as FactionId })} lead={<span className={kit.sub}>Owner</span>} title={<Chip faction={p.owner} factions={factions} short={short} small player={false} />} /></Rows>
+            ) : <p className={kit.sub}>Nobody controls it.</p>}
             <Attachments planet={p} ctx={ctx} />
             {taker && takeable.includes(p.id) ? (
-              <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={async () => {
+              <Button kind="primary" block disabled={w.pending} onClick={async () => {
                 if (await w.write([Events.ClaimPlanetEvent(taker, p.id)], `${short(taker)} took control of ${p.name}${p.owner ? ` from ${short(p.owner)}` : ""}`, taker)) close();
-              }}>Take {p.name} for {short(taker)}</button>
+              }}>Take {p.name} for {short(taker)}</Button>
             ) : null}
           </div>
         );
       })}
-    </SheetFrame>
+    </KitSheet>
   );
 }
 
@@ -191,28 +186,29 @@ function Attachments({ planet, ctx }: { planet: Planet; ctx: Ctx }) {
   };
   if (!on.length && !attachableTo(planet, attachments).length) return null;
   return (
-    <div>
+    <div style={{ display: "grid", gap: 8 }}>
       {on.map((id) => {
         const a = attachments[id];
         return a ? (
-          <div key={id} className={styles.row}>
-            <span className={styles.grow}><b>{a.name}</b> <span className={styles.sub}>{effect(a)}</span></span>
-            <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => change(false, a)}>
+          <div key={id} className={kit.line}>
+            <span className={kit.grow}><Cite thing={{ kind: "attachment", id }}>{a.name}</Cite> <span className={kit.sub}>{effect(a)}</span></span>
+            <Button size="small" disabled={w.pending} onClick={() => change(false, a)}>
               {addedNow(a) ? `Take it back${addedNow(a)?.event.prevPlanet ? ` (returns to ${planets[addedNow(a)!.event.prevPlanet!]?.name})` : ""}` : "Remove"}
-            </button>
+            </Button>
           </div>
         ) : null;
       })}
       {!adding ? (
-        <button className={cx(styles.btn, styles.block)} onClick={() => setAdding(true)}>Add an attachment</button>
+        <Button block onClick={() => setAdding(true)}>Add an attachment</Button>
       ) : (
-        <div>
-          <p className={styles.eyebrow}><span>Attach to {planet.name}</span><button className={styles.link} onClick={() => setAdding(false)}>Cancel</button></p>
-          {list.map((a) => (
-            <button key={a.id} className={styles.opt} disabled={w.pending} onClick={() => change(true, a)}>
-              <b>{a.name}</b><span className={styles.meta}>{effect(a)}{elsewhere(a).map((x) => ` · moves from ${x.name}`).join("")}</span>
-            </button>
-          ))}
+        <div style={{ display: "grid", gap: 6 }}>
+          <p className={kit.eyebrow}><span>Attach to {planet.name}</span><Button kind="quiet" onClick={() => setAdding(false)}>Cancel</Button></p>
+          <Rows>
+            {list.map((a) => (
+              <RowAction key={a.id} verb="Attach" disabled={w.pending} onClick={() => change(true, a)} title={a.name}
+                detail={[effect(a), ...elsewhere(a).map((x) => `moves from ${x.name}`)].filter(Boolean).join(" · ")} />
+            ))}
+          </Rows>
         </div>
       )}
     </div>

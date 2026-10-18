@@ -9,8 +9,7 @@ import GameMap from "../../components/Map/GameMap";
 import { getDefaultMapString, getFactionSystemNumber } from "../../util/map";
 import { Optional } from "../../util/types/types";
 import styles from "../play/play.module.scss";
-import { cx, SheetFrame } from "../play/ui";
-import { kit } from "../ui/kit";
+import { Button, Choices, cx, kit, RowLink, Rows, Sheet as KitSheet, Tag, rootAttrs, useDevicePrefs } from "../ui/kit";
 import { buildMapString, holdings, newSeed, pickerAt, pickFactions, sliceStats, toPixel, wedges, type Draft, type PickKind, type TileInfo, type Wedges } from "./milty";
 import { draftableFactions, makeSlices } from "./NewDraft";
 import { useBase, useDraft, useDraftApi } from "./useDraft";
@@ -32,29 +31,31 @@ function useMe(id: string) {
 
 export default function DraftApp({ id }: { id: string }) {
   const { draft, missing, error } = useDraft(id);
+  const { prefs } = useDevicePrefs();
   if (error) {
     return (
-      <div className={cx(kit.root, styles.root)}><main className={styles.main}>
-        <section className={styles.card}><h2 className={styles.title}>The draft couldn't be read</h2>
-          <p className={styles.sub}>The server refused to send it. On a new install this usually means the Firestore rules for drafts haven't been deployed yet (docs/ktn/ci-cd.md).</p>
-          <Link className={cx(styles.btn, styles.block)} href="/draft">Make or join a draft</Link></section>
+      <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}><main className={styles.main}>
+        <section className={kit.card}><h2 className={kit.title}>The draft couldn't be read</h2>
+          <p className={kit.sub}>The server refused to send it. On a new install this usually means the Firestore rules for drafts haven't been deployed yet (docs/ktn/ci-cd.md).</p>
+          <Rows><RowLink href="/draft" title="Make or join a draft" /></Rows></section>
       </main></div>
     );
   }
   if (missing) {
     return (
-      <div className={cx(kit.root, styles.root)}><main className={styles.main}>
-        <section className={styles.card}><h2 className={styles.title}>No draft with the code {id}</h2>
-          <Link className={cx(styles.btn, styles.block)} href="/draft">Make or join a draft</Link></section>
+      <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}><main className={styles.main}>
+        <section className={kit.card}><h2 className={kit.title}>No draft with the code {id}</h2>
+          <Rows><RowLink href="/draft" title="Make or join a draft" /></Rows></section>
       </main></div>
     );
   }
-  if (!draft) return <div className={cx(kit.root, styles.root)}><main className={styles.main}><p className={styles.sub}>Loading the draft…</p></main></div>;
+  if (!draft) return <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}><main className={styles.main}><p className={kit.sub}>Loading the draft…</p></main></div>;
   return <Live draft={draft} />;
 }
 
 function Live({ draft: d }: { draft: Draft }) {
   const router = useRouter();
+  const { prefs } = useDevicePrefs();
   const base = useBase();
   const api = useDraftApi(d.id);
   const [me, setMe, meLoaded] = useMe(d.id);
@@ -101,13 +102,13 @@ function Live({ draft: d }: { draft: Draft }) {
   const need = acting !== undefined ? (["slice", "faction", "position"] as PickKind[]).filter((k) => holdings(d.picks, acting)[k] === undefined) : [];
 
   return (
-    <div className={cx(kit.root, styles.root)}>
+    <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}>
       <header className={styles.top}>
         <div className={styles.phase}>
           <span className={styles.phaseName}>Milty draft</span>
           <span className={styles.round}>{done ? "All picked" : `Pick ${d.picks.length + 1} of ${n * 3}`}</span>
         </div>
-        <div className={styles.turn}>{!done ? <span className={cx(styles.pill, styles.pillNow)}>Up: {nameOf(up)}</span> : null}</div>
+        <div className={styles.turn}>{!done ? <Tag tone="now">Up: {nameOf(up)}</Tag> : null}</div>
         <button className={styles.seatBtn} onClick={() => setSheet({ kind: "me" })} aria-label="Change who you are">
           <span><small>You</small><b>{me !== undefined ? nameOf(me) : "Watching"}</b></span>
         </button>
@@ -116,57 +117,55 @@ function Live({ draft: d }: { draft: Draft }) {
       <main className={cx(styles.main, styles.split)}>
         <div className={styles.col}>
           {d.gameId ? (
-            <section className={cx(styles.card, styles.hero)} aria-label="Game ready">
-              <p className={styles.eyebrow}><span>Draft done</span></p>
-              <h2 className={styles.title}>The game is ready</h2>
-              <p className={styles.sub}>Game code <b className={styles.num}>{d.gameId}</b></p>
-              <p className={styles.sub}>Setup (starting technologies and the like) happens on the table screen. Then everyone plays from their phone.</p>
-              <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} onClick={() => openGame(d.gameId!)}>Open the game{mine?.faction ? ` as ${fname(mine.faction)}` : ""}</button>
-              <Link className={cx(styles.btn, styles.block)} href={`/game/${d.gameId}/main`}>Open the table screen</Link>
+            <section className={cx(kit.card, styles.hero)} aria-label="Game ready">
+              <p className={kit.eyebrow}><span>Draft done</span></p>
+              <h2 className={kit.title}>The game is ready</h2>
+              <p className={kit.sub}>Game code <b className={kit.num}>{d.gameId}</b></p>
+              <p className={kit.sub}>Setup (starting technologies and the like) happens on the table screen. Then everyone plays from their phone.</p>
+              <Button kind="primary" size="tall" block onClick={() => openGame(d.gameId!)}>Open the game{mine?.faction ? ` as ${fname(mine.faction)}` : ""}</Button>
+              <Rows><RowLink href={`/game/${d.gameId}/main`} external title="Open the table screen" /></Rows>
             </section>
           ) : done ? (
-            <section className={cx(styles.card, styles.hero)} aria-label="Everyone has picked">
-              <p className={styles.eyebrow}><span>Draft done</span></p>
-              <h2 className={styles.title}>Everyone has picked</h2>
-              <p className={styles.sub}>Creating the game builds the map from the slices and seats everyone by position, speaker first.</p>
-              <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={api.pending} onClick={() => api.act({ action: "start" })}>{d.creating ? "Creating the game…" : "Create the game"}</button>
+            <section className={cx(kit.card, styles.hero)} aria-label="Everyone has picked">
+              <p className={kit.eyebrow}><span>Draft done</span></p>
+              <h2 className={kit.title}>Everyone has picked</h2>
+              <p className={kit.sub}>Creating the game builds the map from the slices and seats everyone by position, speaker first.</p>
+              <Button kind="primary" size="tall" block disabled={api.pending} onClick={() => api.act({ action: "start" })}>{d.creating ? "Creating the game…" : "Create the game"}</Button>
             </section>
           ) : acting !== undefined ? (
-            <section className={cx(styles.card, styles.hero)} aria-label="Your pick">
-              {acting !== me ? <div className={styles.banner}><span className={styles.grow}>You're picking for <b>{nameOf(acting)}</b>.</span><button className={cx(styles.btn, styles.smallBtn)} onClick={() => setHelping(undefined)}>Stop</button></div> : null}
-              <p className={styles.eyebrow}><span>{acting === me ? "Your pick" : `${nameOf(acting)}'s pick`}</span></p>
-              <h2 className={styles.title}>Take a {need.join(", a ").replace(/, a ([^,]*)$/, " or a $1")}</h2>
-              <div className={styles.seg} role="group" aria-label="What to pick">
-                {need.map((k) => <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{k === "slice" ? "Slices" : k === "faction" ? "Factions" : "Positions"}</button>)}
-              </div>
+            <section className={cx(kit.card, styles.hero)} aria-label="Your pick">
+              {acting !== me ? <div className={kit.banner}><span className={kit.grow}>You're picking for <b>{nameOf(acting)}</b>.</span><Button size="small" onClick={() => setHelping(undefined)}>Stop</Button></div> : null}
+              <p className={kit.eyebrow}><span>{acting === me ? "Your pick" : `${nameOf(acting)}'s pick`}</span></p>
+              <h2 className={kit.title}>Take a {need.join(", a ").replace(/, a ([^,]*)$/, " or a $1")}</h2>
+              <Choices label="What to pick" hideLabel value={view} onChange={setView}
+                options={need.map((k) => ({ value: k as View, label: k === "slice" ? "Slices" : k === "faction" ? "Factions" : "Positions" }))} />
             </section>
           ) : (
-            <section className={styles.card} aria-label="Up now">
-              <p className={styles.eyebrow}><span>Picking now</span></p>
-              <h2 className={styles.title}>{nameOf(up)}</h2>
-              <p className={styles.sub}>Then {nameOf(pickerAt(d.order, d.picks.length + 1))}.</p>
-              <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(up)}>Pick for {nameOf(up)}</button>
+            <section className={kit.card} aria-label="Up now">
+              <p className={kit.eyebrow}><span>Picking now</span></p>
+              <h2 className={kit.title}>{nameOf(up)}</h2>
+              <p className={kit.sub}>Then {nameOf(pickerAt(d.order, d.picks.length + 1))}.</p>
+              <Button forOther block onClick={() => setHelping(up)}>Pick for {nameOf(up)}</Button>
             </section>
           )}
 
-          <div className={styles.seg} role="group" aria-label="Show">
-            {(["slice", "faction", "position", "map"] as View[]).map((v) => <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "slice" ? "Slices" : v === "faction" ? "Factions" : v === "position" ? "Positions" : "Map"}</button>)}
-          </div>
+          <Choices label="Show" hideLabel value={view} onChange={setView}
+            options={(["slice", "faction", "position", "map"] as View[]).map((v) => ({ value: v, label: v === "slice" ? "Slices" : v === "faction" ? "Factions" : v === "position" ? "Positions" : "Map" }))} />
           {view === "slice" ? (
-            <section className={styles.card} aria-label="Slices">
-              <p className={styles.eyebrow}><span>Slices</span><span>Optimal res / inf</span></p>
+            <section className={kit.card} aria-label="Slices">
+              <p className={kit.eyebrow}><span>Slices</span><span>Optimal res / inf</span></p>
               <div className={styles.slices}>
                 {d.slices.map((tiles, i) => {
                   const owner = took("slice", i);
                   const st = sliceStats(tiles.map(base.info));
                   const homeFaction = owner !== undefined ? holdings(d.picks, owner).faction : undefined;
                   return (
-                    <button key={i} className={styles.slice} data-taken={owner !== undefined || undefined} onClick={() => setSheet({ kind: "slice", value: i })} aria-label={`Slice ${i + 1}`}>
-                      <b>Slice {i + 1}</b>
+                    <button key={i} className={styles.slice} data-taken={owner !== undefined || undefined} onClick={() => setSheet({ kind: "slice", value: i })} aria-label={`Slice ${i + 1}`} aria-haspopup="dialog">
+                      <b>Slice {i + 1} <span aria-hidden="true" style={{ color: "var(--muted)" }}>›</span></b>
                       <SliceArt tiles={tiles} w={w} size={22} home={homeFaction ? getFactionSystemNumber({ id: homeFaction as FactionId }) : undefined} />
-                      <span className={styles.num}>{st.optimal.resources} / {st.optimal.influence}</span>
-                      <span className={styles.sub} style={{ fontSize: "0.78rem" }}>{badges(st)}</span>
-                      {owner !== undefined ? <span className={styles.pill}>{nameOf(owner)}</span> : null}
+                      <span className={kit.num}>{st.optimal.resources} / {st.optimal.influence}</span>
+                      <span className={kit.sub} style={{ fontSize: "calc(var(--fs) * 0.78)" }}>{badges(st)}</span>
+                      {owner !== undefined ? <Tag>{nameOf(owner)}</Tag> : null}
                     </button>
                   );
                 })}
@@ -174,81 +173,75 @@ function Live({ draft: d }: { draft: Draft }) {
             </section>
           ) : null}
           {view === "faction" ? (
-            <section className={styles.card} aria-label="Factions">
-              <p className={styles.eyebrow}><span>Factions</span><span>{d.factions.length}</span></p>
-              <div>
+            <section className={kit.card} aria-label="Factions">
+              <p className={kit.eyebrow}><span>Factions</span><span>{d.factions.length}</span></p>
+              <Rows flush>
                 {d.factions.map((f) => {
                   const owner = took("faction", f);
                   return (
-                    <button key={f} className={styles.opt} disabled={owner !== undefined && acting !== undefined} onClick={() => setSheet({ kind: "faction", value: f })}>
-                      <FactionIcon factionId={f as FactionId} size={26} /><b>{base.factions[f]?.name ?? f}</b>
-                      <span className={styles.meta}>{owner !== undefined ? nameOf(owner) : ""}</span>
-                    </button>
+                    <RowLink key={f} disabled={owner !== undefined && acting !== undefined} onClick={() => setSheet({ kind: "faction", value: f })}
+                      lead={<FactionIcon factionId={f as FactionId} size={26} />} title={base.factions[f]?.name ?? f} end={owner !== undefined ? nameOf(owner) : undefined} />
                   );
                 })}
-              </div>
+              </Rows>
             </section>
           ) : null}
           {view === "position" ? (
-            <section className={styles.card} aria-label="Positions">
-              <p className={styles.eyebrow}><span>Positions</span><span>Speaker, then clockwise</span></p>
-              <div>
+            <section className={kit.card} aria-label="Positions">
+              <p className={kit.eyebrow}><span>Positions</span><span>Speaker, then clockwise</span></p>
+              <Rows flush>
                 {Array.from({ length: n }, (_, pos) => {
                   const owner = took("position", pos);
                   return (
-                    <button key={pos} className={styles.opt} disabled={owner !== undefined && acting !== undefined} onClick={() => setSheet({ kind: "position", value: pos })}>
-                      <b>{POSITIONS[pos]}</b><span className={styles.sub}>{pos === 0 ? "Speaker in round 1, seat at the top of the map" : `Seat ${pos + 1}, clockwise from the speaker`}</span>
-                      <span className={styles.meta}>{owner !== undefined ? nameOf(owner) : ""}</span>
-                    </button>
+                    <RowLink key={pos} disabled={owner !== undefined && acting !== undefined} onClick={() => setSheet({ kind: "position", value: pos })}
+                      title={POSITIONS[pos]} detail={pos === 0 ? "Speaker in round 1, seat at the top of the map" : `Seat ${pos + 1}, clockwise from the speaker`}
+                      end={owner !== undefined ? nameOf(owner) : undefined} />
                   );
                 })}
-              </div>
+              </Rows>
             </section>
           ) : null}
           {view === "map" ? <MapPreview d={d} w={w} fname={fname} nameOf={nameOf} /> : null}
         </div>
 
         <div className={styles.col}>
-          <section className={styles.card} aria-label="Picks">
-            <p className={styles.eyebrow}><span>Draft order</span><span>Snake</span></p>
+          <section className={kit.card} aria-label="Picks">
+            <p className={kit.eyebrow}><span>Draft order</span><span>Snake</span></p>
             <ul className={styles.list}>
               {d.order.map((p, k) => {
                 const h = holdings(d.picks, p);
                 return (
                   <li key={p}>
-                    <span className={cx(styles.num, styles.sub)}>{k + 1}</span>
-                    <span className={styles.grow}><b>{nameOf(p)}</b>{p === me ? <span className={styles.sub}> (you)</span> : null}<br />
-                      <span className={styles.sub}>{[h.slice !== undefined ? `Slice ${h.slice + 1}` : null, h.faction ? fname(h.faction) : null, h.position !== undefined ? POSITIONS[h.position] : null].filter(Boolean).join(" · ") || "Nothing yet"}</span>
+                    <span className={cx(kit.num, kit.sub)}>{k + 1}</span>
+                    <span className={kit.grow}><b>{nameOf(p)}</b>{p === me ? <span className={kit.sub}> (you)</span> : null}<br />
+                      <span className={kit.sub}>{[h.slice !== undefined ? `Slice ${h.slice + 1}` : null, h.faction ? fname(h.faction) : null, h.position !== undefined ? POSITIONS[h.position] : null].filter(Boolean).join(" · ") || "Nothing yet"}</span>
                     </span>
-                    {p === up ? <span className={cx(styles.pill, styles.pillNow)}>Picking</span> : null}
+                    {p === up ? <Tag tone="now">Picking</Tag> : null}
                   </li>
                 );
               })}
             </ul>
             {last && !d.gameId ? (
-              <button className={cx(styles.btn, styles.block)} disabled={api.pending || !!d.creating} onClick={() => api.act({ action: "undo", seen: d.picks.length }, `Undid: ${nameOf(last.player)} took ${describe(last.kind, last.value)}`)}>
+              <Button block disabled={api.pending || !!d.creating} onClick={() => api.act({ action: "undo", seen: d.picks.length }, `Undid: ${nameOf(last.player)} took ${describe(last.kind, last.value)}`)}>
                 Undo: {nameOf(last.player)} took {describe(last.kind, last.value)}
-              </button>
+              </Button>
             ) : null}
-            {!d.picks.length ? <button className={cx(styles.btn, styles.block)} disabled={api.pending} onClick={reroll}>New slices and factions<small>Only before the first pick</small></button> : null}
-            <p className={styles.sub}>Draft code <b className={styles.num}>{d.id}</b>. Others join at /draft with this code.</p>
+            {!d.picks.length ? <Button block disabled={api.pending} onClick={reroll} detail="Only before the first pick">New slices and factions</Button> : null}
+            <p className={kit.sub}>Draft code <b className={kit.num}>{d.id}</b>. Others join at /draft with this code.</p>
           </section>
         </div>
       </main>
 
       {api.toast ? (
-        <div className={cx(styles.toast, api.toast.error && styles.toastError)} role="status"><span>{api.toast.text}</span></div>
+        <div className={cx(kit.toast, api.toast.error && kit.toastError)} role="status"><span>{api.toast.text}</span></div>
       ) : null}
 
       {sheet?.kind === "me" ? (
-        <SheetFrame title="Who's holding this phone?" close={() => setSheet(undefined)}>
-          <div>
-            {d.players.map((_, p) => (
-              <button key={p} className={styles.opt} aria-pressed={me === p} onClick={() => { setMe(p); setSheet(undefined); }}><b>{nameOf(p)}</b><span className={styles.meta}>{me === p ? "You" : ""}</span></button>
-            ))}
-            <button className={styles.opt} onClick={() => { setMe(undefined); setSheet(undefined); }}><b>Just watching</b></button>
-          </div>
-        </SheetFrame>
+        <KitSheet title="Who's holding this phone?" close={() => setSheet(undefined)}>
+          <Choices list label="Who's holding this phone?" hideLabel value={me === undefined ? "watching" : String(me)}
+            onChange={(v) => { setMe(v === "watching" ? undefined : Number(v)); setSheet(undefined); }}
+            options={[...d.players.map((_, p) => ({ value: String(p), label: nameOf(p) })), { value: "watching", label: "Nobody: just watching" }]} />
+        </KitSheet>
       ) : sheet ? (
         <PickSheet d={d} sheet={sheet} w={w} acting={acting} owner={took(sheet.kind, sheet.value)} nameOf={nameOf} fname={fname} pending={api.pending}
           close={() => setSheet(undefined)} pick={() => pick(sheet.kind, sheet.value)} />
@@ -296,37 +289,37 @@ function PickSheet({ d, sheet, w, acting, owner, nameOf, fname, pending, close, 
   const sentence = acting === undefined ? "" : kind === "slice" ? `${nameOf(acting)} takes Slice ${Number(value) + 1}?` : kind === "faction" ? `${nameOf(acting)} plays ${fname(String(value))}?` : Number(value) === 0 ? `${nameOf(acting)} takes the speaker position?` : `${nameOf(acting)} sits ${POSITIONS[Number(value)]}, clockwise from the speaker?`;
   const tiles = kind === "slice" ? d.slices[Number(value)]! : [];
   return (
-    <SheetFrame title={title} close={close}>
+    <KitSheet title={title} close={close}>
       {kind === "slice" ? (
         <>
           <SliceArt tiles={tiles} w={w} size={40} />
           <ul className={styles.list}>
             {tiles.map((t) => <TileRow key={t} info={base.info(t)} planets={(base.systems[t]?.planets ?? []).map((pid) => base.planets[pid]).filter((p): p is NonNullable<typeof p> => !!p)} />)}
           </ul>
-          <p className={styles.sub}>Optimal {sliceStats(tiles.map(base.info)).optimal.resources} resources, {sliceStats(tiles.map(base.info)).optimal.influence} influence. Total {sliceStats(tiles.map(base.info)).total.resources} / {sliceStats(tiles.map(base.info)).total.influence}.</p>
+          <p className={kit.sub}>Optimal {sliceStats(tiles.map(base.info)).optimal.resources} resources, {sliceStats(tiles.map(base.info)).optimal.influence} influence. Total {sliceStats(tiles.map(base.info)).total.resources} / {sliceStats(tiles.map(base.info)).total.influence}.</p>
         </>
       ) : kind === "faction" ? (
-        <div className={styles.row}><FactionIcon factionId={String(value) as FactionId} size={40} /><span className={styles.sub}>{base.factions[String(value)]?.expansion === "BASE" ? "Base game" : base.factions[String(value)]?.expansion}</span></div>
+        <div className={kit.line}><FactionIcon factionId={String(value) as FactionId} size={40} /><span className={kit.sub}>{base.factions[String(value)]?.expansion === "BASE" ? "Base game" : base.factions[String(value)]?.expansion}</span></div>
       ) : null}
-      {owner !== undefined ? <p className={styles.sub}>{nameOf(owner)} has this.</p>
+      {owner !== undefined ? <p className={kit.sub}>{nameOf(owner)} has this.</p>
         : can ? (
           <>
-            <p className={styles.title} style={{ fontWeight: 400 }}>{sentence}</p>
-            <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={pending} onClick={pick}>Take it</button>
+            <p className={kit.confirm}>{sentence}</p>
+            <Button kind="primary" size="tall" block disabled={pending} onClick={pick}>Take it</Button>
           </>
-        ) : acting !== undefined ? <p className={styles.sub}>{nameOf(acting)} already has a {kind}.</p> : null}
-    </SheetFrame>
+        ) : acting !== undefined ? <p className={kit.sub}>{nameOf(acting)} already has a {kind}.</p> : null}
+    </KitSheet>
   );
 }
 
 function TileRow({ info, planets }: { info: TileInfo; planets: { name: string; resources: number; influence: number; attributes?: string[] }[] }) {
   return (
     <li>
-      <span className={styles.grow}>
+      <span className={kit.grow}>
         <b>{planets.map((p) => p.name).join(", ") || (info.wormholes.length ? `${info.wormholes.map((x) => x.toLowerCase()).join(" and ")} wormhole` : "No planets")}</b>
-        <br /><span className={styles.sub}>{[info.red ? (info.anomaly ? "Red, anomaly" : "Red") : "Blue", info.wormholes.length && planets.length ? `${info.wormholes.map((x) => x.toLowerCase()).join(", ")} wormhole` : "", info.skips.length ? `${info.skips.join(", ")} skip` : "", info.legendary ? "legendary" : "", `tile ${info.id}`].filter(Boolean).join(" · ")}</span>
+        <br /><span className={kit.sub}>{[info.red ? (info.anomaly ? "Red, anomaly" : "Red") : "Blue", info.wormholes.length && planets.length ? `${info.wormholes.map((x) => x.toLowerCase()).join(", ")} wormhole` : "", info.skips.length ? `${info.skips.join(", ")} skip` : "", info.legendary ? "legendary" : "", `tile ${info.id}`].filter(Boolean).join(" · ")}</span>
       </span>
-      <span className={styles.num}>{planets.length ? `${info.total.resources}/${info.total.influence}` : ""}</span>
+      <span className={kit.num}>{planets.length ? `${info.total.resources}/${info.total.influence}` : ""}</span>
     </li>
   );
 }
@@ -340,14 +333,14 @@ function MapPreview({ d, w, fname, nameOf }: { d: Draft; w: Wedges; fname: (f: s
   const factionAt = seated.map((p) => (p >= 0 ? holdings(d.picks, p).faction : undefined));
   const mapString = withSlices.split(" ").map((t) => { const m = t.match(/^P(\d)$/); if (!m) return t; const f = factionAt[Number(m[1]) - 1]; return f ? getFactionSystemNumber({ id: f as FactionId }) : "0"; }).join(" ");
   return (
-    <section className={styles.card} aria-label="Map">
-      <p className={styles.eyebrow}><span>Map so far</span><span>Speaker at the top</span></p>
+    <section className={kit.card} aria-label="Map">
+      <p className={kit.eyebrow}><span>Map so far</span><span>Speaker at the top</span></p>
       <div className={styles.board}><div className={styles.boardInner} style={{ cursor: "default" }}>
         <GameMap mapString={mapString} mapStyle="standard" factions={factionAt.map((f) => (f ? { id: f as FactionId } : {}))} expansions={d.expansions as Expansion[]} hideLegend hideFracture />
       </div></div>
       <ul className={styles.list}>
         {seated.map((p, pos) => (
-          <li key={pos}><b>{POSITIONS[pos]}</b><span className={styles.meta}>{p >= 0 ? [nameOf(p), holdings(d.picks, p).faction ? fname(holdings(d.picks, p).faction!) : null, holdings(d.picks, p).slice !== undefined ? `Slice ${holdings(d.picks, p).slice! + 1}` : null].filter(Boolean).join(" · ") : "Open"}</span></li>
+          <li key={pos}><b className={kit.grow}>{POSITIONS[pos]}</b><span className={kit.sub}>{p >= 0 ? [nameOf(p), holdings(d.picks, p).faction ? fname(holdings(d.picks, p).faction!) : null, holdings(d.picks, p).slice !== undefined ? `Slice ${holdings(d.picks, p).slice! + 1}` : null].filter(Boolean).join(" · ") : "Open"}</span></li>
         ))}
       </ul>
     </section>

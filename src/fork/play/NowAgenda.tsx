@@ -2,7 +2,6 @@
 // Now, agenda phase: reveal, start voting, vote (capped at what's available),
 // resolve, twice, then the next round. Vote counts, outcomes and the tally come
 // from upstream's VoteBlock and AgendaPhase; laws' effects stay on the board.
-import Link from "next/link";
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { computeVotes } from "../../../app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase";
@@ -17,7 +16,8 @@ import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
 import { votingOrder } from "./logic";
 import styles from "./play.module.scss";
-import { Chip, cx, pcolor, SheetFrame, type Ctx, type Sheet } from "./ui";
+import type { Ctx, Sheet } from "./ui";
+import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Stepper, Tag } from "../ui/kit";
 
 const AGENDA_NAMES = ["first", "second"];
 
@@ -76,25 +76,30 @@ export default function NowAgenda(ctx: Ctx) {
 
   if (agendaNum > 2) {
     return (
-      <section className={styles.card} aria-label="Agendas done">
-        <p className={styles.eyebrow}><span>Agenda phase</span></p>
-        <h2 className={styles.title}>Both agendas are resolved</h2>
-        <p className={styles.sub}>Ready your planets on the board, then start the next round.</p>
-        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-          onClick={() => w.write([Events.AdvancePhaseEvent()], `Round ${(state.round ?? 0) + 1} started`)}>Start round {(state.round ?? 0) + 1}</button>
+      <section className={kit.card} aria-label="Agendas done">
+        <p className={kit.eyebrow}><span>Agenda phase</span></p>
+        <h2 className={kit.title}>Both agendas are resolved</h2>
+        <p className={kit.sub}>Ready your planets on the board, then start the next round.</p>
+        <Button kind="primary" size="tall" block disabled={w.pending}
+          onClick={() => w.write([Events.AdvancePhaseEvent()], `Round ${(state.round ?? 0) + 1} started`)}>Start round {(state.round ?? 0) + 1}</Button>
       </section>
     );
   }
 
   if (!agenda) {
     return (
-      <section className={styles.card} aria-label="Reveal an agenda">
-        <p className={styles.eyebrow}><span>Agenda {agendaNum} of 2</span></p>
-        <h2 className={styles.title}>Reveal the {AGENDA_NAMES[agendaNum - 1]} agenda</h2>
-        <p className={styles.sub}>{speakerJob}: flip the top card of the agenda deck.</p>
-        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block, help && styles.help)} disabled={w.pending}
-          onClick={() => open({ kind: "agenda", as: speaker })}>{help ? `Reveal for ${short(speaker)}` : "Reveal the agenda"}</button>
-        {agendaNum === 1 ? <p className={styles.sub}>Maw of Worlds and Ancient Burial Sites are on the <Link href={`/game/${gameId}/main`} className={styles.textLink}>table screen</Link>.</p> : null}
+      <section className={kit.card} aria-label="Reveal an agenda">
+        <p className={kit.eyebrow}><span>Agenda {agendaNum} of 2</span></p>
+        <h2 className={kit.title}>Reveal the {AGENDA_NAMES[agendaNum - 1]} agenda</h2>
+        <p className={kit.sub}>{speakerJob}: flip the top card of the agenda deck.</p>
+        <Button kind="primary" size="tall" block forOther={help} disabled={w.pending}
+          onClick={() => open({ kind: "agenda", as: speaker })}>{help ? `Reveal for ${short(speaker)}` : "Reveal the agenda"}</Button>
+        {agendaNum === 1 ? (
+          <>
+            <p className={kit.sub}>Maw of Worlds and Ancient Burial Sites are on the table screen.</p>
+            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+          </>
+        ) : null}
       </section>
     );
   }
@@ -105,18 +110,16 @@ export default function NowAgenda(ctx: Ctx) {
     <>
       <AgendaCard d={d} agendaNum={agendaNum} />
       {!state.votingStarted ? (
-        <section className={styles.card} aria-label="Before voting">
-          <p className={styles.sub}>
-            Cards played when an agenda is revealed (Veto, riders, Hack Election, Political Secret) are on the{" "}
-            <Link href={`/game/${gameId}/main`} className={styles.textLink}>table screen</Link>.
-          </p>
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-            onClick={() => w.write([Events.StartVotingEvent()], "Voting started")}>Start voting</button>
+        <section className={kit.card} aria-label="Before voting">
+          <p className={kit.sub}>Cards played when an agenda is revealed (Veto, riders, Hack Election, Political Secret) are on the table screen.</p>
+          <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+          <Button kind="primary" size="tall" block disabled={w.pending}
+            onClick={() => w.write([Events.StartVotingEvent()], "Voting started")}>Start voting</Button>
         </section>
       ) : (
         <>
           {who && !d.votes.has(who) && canVote(d, ctx, who) ? (
-            <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(factions[who]?.color) }} aria-label="Your vote">
+            <section className={cx(kit.card, styles.hero)} style={{ ["--c" as string]: pcolor(factions[who]?.color) }} aria-label="Your vote">
               <VoteForm d={d} ctx={ctx} faction={who} />
             </section>
           ) : null}
@@ -132,10 +135,10 @@ function AgendaCard({ d, agendaNum }: { d: AgendaData; agendaNum: number }) {
   const a = d.agenda!;
   const elect = a.elect === "For/Against" ? "For or against" : `Elect a ${a.elect.toLowerCase()}`;
   return (
-    <section className={styles.card} aria-label="Agenda">
-      <p className={styles.eyebrow}><span>Agenda {agendaNum} of 2 · {a.type === "LAW" ? "Law" : "Directive"}</span></p>
-      <h2 className={styles.title}>{a.name}</h2>
-      <p className={styles.sub}><b>{elect}.</b> {a.description}</p>
+    <section className={kit.card} aria-label="Agenda">
+      <p className={kit.eyebrow}><span>Agenda {agendaNum} of 2 · {a.type === "LAW" ? "Law" : "Directive"}</span></p>
+      <h2 className={kit.title}>{a.name}</h2>
+      <p className={kit.sub}><b>{elect}.</b> {a.description}</p>
     </section>
   );
 }
@@ -158,25 +161,17 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
   };
   return (
     <>
-      <p className={styles.eyebrow}><span>{faction === seat ? "Your vote" : `${short(faction)}'s vote`}</span><span className={styles.num}>{max} available</span></p>
-      {many ? <input className={styles.search} type="search" placeholder="Find an outcome" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an outcome" /> : null}
-      <div className={styles.pick}>
-        {shown.map((t) => (
-          <button key={t.id} aria-pressed={target === t.id} onClick={() => setTarget(t.id)}>
-            {ctx.isFaction(t.id) ? <Chip faction={t.id as FactionId} factions={factions} short={short} small player={false} /> : <b>{label(t.id)}</b>}
-          </button>
-        ))}
-      </div>
-      <div className={styles.stepper}>
-        <button aria-label="One fewer vote" disabled={n <= 0} onClick={() => setN(Math.max(0, n - 1))}>−</button>
-        <output aria-live="polite">{n}</output>
-        <button aria-label="One more vote" disabled={n >= max} onClick={() => setN(Math.min(max, n + 1))}>+</button>
-      </div>
-      <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending || !target || n < 1} onClick={() => cast(n)}>
+      <p className={kit.eyebrow}><span>{faction === seat ? "Your vote" : `${short(faction)}'s vote`}</span><span className={kit.num}>{max} available</span></p>
+      {many ? <input className={kit.search} type="search" placeholder="Find an outcome" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an outcome" /> : null}
+      <Choices label="For which outcome?" value={target} onChange={setTarget}
+        options={shown.map((t) => ({ value: t.id, label: ctx.isFaction(t.id) ? <Chip faction={t.id as FactionId} factions={factions} short={short} small player={false} /> : label(t.id) }))} />
+      <p className={kit.label}>How many votes?</p>
+      <Stepper value={n} min={0} max={max} less="One fewer vote" more="One more vote" onChange={setN} />
+      <Button kind="primary" size="tall" block disabled={w.pending || !target || n < 1} onClick={() => cast(n)}>
         {!target ? "Choose an outcome" : `Cast ${n} vote${n === 1 ? "" : "s"} for ${label(target)}`}
-      </button>
-      <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => cast(0)}>Abstain</button>
-      <p className={styles.sub}>
+      </Button>
+      <Button block disabled={w.pending} onClick={() => cast(0)}>Abstain</Button>
+      <p className={kit.sub}>
         {d.repGov ? "Representative Government: one vote each." : "The influence of your planets, less votes spent on the first agenda."} Bonus votes (Argent Flight, and cards such as Distinguished Councilor once recorded) are added to the tally.
       </p>
     </>
@@ -189,32 +184,26 @@ function VotesCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionI
   const eligible = order.filter((id) => canVote(d, ctx, id));
   const next = eligible.find((id) => !d.votes.has(id));
   return (
-    <section className={styles.card} aria-label="Votes">
-      <p className={styles.eyebrow}><span>Votes</span><span className={styles.num}>{eligible.filter((id) => d.votes.has(id)).length} of {eligible.length}</span></p>
+    <section className={kit.card} aria-label="Votes">
+      <p className={kit.eyebrow}><span>Votes</span><span className={kit.num}>{eligible.filter((id) => d.votes.has(id)).length} of {eligible.length}</span></p>
       {Object.keys(tally).length ? (
-        <div className={styles.row} style={{ flexWrap: "wrap", gap: 6 }}>
-          {Object.entries(tally).map(([t, v]) => <span key={t} className={cx(styles.pill, styles.pillOn)}>{outcomeLabel(d, ctx, t)}: <b className={styles.num}>{v}</b></span>)}
+        <div className={kit.line} style={{ flexWrap: "wrap", gap: 6 }}>
+          {Object.entries(tally).map(([t, v]) => <Tag key={t} tone="done">{outcomeLabel(d, ctx, t)}: <b className={kit.num}>{v}</b></Tag>)}
         </div>
       ) : null}
-      <ul className={styles.list}>
+      <Rows flush>
         {order.map((id) => {
           const v = d.votes.get(id);
           const can = canVote(d, ctx, id);
           return (
-            <li key={id}>
-              <button className={styles.raceRow} disabled={!can} onClick={() => open({ kind: "vote", faction: id })} aria-label={`${short(id)}: vote`}>
-                <Chip faction={id} factions={factions} short={short} small />
-                <span className={styles.grow} />
-                {v ? <span className={cx(styles.pill, styles.pillOn)}>{v.target === "Abstain" || !v.votes ? "Abstained" : `${v.votes} · ${outcomeLabel(d, ctx, v.target)}`}</span>
-                  : !can ? <span className={styles.sub}>Can't vote</span>
-                  : id === next ? <span className={cx(styles.pill, styles.pillNow)}>Up next</span>
-                  : <span className={styles.sub}>Waiting</span>}
-              </button>
-            </li>
+            <RowLink key={id} disabled={!can} onClick={() => open({ kind: "vote", faction: id })} label={`${short(id)}: vote`}
+              title={<Chip faction={id} factions={factions} short={short} small />}
+              end={v ? <Tag tone="done">{v.target === "Abstain" || !v.votes ? "Abstained" : `${v.votes} · ${outcomeLabel(d, ctx, v.target)}`}</Tag>
+                : !can ? "Can't vote" : id === next ? <Tag tone="now">Up next</Tag> : "Waiting"} />
           );
         })}
-      </ul>
-      <p className={styles.sub}>Tap a player to vote for them or change their vote.</p>
+      </Rows>
+      <p className={kit.sub}>Choose a player to vote for them or change their vote.</p>
     </section>
   );
 }
@@ -231,12 +220,12 @@ function ResolveCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: Factio
   const waiting = order.filter((id) => canVote(d, ctx, id) && !d.votes.has(id)).length;
   const status = !leaders.length ? "No votes yet" : leaders.length > 1 ? `Tied: ${leaders.map((t) => outcomeLabel(d, ctx, t)).join(", ")}` : `Leading: ${outcomeLabel(d, ctx, leaders[0])} with ${tally[leaders[0]!]}`;
   return (
-    <section className={styles.card} aria-label="Resolve">
-      <p className={styles.eyebrow}><span>Result</span></p>
-      <h2 className={styles.title}>{status}</h2>
-      <p className={styles.sub}>{waiting ? `${waiting} still to vote. ` : "Everyone has voted. "}{d.speaker === seat ? "Resolving is your job as speaker." : `Resolving is ${short(d.speaker)}'s job as speaker.`}</p>
-      <button className={cx(styles.btn, styles.block, !waiting && styles.primary, d.speaker !== seat && styles.help)} disabled={w.pending}
-        onClick={() => open({ kind: "resolve", as: d.speaker })}>{d.speaker === seat ? "Resolve the agenda" : `Resolve for ${short(d.speaker)}`}</button>
+    <section className={kit.card} aria-label="Resolve">
+      <p className={kit.eyebrow}><span>Result</span></p>
+      <h2 className={kit.title}>{status}</h2>
+      <p className={kit.sub}>{waiting ? `${waiting} still to vote. ` : "Everyone has voted. "}{d.speaker === seat ? "Resolving is your job as speaker." : `Resolving is ${short(d.speaker)}'s job as speaker.`}</p>
+      <Button kind={waiting ? "secondary" : "primary"} block forOther={d.speaker !== seat} disabled={w.pending}
+        onClick={() => open({ kind: "resolve", as: d.speaker })}>{d.speaker === seat ? "Resolve the agenda" : `Resolve for ${short(d.speaker)}`}</Button>
     </section>
   );
 }
@@ -249,11 +238,11 @@ export function AgendaSheet({ sheet, close, ctx }: { sheet: Extract<Sheet, { kin
   if (sheet.kind === "vote") {
     const can = canVote(d, ctx, sheet.faction);
     return (
-      <SheetFrame title={`${ctx.short(sheet.faction)} votes`} close={close}>
-        {sheet.faction !== ctx.seat ? <p className={styles.sub}>You're voting for {ctx.short(sheet.faction)}. It's logged as you, for them.</p> : null}
-        {d.votes.has(sheet.faction) ? <p className={styles.sub}>This replaces their vote.</p> : null}
-        {can && d.agenda ? <VoteForm d={d} ctx={ctx} faction={sheet.faction} onDone={close} /> : <p className={styles.sub}>{ctx.short(sheet.faction)} can't vote on this agenda.</p>}
-      </SheetFrame>
+      <KitSheet title={`${ctx.short(sheet.faction)} votes`} close={close}>
+        {sheet.faction !== ctx.seat ? <p className={kit.sub}>You're voting for {ctx.short(sheet.faction)}. It's logged as you, for them.</p> : null}
+        {d.votes.has(sheet.faction) ? <p className={kit.sub}>This replaces their vote.</p> : null}
+        {can && d.agenda ? <VoteForm d={d} ctx={ctx} faction={sheet.faction} onDone={close} /> : <p className={kit.sub}>{ctx.short(sheet.faction)} can't vote on this agenda.</p>}
+      </KitSheet>
     );
   }
   return <ResolveSheet d={d} as={sheet.as} close={close} ctx={ctx} />;
@@ -264,18 +253,17 @@ function RevealAgendaSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionI
   const list = Object.values(d.agendas).filter((a): a is Agenda => !!a && !a.resolved && (!q || a.name.toLowerCase().includes(q.toLowerCase())))
     .sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <SheetFrame title="Reveal an agenda" close={close}>
-      <input className={styles.search} type="search" placeholder="Find the agenda you flipped" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the agenda you flipped" />
-      <div>
+    <KitSheet title="Reveal an agenda" close={close}>
+      <input className={kit.search} type="search" placeholder="Find the agenda you flipped" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the agenda you flipped" />
+      <Rows>
         {list.map((a) => (
-          <button key={a.id} className={styles.opt} disabled={ctx.w.pending} onClick={async () => {
-            if (await ctx.w.write([Events.RevealAgendaEvent(a.id)], `Agenda revealed: ${a.name}`, as)) close();
-          }}>
-            <span style={{ display: "grid", textAlign: "left", gap: 2 }}><b>{a.name}</b><span className={styles.sub}>{a.type === "LAW" ? "Law" : "Directive"} · {a.elect}</span></span>
-          </button>
+          <RowAction key={a.id} verb="Reveal" disabled={ctx.w.pending} title={a.name} detail={`${a.type === "LAW" ? "Law" : "Directive"} · ${a.elect}`}
+            onClick={async () => {
+              if (await ctx.w.write([Events.RevealAgendaEvent(a.id)], `Agenda revealed: ${a.name}`, as)) close();
+            }} />
         ))}
-      </div>
-    </SheetFrame>
+      </Rows>
+    </KitSheet>
   );
 }
 
@@ -296,23 +284,18 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
     if (await w.write(events, `${agenda.name}: ${outcomeLabel(d, ctx, pick)}`, as)) close();
   };
   return (
-    <SheetFrame title={`Resolve ${agenda.name}`} close={close}>
-      {tie ? <p className={styles.sub}>{leaders.length ? "The vote is tied." : "Nobody voted."} The speaker chooses the outcome.</p> : null}
-      <div className={styles.pick}>
-        {choices.map((t) => (
-          <button key={t} aria-pressed={pick === t} onClick={() => setPick(t)}>
-            <b>{outcomeLabel(d, ctx, t)}</b>{tally[t] ? <span className={styles.sub}> {tally[t]}</span> : null}
-          </button>
-        ))}
-      </div>
+    <KitSheet title={`Resolve ${agenda.name}`} close={close}>
+      {tie ? <p className={kit.sub}>{leaders.length ? "The vote is tied." : "Nobody voted."} The speaker chooses the outcome.</p> : null}
+      <Choices label="Outcome" hideLabel={!tie} value={pick} onChange={setPick}
+        options={choices.map((t) => ({ value: t, label: outcomeLabel(d, ctx, t), note: tally[t] ? `${tally[t]} votes` : undefined }))} />
       {pick ? (
         <>
-          <p className={styles.title} style={{ fontWeight: 400 }}>
+          <p className={kit.confirm}>
             {agenda.elect !== "For/Against" ? `${outcomeLabel(d, ctx, pick)} is elected: ${agenda.name}?` : pick === "For" ? `${agenda.name} passes?` : `${agenda.name} is voted down?`}
           </p>
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={resolve}>Confirm</button>
+          <Button kind="primary" size="tall" block disabled={w.pending} onClick={resolve}>Confirm</Button>
         </>
       ) : null}
-    </SheetFrame>
+    </KitSheet>
   );
 }

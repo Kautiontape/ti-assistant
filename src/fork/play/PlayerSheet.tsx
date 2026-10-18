@@ -1,40 +1,34 @@
 "use client";
 // A player's sheet: what they hold and how they got their points, from data
-// upstream already tracks. Each component opens to its rules text.
+// upstream already tracks. Each component's name opens its text in a popout.
 import { useActionCards, useActionLog, useAgendas, useLeaders, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { combats, pointsBySource, SFTT } from "./logic";
-import { playedActionCards } from "./NowActionCards";
 import styles from "./play.module.scss";
-import { Chip, cx, SheetFrame, type Ctx } from "./ui";
+import { playedActionCards } from "./NowActionCards";
+import type { Ctx } from "./ui";
+import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
 const TECH_COLOURS: [string, string][] = [["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Other"]];
 
-// One line that opens to the component's text.
-function Item({ name, state, text }: { name: string; state?: string; text?: string }) {
-  return (
-    <details className={styles.item}>
-      <summary><b className={styles.grow}>{name}</b>{state ? <span className={styles.pill}>{state}</span> : null}</summary>
-      {text ? <p className={styles.sub} style={{ whiteSpace: "pre-line" }}>{text}</p> : null}
-    </details>
-  );
-}
+type Item = { thing: Thing; name: string; state?: string };
 
-function Section({ title, count, children }: { title: string; count?: string | number; children: React.ReactNode }) {
+// Names that open their text in a popout, with a state tag where it matters.
+function Items({ items, empty }: { items: Item[]; empty?: string }) {
+  if (!items.length) return empty ? <p className={kit.sub}>{empty}</p> : null;
   return (
-    <>
-      <p className={styles.eyebrow}><span>{title}</span>{count !== undefined ? <span className={styles.num}>{count}</span> : null}</p>
-      {children}
-    </>
+    <p style={{ margin: 0, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 14px", lineHeight: 1.9 }}>
+      {items.map((i, k) => <span key={`${i.name}-${k}`} className={kit.line} style={{ gap: 6, display: "inline-flex" }}><Cite thing={i.thing}>{i.name}</Cite>{i.state ? <Tag>{i.state}</Tag> : null}</span>)}
+    </p>
   );
 }
 
 export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; close: () => void; ctx: Ctx }) {
-  const { factions, short, open } = ctx;
+  const { factions, short } = ctx;
   const objectives = useObjectives();
   const planets = usePlanets();
   const techs = useTechs();
@@ -64,25 +58,22 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const won = fought.filter((c) => c.winner === id).length;
   const played = playedActionCards(log, id, new Set(Object.values(actionCards).map((c) => c?.name ?? "")));
   const playArea = [...throneFrom.map((g) => `${short(g)}'s Support for the Throne`), ...alliances.map((a) => `${short(a)}'s Alliance`)];
+  const cardIdByName = (name: string) => Object.values(actionCards).find((c) => c?.name === name)?.id ?? name;
 
   return (
-    <SheetFrame title={f.name} close={close}>
-      <div className={styles.row} style={{ flexWrap: "wrap", gap: 6 }}>
+    <Sheet title={f.name} close={close} dock>
+      <div className={kit.line} style={{ flexWrap: "wrap", gap: 6 }}>
         <Chip faction={id} factions={factions} short={short} />
-        <span className={styles.grow} />
-        {speaker === id ? <span className={styles.pill}>Speaker</span> : null}
-        {passed.includes(id) ? <span className={styles.pill}>Passed</span> : null}
+        <span className={kit.grow} />
+        {speaker === id ? <Tag>Speaker</Tag> : null}
+        {passed.includes(id) ? <Tag>Passed</Tag> : null}
         <span className={styles.vp}>{pts.total}</span>
       </div>
 
       {cards.length ? (
         <Section title="Strategy card">
-          <div className={styles.row} style={{ flexWrap: "wrap", gap: 8 }}>
-            {cards.map((c) => (
-              <button key={c.id} className={cx(styles.btn, styles.smallBtn)} onClick={() => open({ kind: "card", card: c.id })}>
-                {c.order} {c.name} · {c.used ? "Played" : passed.includes(id) ? "Passed" : "Ready"}
-              </button>
-            ))}
+          <div className={kit.line} style={{ flexWrap: "wrap", gap: 8 }}>
+            {cards.map((c) => <span key={c.id} className={kit.line} style={{ gap: 6 }}><CardTag card={c} used={c.used} large /><span className={kit.sub}>{c.used ? "Played" : passed.includes(id) ? "Passed" : "Ready"}</span></span>)}
           </div>
         </Section>
       ) : null}
@@ -90,13 +81,13 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
       <Section title="Points" count={pts.total}>
         <ul className={styles.list}>{pts.groups.map((g) => {
           const detail = g.label === "Support for the Throne" ? `From ${throneFrom.map((x) => short(x)).join(" and ")}` : g.label === "Imperial" || g.label === "Custodians" ? "" : g.items.join(", ");
-          return <li key={g.label}><span className={styles.grow}><b>{g.label}</b>{detail ? <><br /><span className={styles.sub}>{detail}</span></> : null}</span><span className={styles.num}>{g.points}</span></li>;
+          return <li key={g.label}><span className={kit.grow}><b>{g.label}</b>{detail ? <><br /><span className={kit.sub}>{detail}</span></> : null}</span><span className={kit.num}>{g.points}</span></li>;
         })}</ul>
       </Section>
 
       {myLeaders.length ? (
         <Section title="Leaders">
-          {myLeaders.map((l) => <Item key={l.id} name={`${l.name} · ${l.type[0] + l.type.slice(1).toLowerCase()}`} state={STATE[l.state ?? (l.type === "AGENT" ? "readied" : "locked")]} text={`${l.unlock ? `Unlock: ${l.unlock}\n` : ""}${l.description}`} />)}
+          <Items items={myLeaders.map((l) => ({ thing: { kind: "leader", id: l.id }, name: `${l.name} (${l.type[0] + l.type.slice(1).toLowerCase()})`, state: STATE[l.state ?? (l.type === "AGENT" ? "readied" : "locked")] }))} />
         </Section>
       ) : null}
 
@@ -104,56 +95,53 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         {TECH_COLOURS.map(([type, label]) => {
           const group = myTechs.filter((t) => t.type === type);
           return group.length ? (
-            <div key={type}>
-              <p className={styles.sub} style={{ margin: "4px 0" }}>{label}</p>
-              {group.map((t) => <Item key={t.id} name={t.name} state={f.techs?.[t.id]?.state === "exhausted" ? "Exhausted" : undefined} text={t.description} />)}
+            <div key={type} style={{ display: "grid", gap: 2 }}>
+              <p className={kit.sub}>{label}</p>
+              <Items items={group.map((t) => ({ thing: { kind: "tech", id: t.id }, name: t.name, state: f.techs?.[t.id]?.state === "exhausted" ? "Exhausted" : undefined }))} />
             </div>
           ) : null;
         })}
-        {!myTechs.length ? <p className={styles.sub}>None</p> : null}
-        {f.breakthrough?.name ? <Item name={`${f.breakthrough.name} · Breakthrough`} state={f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked"} text={f.breakthrough.description} /> : null}
+        {!myTechs.length ? <p className={kit.sub}>None</p> : null}
+        {f.breakthrough?.name ? <Items items={[{ thing: { kind: "breakthrough", id }, name: `${f.breakthrough.name} (breakthrough)`, state: f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked" }]} /> : null}
       </Section>
 
       {myRelics.length ? (
         <Section title="Relics" count={myRelics.length}>
-          {myRelics.map((r) => <Item key={r.id} name={r.name} state={r.state ? STATE[r.state] : undefined} text={r.description} />)}
+          <Items items={myRelics.map((r) => ({ thing: { kind: "relic", id: r.id }, name: r.name, state: r.state ? STATE[r.state] : undefined }))} />
         </Section>
       ) : null}
 
       {playArea.length ? (
         <Section title="In their play area">
-          <p className={styles.sub}>{playArea.join(" · ")}</p>
+          <p className={kit.sub}>{playArea.join(" · ")}</p>
         </Section>
       ) : null}
 
       {fought.length ? (
         <Section title="Combats" count={`${won} of ${fought.length} won`}>
-          <p className={styles.sub}>{fought.map((c) => `${c.kind === "space" ? "Space" : `Ground${c.planet ? ` (${c.planet})` : ""}`} vs ${short(c.attacker === id ? c.defender : c.attacker)}: ${c.winner === id ? "won" : c.winner === "None" ? "no winner" : "lost"}`).join(" · ")}</p>
+          <p className={kit.sub}>{fought.map((c) => `${c.kind === "space" ? "Space" : `Ground${c.planet ? ` (${c.planet})` : ""}`} vs ${short(c.attacker === id ? c.defender : c.attacker)}: ${c.winner === id ? "won" : c.winner === "None" ? "no winner" : "lost"}`).join(" · ")}</p>
         </Section>
       ) : null}
 
       <Section title="Action cards played" count={played.length}>
-        {played.length ? played.map((name, i) => <Item key={`${name}-${i}`} name={name} text={Object.values(actionCards).find((c) => c?.name === name)?.description} />)
-          : <p className={styles.sub}>None recorded</p>}
+        <Items items={played.map((name) => ({ thing: { kind: "actionCard", id: cardIdByName(name) }, name }))} empty="None recorded" />
       </Section>
 
       {laws.length ? (
         <Section title="Laws that name them">
-          {laws.map((a) => <Item key={a.id} name={a.name} text={a.passedText ?? a.description} />)}
+          <Items items={laws.map((a) => ({ thing: { kind: "agenda", id: a.id }, name: a.name }))} />
         </Section>
       ) : null}
 
       <Section title="Planets" count={`${owned.length} · ${res} res · ${inf} inf`}>
-        <p className={styles.sub}>
-          {owned.map((p) => p.attachments?.length ? `${p.name} (${p.attachments.join(", ")})` : p.name).join(", ") || "None"}
-        </p>
+        <Items items={owned.map((p) => ({ thing: { kind: "planet", id: p.id }, name: p.attachments?.length ? `${p.name} (${p.attachments.length} attached)` : p.name }))} empty="None" />
       </Section>
 
       {f.abilities?.length ? (
         <Section title="Faction abilities">
-          {f.abilities.map((a) => <Item key={a.name} name={a.name} text={a.description} />)}
+          <Items items={f.abilities.map((a) => ({ thing: { kind: "ability", id: `${id}|${a.name}` }, name: a.name }))} />
         </Section>
       ) : null}
-    </SheetFrame>
+    </Sheet>
   );
 }

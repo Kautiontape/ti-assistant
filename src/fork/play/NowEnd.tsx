@@ -1,14 +1,14 @@
 "use client";
 // The end of the game: a banner when someone reaches the target, and the
 // game-over screen (results, points by source, time per player).
-import Link from "next/link";
 import { useActionLog, useOptions } from "../../context/dataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
 import { computeVPs } from "../../util/factions";
 import { combats as combatsOf, fmtDuration, timeByPlayer } from "./logic";
 import styles from "./play.module.scss";
-import { Chip, cx, pcolor, useRace, type Ctx } from "./ui";
+import { useRace, type Ctx } from "./ui";
+import { Button, Chip, cx, kit, pcolor, RowLink, Rows } from "../ui/kit";
 
 // Who has reached the target. Upstream's header offers "End Game" on the same
 // condition (normal games; alliance games link to the table screen).
@@ -29,15 +29,15 @@ export function GameEndBanner(ctx: Ctx) {
   if (!reached.length) return null;
   const who = reached.map((id) => short(id)).join(" and ");
   return (
-    <section className={cx(styles.card, styles.hero)} aria-label="Game end">
-      <p className={styles.eyebrow}><span>{target} points</span></p>
-      <h2 className={styles.title}>{who} {reached.length > 1 ? "have" : "has"} {target} points</h2>
-      <p className={styles.sub}>The game ends when someone reaches {target}. If a score was a mistake, fix it and keep playing.</p>
+    <section className={cx(kit.card, styles.hero)} aria-label="Game end">
+      <p className={kit.eyebrow}><span>{target} points</span></p>
+      <h2 className={kit.title}>{who} {reached.length > 1 ? "have" : "has"} {target} points</h2>
+      <p className={kit.sub}>The game ends when someone reaches {target}. If a score was a mistake, fix it and keep playing.</p>
       {alliance ? (
-        <Link className={cx(styles.btn, styles.block)} href={`/game/${gameId}/main`}>End the game on the table screen</Link>
+        <Rows><RowLink href={`/game/${gameId}/main`} external title="End the game on the table screen" /></Rows>
       ) : (
-        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-          onClick={() => w.write([Events.EndGameEvent()], "The game ended")}>End the game</button>
+        <Button kind="primary" size="tall" block disabled={w.pending}
+          onClick={() => w.write([Events.EndGameEvent()], "The game ended")}>End the game</Button>
       )}
     </section>
   );
@@ -57,32 +57,27 @@ export default function NowEnd(ctx: Ctx) {
   const winners = rows.filter((r) => r.total === top && top > 0);
   return (
     <>
-      <section className={cx(styles.card, styles.hero)} style={winners[0] ? { ["--c" as string]: pcolor(factions[winners[0].id]?.color) } : undefined} aria-label="Game over">
-        <p className={styles.eyebrow}><span>Game over</span></p>
-        <h2 className={styles.title}>
+      <section className={cx(kit.card, styles.hero)} style={winners[0] ? { ["--c" as string]: pcolor(factions[winners[0].id]?.color) } : undefined} aria-label="Game over">
+        <p className={kit.eyebrow}><span>Game over</span></p>
+        <h2 className={kit.title}>
           {winners.length === 1 ? `${short(winners[0]!.id)} wins with ${top} points` : winners.length ? `${winners.map((r) => short(r.id)).join(" and ")} tie with ${top} points` : "No points scored"}
         </h2>
       </section>
-      <section className={styles.card} aria-label="Results">
-        <p className={styles.eyebrow}><span>Results</span></p>
-        <ul className={styles.list}>
+      <section className={kit.card} aria-label="Results">
+        <p className={kit.eyebrow}><span>Results</span></p>
+        <Rows flush>
           {rows.map((r) => (
-            <li key={r.id}>
-              <button className={styles.raceRow} style={{ alignItems: "flex-start", padding: "8px 0" }} onClick={() => open({ kind: "player", faction: r.id })} aria-label={`${short(r.id)}: ${r.total} points`}>
-                <span className={styles.grow} style={{ display: "grid", gap: 4 }}>
-                  <span className={styles.row}><Chip faction={r.id} factions={factions} short={short} small /><span className={styles.grow} /><span className={styles.vp}>{r.total}</span></span>
-                  <span className={styles.srcs}>{r.groups.map((g) => `${g.label} ${g.points}`).join(" · ")}</span>
-                  <span className={styles.srcs}>{time(r.id)}</span>
-                </span>
-              </button>
-            </li>
+            <RowLink key={r.id} onClick={() => open({ kind: "player", faction: r.id })} label={`${short(r.id)}: ${r.total} points`}
+              title={<Chip faction={r.id} factions={factions} short={short} small />}
+              detail={<span style={{ display: "grid", gap: 2 }}><span className={styles.srcs}>{r.groups.map((g) => `${g.label} ${g.points}`).join(" · ")}</span><span className={styles.srcs}>{time(r.id)}</span></span>}
+              end={<span className={styles.vp}>{r.total}</span>} />
           ))}
-        </ul>
+        </Rows>
       </section>
       <CombatSummary {...ctx} />
-      <section className={styles.card} aria-label="Back to the game">
-        <p className={styles.sub}>Ended by mistake? This puts the game back where it was.</p>
-        <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => w.write([Events.ContinueGameEvent()], "The game continued")}>Back to the game</button>
+      <section className={kit.card} aria-label="Back to the game">
+        <p className={kit.sub}>Ended by mistake? This puts the game back where it was.</p>
+        <Button block disabled={w.pending} onClick={() => w.write([Events.ContinueGameEvent()], "The game continued")}>Back to the game</Button>
       </section>
     </>
   );
@@ -105,20 +100,16 @@ function CombatSummary({ factions, short, open }: Ctx) {
   const longest = [...all].sort((a, b) => (b.end! - b.start) - (a.end! - a.start))[0]!;
   const where = (c: typeof longest) => (c.kind === "space" ? "in space" : `on the ground${c.planet ? ` on ${c.planet}` : ""}`);
   return (
-    <section className={styles.card} aria-label="Combats">
-      <p className={styles.eyebrow}><span>Combats</span><span className={styles.num}>{all.length}</span></p>
-      <ul className={styles.list}>
+    <section className={kit.card} aria-label="Combats">
+      <p className={kit.eyebrow}><span>Combats</span><span className={kit.num}>{all.length}</span></p>
+      <Rows flush>
         {ids.map((r) => (
-          <li key={r.id}>
-            <button className={styles.raceRow} onClick={() => open({ kind: "player", faction: r.id })} aria-label={`${short(r.id)}: ${r.n} combats`}>
-              <Chip faction={r.id} factions={factions} short={short} small player={false} />
-              <span className={styles.grow} />
-              <span className={styles.srcs}>{r.n} fought · {r.won} won · {r.n - r.won - r.none} lost{r.none ? ` · ${r.none} no winner` : ""} · {fmtDuration(r.time * 1000)}</span>
-            </button>
-          </li>
+          <RowLink key={r.id} onClick={() => open({ kind: "player", faction: r.id })} label={`${short(r.id)}: ${r.n} combats`}
+            title={<Chip faction={r.id} factions={factions} short={short} small player={false} />}
+            detail={`${r.n} fought · ${r.won} won · ${r.n - r.won - r.none} lost${r.none ? ` · ${r.none} no winner` : ""} · ${fmtDuration(r.time * 1000)}`} />
         ))}
-      </ul>
-      <p className={styles.sub}>Longest: {short(longest.attacker)} against {short(longest.defender)} {where(longest)}, {fmtDuration(longest.end! - longest.start)}{longest.winner && longest.winner !== "None" ? `, won by ${short(longest.winner)}` : ", no winner"}.</p>
+      </Rows>
+      <p className={kit.sub}>Longest: {short(longest.attacker)} against {short(longest.defender)} {where(longest)}, {fmtDuration(longest.end! - longest.start)}{longest.winner && longest.winner !== "None" ? `, won by ${short(longest.winner)}` : ", no winner"}.</p>
     </section>
   );
 }
