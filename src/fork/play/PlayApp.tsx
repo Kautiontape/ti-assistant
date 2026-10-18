@@ -144,8 +144,17 @@ function NotNativeYet({ phase, gameId, seat }: { phase: string; gameId: string; 
   return (
     <section className={styles.card}>
       <p className={styles.eyebrow}><span>{PHASES[phase] ?? phase} phase</span></p>
-      <h2 className={styles.title}>This phase isn't on the new screen yet</h2>
-      <p className={styles.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
+      {phase === "SETUP" ? (
+        <>
+          <h2 className={styles.title}>Setup is on the table screen</h2>
+          <p className={styles.sub}>Choose starting technologies and the like there, then start the game. This screen takes over from the first strategy phase.</p>
+        </>
+      ) : (
+        <>
+          <h2 className={styles.title}>This phase isn't on the new screen yet</h2>
+          <p className={styles.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
+        </>
+      )}
       {seat ? <Link className={cx(styles.btn, styles.primary, styles.block)} href={`/game/${gameId}/${encodeURIComponent(seat)}`}>Open your faction's full screen</Link> : null}
       <Link className={cx(styles.btn, styles.block)} href={`/game/${gameId}/main`}>Open the table screen</Link>
     </section>
