@@ -317,7 +317,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
     case "combat":
       return <StartCombatSheet attacker={sheet.attacker} close={close} ctx={ctx} />;
     case "endCombat":
-      return <EndCombatSheet close={close} ctx={ctx} />;
+      return <EndCombatSheet before={sheet.before} close={close} ctx={ctx} />;
     case "actionCard":
       return <ActionCardSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "component":

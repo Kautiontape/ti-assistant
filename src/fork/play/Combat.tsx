@@ -21,13 +21,13 @@ export function CombatBanner({ ctx }: { ctx: Ctx }) {
   if (!combat) return null;
   return (
     <section className={cx(styles.card, styles.hero)} aria-label="Combat">
-      <p className={styles.eyebrow}><span>⚔ {combat.kind === "space" ? "Space combat" : `Ground combat${combat.planet ? ` on ${combat.planet}` : ""}`}</span><span className={styles.num}>{now ? fmtDuration(now - combat.start) : ""}</span></p>
+      <p className={styles.eyebrow}><span>⚔ {combat.kind === "space" ? "Space combat" : `Ground combat${combat.planet ? ` on ${combat.planet}` : ""}`}</span><span className={styles.num}>{combat.end ? fmtDuration(combat.end - combat.start) : now ? fmtDuration(now - combat.start) : ""}</span></p>
       <div className={styles.row} style={{ flexWrap: "wrap", gap: 8 }}>
         <Chip faction={combat.attacker} factions={factions} short={short} small player={false} />
         <span className={styles.sub}>vs</span>
         <Chip faction={combat.defender} factions={factions} short={short} small player={false} />
       </div>
-      <p className={styles.sub}>The combat clock counts for both players, apart from their turns.</p>
+      <p className={styles.sub}>{combat.endedWithTurn ? "Its clock stopped when the turn ended. Record who won." : "The combat clock counts for both players, apart from their turns."}</p>
       <button className={cx(styles.btn, styles.primary, styles.block)} onClick={() => open({ kind: "endCombat" })}>End combat</button>
     </section>
   );
@@ -96,7 +96,7 @@ export function StartCombatSheet({ attacker, close, ctx }: { attacker: FactionId
   );
 }
 
-export function EndCombatSheet({ close, ctx }: { close: () => void; ctx: Ctx }) {
+export function EndCombatSheet({ before, close, ctx }: { before?: string; close: () => void; ctx: Ctx }) {
   const { factions, short, w } = ctx;
   const combat = useOpenCombat();
   if (!combat) return <SheetFrame title="End combat" close={close}><p className={styles.sub}>No combat is open.</p></SheetFrame>;
@@ -107,6 +107,7 @@ export function EndCombatSheet({ close, ctx }: { close: () => void; ctx: Ctx }) 
   };
   return (
     <SheetFrame title="Who won?" close={close}>
+      {before ? <p className={styles.sub}>{short(combat.attacker)} vs {short(combat.defender)} is still open. Record who won before {before}, then carry on.</p> : null}
       <div className={styles.pick}>
         {[combat.attacker, combat.defender].map((id) => (
           <button key={id} disabled={w.pending} onClick={() => end(id)}><Chip faction={id} factions={factions} short={short} small player={false} /> won</button>

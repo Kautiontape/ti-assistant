@@ -24,7 +24,7 @@ export type Sheet =
   | { kind: "relic"; faction: FactionId }
   | { kind: "actionCard"; faction?: FactionId }
   | { kind: "combat"; attacker: FactionId }
-  | { kind: "endCombat" }
+  | { kind: "endCombat"; before?: string }
   | { kind: "give"; giver: FactionId }
   | { kind: "reveal"; as?: FactionId }
   | { kind: "agenda"; as?: FactionId }

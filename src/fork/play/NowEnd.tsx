@@ -51,7 +51,7 @@ export default function NowEnd(ctx: Ctx) {
   const time = (id: FactionId) => {
     const t = turns[id] ?? 0, c = fights[id] ?? 0;
     if (!t && !c) return "No time recorded";
-    return `${fmtDuration(t * 1000)} on turns${c ? ` · ${fmtDuration(c * 1000)} in combat` : ""}`;
+    return `${fmtDuration(t * 1000)} on turns and decisions${c ? ` · ${fmtDuration(c * 1000)} in combat` : ""}`;
   };
   const top = rows[0]?.total ?? 0;
   const winners = rows.filter((r) => r.total === top && top > 0);

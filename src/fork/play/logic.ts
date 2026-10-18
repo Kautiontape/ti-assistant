@@ -246,40 +246,69 @@ export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speak
 
 // ---------- combat (fork actions, src/fork/actions) ----------
 
-export interface Combat { attacker: FactionId; defender: FactionId; kind: "space" | "ground"; planet?: PlanetId; start: number; end?: number; winner?: FactionId | "None" }
+export interface Combat { attacker: FactionId; defender: FactionId; kind: "space" | "ground"; planet?: PlanetId; start: number; end?: number; winner?: FactionId | "None"; endedWithTurn?: boolean }
 
-// Combats in the order they started; each END_COMBAT closes the open one.
+// Combats in the order they started. END_COMBAT records the result. For timing,
+// a combat nobody ended stops at the next end of turn or phase change, so a
+// forgotten "End combat" can't keep counting for the rest of the game.
 export function combats(log: ActionLog): Combat[] {
   const out: Combat[] = [];
   for (const e of [...log].reverse()) {
-    const d = e.data as unknown as ForkUpdateData;
-    if (d.action === "START_COMBAT") out.push({ attacker: d.event.faction, defender: d.event.defender, kind: d.event.kind, planet: d.event.planet, start: e.timestampMillis });
-    if (d.action === "END_COMBAT") { const open = out[out.length - 1]; if (open && open.end === undefined) { open.end = e.timestampMillis; open.winner = d.event.winner; } }
+    const d = e.data as unknown as ForkUpdateData | { action: string; event?: unknown };
+    const last = out[out.length - 1];
+    if (d.action === "START_COMBAT") {
+      const ev = (d as StartCombatData).event;
+      out.push({ attacker: ev.faction, defender: ev.defender, kind: ev.kind, planet: ev.planet, start: e.timestampMillis });
+    } else if (d.action === "END_COMBAT") {
+      if (last && last.winner === undefined) { last.winner = (d as EndCombatData).event.winner; last.end ??= e.timestampMillis; }
+    } else if ((d.action === "END_TURN" || d.action === "ADVANCE_PHASE") && last && last.end === undefined) {
+      last.end = e.timestampMillis;
+      last.endedWithTurn = true;
+    }
   }
   return out;
 }
 
+// The combat still waiting for a result, if any (its clock may already have stopped).
 export function openCombat(log: ActionLog): Optional<Combat> {
   const last = combats(log).at(-1);
-  return last && last.end === undefined ? last : undefined;
+  return last && last.winner === undefined ? last : undefined;
 }
 
-// Shawn's rule: combat time counts for both players in it, and is a separate
-// block from playing the game. Turn time is each END_TURN since the previous
-// boundary, less any combat inside it; combat time goes to both combatants.
+// Shawn's rule: "time on turns and decisions", with combat a separate block that
+// counts for both players in it. Turns run from the previous boundary to each
+// END_TURN, less combat inside them. Decisions are strategy picks and votes:
+// the time since the previous pick or vote (or since the phase or vote began).
 export function timeByPlayer(log: ActionLog, now = Date.now()) {
   const turns: Partial<Record<FactionId, number>> = {};
   const fights: Partial<Record<FactionId, number>> = {};
+  const add = (rec: Partial<Record<FactionId, number>>, f: Optional<string>, ms: number) => {
+    if (f && f !== "None" && ms > 0) rec[f as FactionId] = (rec[f as FactionId] ?? 0) + ms / 1000;
+  };
   const blocks = combats(log).map((c) => ({ ...c, end: c.end ?? now }));
-  for (const c of blocks) for (const f of [c.attacker, c.defender]) fights[f] = (fights[f] ?? 0) + (c.end - c.start) / 1000;
+  for (const c of blocks) { add(fights, c.attacker, c.end - c.start); add(fights, c.defender, c.end - c.start); }
   const inCombat = (a: number, b: number) => blocks.reduce((ms, c) => ms + Math.max(0, Math.min(b, c.end) - Math.max(a, c.start)), 0);
-  let start: Optional<number>;
+  let boundary: Optional<number>;
+  let decided: Optional<number>;
   for (const e of [...log].reverse()) {
-    if (e.data.action === "ADVANCE_PHASE") { start = e.timestampMillis; continue; }
-    if (e.data.action !== "END_TURN") continue;
-    const f = (e.data.event as { prevFaction?: string }).prevFaction as Optional<FactionId>;
-    if (f && (f as string) !== "None" && start !== undefined) turns[f] = (turns[f] ?? 0) + (e.timestampMillis - start - inCombat(start, e.timestampMillis)) / 1000;
-    start = e.timestampMillis;
+    const t = e.timestampMillis;
+    const ev = (e.data as { event?: Record<string, string> }).event ?? {};
+    switch (e.data.action) {
+      case "ADVANCE_PHASE": boundary = t; decided = t; break;
+      case "END_TURN":
+        if (boundary !== undefined) add(turns, ev.prevFaction, t - boundary - inCombat(boundary, t));
+        boundary = t;
+        break;
+      case "ASSIGN_STRATEGY_CARD":
+        if (decided !== undefined) add(turns, ev.pickedBy ?? ev.assignedTo, t - decided);
+        decided = t;
+        break;
+      case "START_VOTING": case "RESOLVE_AGENDA": decided = t; break;
+      case "CAST_VOTES":
+        if (decided !== undefined) add(turns, ev.faction, t - decided);
+        decided = t;
+        break;
+    }
   }
   return { turns, fights };
 }

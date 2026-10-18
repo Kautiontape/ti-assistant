@@ -7,7 +7,7 @@ import { useActiveFactionId, useOnDeckFactionId } from "../../context/gameDataHo
 import { getSelectedActionFromLog } from "../../util/api/data";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { fmtDuration, sentence, turnStartedAt } from "./logic";
+import { fmtDuration, openCombat, sentence, turnStartedAt } from "./logic";
 import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
 import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
@@ -23,6 +23,7 @@ export default function NowAction(ctx: Ctx) {
   const strategyCards = useStrategyCards();
   const log = useActionLog();
   const now = useNow();
+  const combat = openCombat(log);
   if (!active) {
     return (
       <section className={styles.card} aria-label="Everyone has passed">
@@ -30,7 +31,7 @@ export default function NowAction(ctx: Ctx) {
         <h2 className={styles.title}>Everyone has passed</h2>
         <p className={styles.sub}>The status phase is next: scoring, then cleanup.</p>
         <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-          onClick={() => w.write([Events.AdvancePhaseEvent()], "The status phase started")}>Start the status phase</button>
+          onClick={() => (combat ? open({ kind: "endCombat", before: "the status phase starts" }) : w.write([Events.AdvancePhaseEvent()], "The status phase started"))}>Start the status phase</button>
       </section>
     );
   }
@@ -84,7 +85,10 @@ export default function NowAction(ctx: Ctx) {
               </div>
               {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-                onClick={async () => { if (await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active)) setHelping(undefined); }}>End turn</button>
+                onClick={async () => {
+                  if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
+                  if (await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active)) setHelping(undefined);
+                }}>End turn</button>
             </>
           )}
         </section>
