@@ -67,6 +67,13 @@ export default function PlayApp() {
 
   const active = useActiveFactionId();
   const phase = state.phase;
+
+  // Helping lasts as long as what it was for: the phase, and in turn-based
+  // phases the helped player's turn (they may end it from their own phone).
+  useEffect(() => setHelping(undefined), [phase]);
+  useEffect(() => {
+    if ((phase === "ACTION" || phase === "STRATEGY") && helping && helping !== active) setHelping(undefined);
+  }, [phase, active, helping]);
   const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, w, open: setSheet, gameId };
 
   return (
