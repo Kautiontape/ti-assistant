@@ -326,12 +326,13 @@ export function CardTag({ card, used, large, still, label }: { card: CardLike; u
   const props = { className: cx(kit.sc, large && kit.scLarge), "data-c": card.color, "data-used": used || undefined };
   if (still || !pop) return <span {...props} aria-label={label}>{body}</span>;
   const thing = { kind: "strategyCard", id: card.id };
+  // The button is a 44px-tall tap area around the 30px chip.
   return (
-    <button type="button" {...props} aria-haspopup="dialog" aria-label={label ?? `${card.name}${used ? ", played" : ""}`}
+    <button type="button" className={kit.scHit} aria-haspopup="dialog" aria-label={label ?? `${card.name}${used ? ", played" : ""}`}
       onClick={(e) => { e.stopPropagation(); pop.open(thing, e.currentTarget); }}
       onPointerEnter={(e) => e.pointerType === "mouse" && pop.peek(thing, e.currentTarget)}
       onPointerLeave={(e) => e.pointerType === "mouse" && pop.unpeek()}>
-      {body}
+      <span {...props}>{body}</span>
     </button>
   );
 }
