@@ -12,6 +12,7 @@ import { fmtDuration, openCombat, sentence, turnStartedAt } from "./logic";
 import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
 import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
+import { ExpeditionButton } from "./NowExpedition";
 import styles from "./play.module.scss";
 import { cx, pcolor, useNow, Swatch, Chip, HelpBanner, type Ctx } from "./ui";
 
@@ -86,6 +87,7 @@ export default function NowAction(ctx: Ctx) {
                 <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>
               </div>
               {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
+              {selected ? <ExpeditionButton active={active} ctx={ctx} /> : null}
               {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
                 onClick={async () => {

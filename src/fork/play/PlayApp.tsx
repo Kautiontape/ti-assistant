@@ -18,6 +18,7 @@ import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
 import { PointsButton, PointsSheet } from "./NowPoints";
+import { ExpeditionCard, ExpeditionSheet } from "./NowExpedition";
 import MapTab, { SystemSheet } from "./MapTab";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
@@ -234,6 +235,7 @@ function TableTab(ctx: Ctx) {
   const state = useGameState();
   const strategyCards = useStrategyCards();
   return (
+    <>
     <section className={styles.card} aria-label="Players">
       <p className={styles.eyebrow}><span>Players by points</span></p>
       <ul className={styles.list}>
@@ -253,6 +255,8 @@ function TableTab(ctx: Ctx) {
         ))}
       </ul>
     </section>
+    <ExpeditionCard ctx={ctx} />
+    </>
   );
 }
 
@@ -326,6 +330,8 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       return <EndCombatSheet before={sheet.before} close={close} ctx={ctx} />;
     case "system":
       return <SystemSheet system={sheet.system} close={close} ctx={ctx} />;
+    case "expedition":
+      return <ExpeditionSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "points":
       return <PointsSheet phase={phase} close={close} ctx={ctx} />;
     case "actionCard":

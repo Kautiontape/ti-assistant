@@ -83,7 +83,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "SET_SPEAKER": return "became speaker";
     case "PLAY_COMPONENT": return `used ${ev.name}`;
     case "GAIN_RELIC": return `gained ${ev.relic}`;
-    case "COMMIT_TO_EXPEDITION": return "committed to the Expedition";
+    case "COMMIT_TO_EXPEDITION": return ev.factionId ? `committed to the ${EXPEDITION_NAMES[ev.expedition] ?? ev.expedition} expedition` : `took back the ${EXPEDITION_NAMES[ev.expedition] ?? ev.expedition} expedition`;
     case "REVEAL_AGENDA": return `Agenda revealed: ${ev.agenda}`;
     case "CAST_VOTES": {
       const n = (ev.votes ?? 0) + (ev.extraVotes ?? 0);
@@ -188,6 +188,8 @@ export function planetsInSystem(planets: Partial<Record<PlanetId, Planet>>, syst
     return system === systemNumber;
   });
 }
+
+const EXPEDITION_NAMES: Record<string, string> = { resources: "Resources", influence: "Influence", tradeGoods: "Trade goods", actionCards: "Action cards", secrets: "Secret objective", techSkip: "Technology skip" };
 
 // Attachments a planet can take, as upstream's planet row offers them
 // (availableAttachments in src/components/PlanetRow/PlanetRow.tsx), less the
