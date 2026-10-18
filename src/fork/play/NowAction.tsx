@@ -8,7 +8,7 @@ import { getSelectedActionFromLog } from "../../util/api/data";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { fmtDuration, sentence, turnStartedAt } from "./logic";
-import { CardControls, CARDS_WITH_CONTROLS } from "./NowCards";
+import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
 import styles from "./play.module.scss";
 import { cx, pcolor, useNow, Swatch, Chip, HelpBanner, type Ctx } from "./ui";
 
@@ -110,6 +110,7 @@ export default function NowAction(ctx: Ctx) {
           </div>
         </section>
       ) : null}
+      {isCard ? <SecondariesCard card={isCard as StrategyCard} active={active} ctx={ctx} /> : null}
     </>
   );
 }

@@ -118,6 +118,47 @@ function ImperialPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   );
 }
 
+// ---------- secondaries ----------
+
+// Everyone but the active player may follow the card's secondary. Anyone can
+// record it for anyone (upstream's SecondaryCheck in main/phase/action/ActionPhase.tsx).
+export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; active: FactionId; ctx: Ctx }) {
+  const { factions, short, w, open, seat } = ctx;
+  const order = useOrderedFactionIds("SPEAKER").filter((id) => id !== active);
+  const mark = (id: FactionId, state: "DONE" | "SKIPPED" | "PENDING") => w.write([Events.MarkSecondaryEvent(id, state)],
+    state === "PENDING" ? `${short(id)}'s secondary is open again` : `${short(id)} ${state === "DONE" ? "followed" : "skipped"} ${card.name}`, id);
+  const done = order.filter((id) => (factions[id]?.secondary ?? "PENDING") !== "PENDING").length;
+  return (
+    <section className={styles.card} aria-label="Secondaries">
+      <p className={styles.eyebrow}><span>{card.name} secondary</span><span className={styles.num}>{done} of {order.length}</span></p>
+      <ul className={styles.list}>
+        {order.map((id) => {
+          const state = factions[id]?.secondary ?? "PENDING";
+          return (
+            <li key={id} className={styles.row}>
+              <Chip faction={id} factions={factions} short={short} small player={false} />
+              <span className={styles.grow} />
+              {state === "PENDING" ? (
+                <>
+                  <button className={cx(styles.btn, styles.smallBtn, id !== seat && styles.help)} disabled={w.pending}
+                    onClick={() => (card.id === "Technology" && id !== "Nekro Virus" ? open({ kind: "research", faction: id, follow: true }) : mark(id, "DONE"))}>Follow</button>
+                  <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => mark(id, "SKIPPED")}>Skip</button>
+                </>
+              ) : (
+                <button className={cx(styles.pill, styles.pillOn)} style={{ minHeight: 44, background: "none", cursor: "pointer" }} disabled={w.pending}
+                  aria-label={`${short(id)} ${state === "DONE" ? "followed" : "skipped"}; tap to reopen`} onClick={() => mark(id, "PENDING")}>
+                  {state === "DONE" ? "Followed" : "Skipped"}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className={styles.sub}>Each player usually marks their own. Tapping Followed or Skipped opens it again.</p>
+    </section>
+  );
+}
+
 // ---------- research sheet ----------
 
 export function ResearchSheet({ faction: factionId, follow, close, ctx }: { faction: FactionId; follow?: boolean; close: () => void; ctx: Ctx }) {
