@@ -74,7 +74,7 @@ export default function NowStrategy(ctx: Ctx) {
           {endAbilities.length ? (
             <p className={styles.sub}>
               {endAbilities.join(", ")} can still change cards before the action phase. {endAbilities.length > 1 ? "They're" : "It's"} on the table screen.{" "}
-              <Link href={`/game/${gameId}/main`} style={{ color: "var(--accent)" }}>Open the table screen</Link>
+              <Link href={`/game/${gameId}/main`} className={styles.textLink}>Open the table screen</Link>
             </p>
           ) : null}
           <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}

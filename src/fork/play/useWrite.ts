@@ -11,6 +11,14 @@ import { useUndo } from "../../util/api/undo";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Actor, groupKey, newestGroup } from "./logic";
 
+// Upstream rebuilds these log entries from the event alone (revealObjective.ts,
+// addTech.ts), so the actor also rides inside the event for them.
+const EVENT_ONLY = new Set(["REVEAL_OBJECTIVE", "HIDE_OBJECTIVE", "REMOVE_TECH"]);
+function withActor(e: GameUpdateData, actor: Actor) {
+  const d = e as unknown as { action: string; event?: Record<string, unknown> };
+  return (EVENT_ONLY.has(d.action) ? { ...d, actor, event: { ...d.event, actor } } : { ...d, actor }) as unknown as GameUpdateData;
+}
+
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
 export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string) {
@@ -37,7 +45,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     const actor: Actor = { seat, as: as && as !== seat ? as : undefined, id: `${seat ?? "nobody"}:${Date.now()}` };
     let ok = true;
     for (const event of events) {
-      const res = await dataUpdate({ ...event, actor } as unknown as GameUpdateData);
+      const res = await dataUpdate(withActor(event, actor));
       if (res === undefined) { ok = false; break; }
     }
     busy.current = false;

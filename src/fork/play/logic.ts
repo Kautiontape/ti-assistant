@@ -14,7 +14,8 @@ export interface Actor {
 }
 
 export function actorOf(e: Optional<Entry>): Optional<Actor> {
-  return (e?.data as unknown as { actor?: Actor })?.actor;
+  const d = e?.data as unknown as Optional<{ actor?: Actor; event?: { actor?: Actor } }>;
+  return d?.actor ?? d?.event?.actor;
 }
 
 const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "SWAP_MAP_TILES"]);
@@ -24,11 +25,15 @@ const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING
 export function subjectOf(e: Entry, turn?: FactionId): Optional<FactionId> {
   const ev = ((e.data as { event?: Record<string, unknown> }).event ?? {}) as Record<string, string>;
   const actor = actorOf(e);
-  if (actor?.as) return actor.as;
-  if (TABLE_EVENTS.has(e.data.action)) return undefined;
   if (e.data.action === "SET_SPEAKER") return ev.newSpeaker as FactionId;
   if (e.data.action === "ASSIGN_STRATEGY_CARD") return (ev.pickedBy ?? ev.assignedTo) as FactionId;
-  return (ev.faction ?? ev.factionId ?? ev.assignedTo ?? turn ?? actor?.seat) as Optional<FactionId>;
+  // The event's own faction first: moving Support for the Throne is the giver's
+  // action, but each entry is about the player who loses or gains it.
+  const own = (ev.faction ?? ev.factionId) as Optional<FactionId>;
+  if (own) return own;
+  if (actor?.as) return actor.as;
+  if (TABLE_EVENTS.has(e.data.action)) return undefined;
+  return (turn ?? actor?.seat) as Optional<FactionId>;
 }
 
 // Whose turn each action-phase entry fell in. Upstream replays the whole game to
@@ -64,7 +69,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "REMOVE_TECH": return `removed ${ev.tech}`;
     case "SCORE_OBJECTIVE":
       return ev.objective === "Support for the Throne" && ev.key ? `received Support for the Throne from ${name(ev.key)}` : `scored ${ev.objective}`;
-    case "UNSCORE_OBJECTIVE": return `lost ${ev.objective}`;
+    case "UNSCORE_OBJECTIVE":
+      return ev.objective === "Support for the Throne" && ev.key ? `lost ${name(ev.key)}'s Support for the Throne` : `took back ${ev.objective}`;
     case "REVEAL_OBJECTIVE": return `Objective revealed: ${ev.objective}`;
     case "ASSIGN_STRATEGY_CARD":
       return ev.pickedBy && ev.pickedBy !== ev.assignedTo ? `gave ${ev.id} to ${name(ev.assignedTo)}` : `picked ${ev.id}`;
@@ -163,6 +169,57 @@ export function checksAndBalancesTargets(cards: StrategyCard[], players: Faction
   const limit = players.length > 4 ? 1 : 2;
   const room = players.filter((id) => id !== picker && cards.filter((c) => c.faction === id).length < limit);
   return room.length ? room : [picker];
+}
+
+// ---------- status phase: upstream's rules from main/phase/status/StatusPhase.tsx ----------
+
+export const SFTT = "Support for the Throne" as ObjectiveId;
+
+type Objectives = Partial<Record<ObjectiveId, Objective>>;
+const isPublic = (o: Objective) => o.type === "STAGE ONE" || o.type === "STAGE TWO";
+
+// What a player scored since the phase began (the whole status phase is one "turn").
+export function scoredThisPhase(currentTurn: ActionLog, objectives: Objectives, factionId: FactionId) {
+  const ids = currentTurn
+    .filter((e) => e.data.action === "SCORE_OBJECTIVE" && ((e.data as { event?: { faction?: string } }).event?.faction === factionId))
+    .map((e) => (e.data as unknown as { event: { objective: ObjectiveId } }).event.objective);
+  const of = (id: ObjectiveId) => objectives[id];
+  return {
+    publics: ids.filter((id) => { const o = of(id); return !!o && isPublic(o); }),
+    secrets: ids.filter((id) => of(id)?.type === "SECRET"),
+  };
+}
+
+// Revealed public objectives scored in the status phase that this player hasn't scored.
+export function scorablePublics(objectives: Objectives, factionId: FactionId) {
+  return Object.values(objectives).filter((o): o is Objective =>
+    !!o && !!o.selected && isPublic(o) && (!o.phase || o.phase === "STATUS") && !(o.scorers ?? []).includes(factionId));
+}
+
+// Status-phase secrets nobody has scored. Hands aren't tracked, so all of them.
+export function scorableSecrets(objectives: Objectives) {
+  return Object.values(objectives).filter((o): o is Objective =>
+    !!o && o.type === "SECRET" && o.phase === "STATUS" && !(o.scorers ?? []).length);
+}
+
+// A player who doesn't control all their home planets can't score publics
+// (Clan of Saar excepted; space stations don't count).
+export function missingHomePlanets(planets: Partial<Record<PlanetId, Planet>>, factionId: FactionId) {
+  if (factionId === "Clan of Saar") return [];
+  return Object.values(planets).filter((p): p is Planet =>
+    !!p && !!p.home && p.faction === factionId && p.owner !== factionId && !p.attributes.includes("space-station"));
+}
+
+export const revealStage = (round: number) => (round < 4 ? "STAGE ONE" : "STAGE TWO");
+
+export function revealableObjectives(objectives: Objectives, round: number) {
+  const stage = revealStage(round);
+  return Object.values(objectives).filter((o): o is Objective => !!o && o.type === stage && !o.selected);
+}
+
+// Who holds the giver's Support for the Throne, if anyone.
+export function throneHolder(objectives: Objectives, giver: FactionId): Optional<FactionId> {
+  return objectives[SFTT]?.keyedScorers?.[giver]?.[0];
 }
 
 export function fmtDuration(ms: number) {

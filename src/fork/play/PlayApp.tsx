@@ -16,6 +16,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
+import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, cx, pcolor, useMounted, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
 
@@ -89,7 +90,7 @@ export default function PlayApp() {
       {tab === "now" ? (
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
-            {phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -280,6 +281,10 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
   const [q, setQ] = useState("");
   const [to, setTo] = useState<Optional<FactionId>>();
   switch (sheet.kind) {
+    case "score":
+    case "give":
+    case "reveal":
+      return <StatusSheet sheet={sheet} close={close} ctx={ctx} />;
     case "seat":
       return (
         <SheetFrame title="Whose phone is this?" close={close}>

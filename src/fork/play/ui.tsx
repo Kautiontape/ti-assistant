@@ -15,7 +15,10 @@ export type Sheet =
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }
-  | { kind: "card"; card: StrategyCardId; pickFor?: FactionId };
+  | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }
+  | { kind: "score"; faction: FactionId; which: "public" | "secret" }
+  | { kind: "give"; giver: FactionId }
+  | { kind: "reveal"; as?: FactionId };
 
 export type Ctx = {
   factions: Partial<Record<FactionId, Faction>>;
