@@ -6,7 +6,7 @@ import { useActionLog, useOptions } from "../../context/dataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
 import { computeVPs } from "../../util/factions";
-import { fmtDuration, timeByPlayer } from "./logic";
+import { combats as combatsOf, fmtDuration, timeByPlayer } from "./logic";
 import styles from "./play.module.scss";
 import { Chip, cx, pcolor, useRace, type Ctx } from "./ui";
 
@@ -79,6 +79,7 @@ export default function NowEnd(ctx: Ctx) {
           ))}
         </ul>
       </section>
+      <CombatSummary {...ctx} />
       <section className={styles.card} aria-label="Back to the game">
         <p className={styles.sub}>Ended by mistake? This puts the game back where it was.</p>
         <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={() => w.write([Events.ContinueGameEvent()], "The game continued")}>Back to the game</button>
@@ -86,3 +87,39 @@ export default function NowEnd(ctx: Ctx) {
     </>
   );
 }
+
+// Task 4's end-of-game summary, from the fork's own combat events: fights per
+// player with wins, losses and no-winner results, and the longest combat.
+function CombatSummary({ factions, short, open }: Ctx) {
+  const log = useActionLog();
+  const { fights } = timeByPlayer(log);
+  const all = combatsOf(log).filter((c) => c.end !== undefined);
+  if (!all.length) return null;
+  const ids = Object.values(factions).filter((f): f is Faction => !!f).map((f) => f.id)
+    .map((id) => {
+      const mine = all.filter((c) => c.attacker === id || c.defender === id);
+      return { id, n: mine.length, won: mine.filter((c) => c.winner === id).length, none: mine.filter((c) => c.winner === "None" || c.winner === undefined).length, time: fights[id] ?? 0 };
+    })
+    .filter((r) => r.n)
+    .sort((a, b) => b.n - a.n || b.won - a.won);
+  const longest = [...all].sort((a, b) => (b.end! - b.start) - (a.end! - a.start))[0]!;
+  const where = (c: typeof longest) => (c.kind === "space" ? "in space" : `on the ground${c.planet ? ` on ${c.planet}` : ""}`);
+  return (
+    <section className={styles.card} aria-label="Combats">
+      <p className={styles.eyebrow}><span>Combats</span><span className={styles.num}>{all.length}</span></p>
+      <ul className={styles.list}>
+        {ids.map((r) => (
+          <li key={r.id}>
+            <button className={styles.raceRow} onClick={() => open({ kind: "player", faction: r.id })} aria-label={`${short(r.id)}: ${r.n} combats`}>
+              <Chip faction={r.id} factions={factions} short={short} small player={false} />
+              <span className={styles.grow} />
+              <span className={styles.srcs}>{r.n} fought · {r.won} won · {r.n - r.won - r.none} lost{r.none ? ` · ${r.none} no winner` : ""} · {fmtDuration(r.time * 1000)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className={styles.sub}>Longest: {short(longest.attacker)} against {short(longest.defender)} {where(longest)}, {fmtDuration(longest.end! - longest.start)}{longest.winner && longest.winner !== "None" ? `, won by ${short(longest.winner)}` : ", no winner"}.</p>
+    </section>
+  );
+}
+
