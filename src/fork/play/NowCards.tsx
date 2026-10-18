@@ -120,10 +120,13 @@ function ImperialPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
 
 // ---------- secondaries ----------
 
+const BRILLIANT = "Universities of Jol-Nar" as FactionId;
+
 // Everyone but the active player may follow the card's secondary. Anyone can
 // record it for anyone (upstream's SecondaryCheck in main/phase/action/ActionPhase.tsx).
 export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; active: FactionId; ctx: Ctx }) {
   const { factions, short, w, open, seat } = ctx;
+  const currentTurn = useCurrentTurn();
   const order = useOrderedFactionIds("SPEAKER").filter((id) => id !== active);
   const mark = (id: FactionId, state: "DONE" | "SKIPPED" | "PENDING") => w.write([Events.MarkSecondaryEvent(id, state)],
     state === "PENDING" ? `${short(id)}'s secondary is open again` : `${short(id)} ${state === "DONE" ? "followed" : "skipped"} ${card.name}`, id);
@@ -145,10 +148,16 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
                   <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => mark(id, "SKIPPED")}>Skip</button>
                 </>
               ) : (
+                <>
+                {/* Jol-Nar's Brilliant: following Technology may resolve the primary, so a second technology. */}
+                {card.id === "Technology" && id === BRILLIANT && state === "DONE" && getResearchedTechs(currentTurn, id).length === 1 ? (
+                  <button className={cx(styles.btn, styles.smallBtn, id !== seat && styles.help)} disabled={w.pending} onClick={() => open({ kind: "research", faction: id })}>2nd tech</button>
+                ) : null}
                 <button className={cx(styles.pill, styles.pillOn)} style={{ minHeight: 44, background: "none", cursor: "pointer" }} disabled={w.pending}
                   aria-label={`${short(id)} ${state === "DONE" ? "followed" : "skipped"}; tap to reopen`} onClick={() => mark(id, "PENDING")}>
                   {state === "DONE" ? "Followed" : "Skipped"}
                 </button>
+                </>
               )}
             </li>
           );
@@ -184,6 +193,7 @@ export function ResearchSheet({ faction: factionId, follow, close, ctx }: { fact
   return (
     <SheetFrame title={follow ? `${short(factionId)} follows Technology` : `${short(factionId)} researches`} close={close}>
       {follow ? <p className={styles.sub}>Following costs a strategy token and 4 resources on the board. Pick the technology, or follow without recording one.</p> : null}
+      {follow && factionId === BRILLIANT ? <p className={styles.sub}>Brilliant: Jol-Nar may resolve the primary instead. After this one, "2nd tech" on their row records a second technology (6 resources on the board).</p> : null}
       <input className={styles.search} type="search" placeholder="Find a technology" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a technology" />
       {TECH_GROUPS.map(([type, label]) => {
         const group = list.filter((t) => t.type === type);
