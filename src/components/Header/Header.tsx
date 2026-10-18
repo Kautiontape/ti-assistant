@@ -23,9 +23,10 @@ import GameTimer from "../GameTimer/GameTimer";
 import styles from "./Header.module.scss";
 
 const BASE_URL =
-  process.env.GAE_SERVICE === "dev"
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (process.env.GAE_SERVICE === "dev"
     ? "https://dev-dot-twilight-imperium-360307.wm.r.appspot.com"
-    : "https://ti-assistant.com";
+    : "https://ti-assistant.com");
 
 export default function Header({ archive }: { archive?: boolean }) {
   const dataUpdate = useDataUpdate();

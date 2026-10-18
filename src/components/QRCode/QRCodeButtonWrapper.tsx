@@ -7,9 +7,10 @@ import { usePathname } from "next/navigation";
 import UndoButton from "../UndoButton/UndoButton";
 
 const BASE_URL =
-  process.env.GAE_SERVICE === "dev"
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (process.env.GAE_SERVICE === "dev"
     ? "https://dev.ti-assistant.com"
-    : "https://ti-assistant.com";
+    : "https://ti-assistant.com");
 
 function getQRCode(gameId: string, size: number): Promise<string> {
   return new Promise<string>((resolve) => {

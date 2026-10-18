@@ -15,13 +15,26 @@ export default class DBConnection {
     if (this.db) {
       return this.db;
     }
+    // NEXT_PUBLIC_FIREBASE_* lets other deployments use their own project.
     const firebaseConfig = {
-      apiKey: "AIzaSyCtN7R96q0Xa3wasE0b6JQRyb52e0KSINY",
-      authDomain: "twilight-imperium-360307.firebaseapp.com",
-      projectId: "twilight-imperium-360307",
-      storageBucket: "twilight-imperium-360307.appspot.com",
-      messagingSenderId: "881312315045",
-      appId: "1:881312315045:web:d43e66019ce64ecf623f4c",
+      apiKey:
+        process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+        "AIzaSyCtN7R96q0Xa3wasE0b6JQRyb52e0KSINY",
+      authDomain:
+        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+        "twilight-imperium-360307.firebaseapp.com",
+      projectId:
+        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+        "twilight-imperium-360307",
+      storageBucket:
+        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+        "twilight-imperium-360307.appspot.com",
+      messagingSenderId:
+        process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+        "881312315045",
+      appId:
+        process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
+        "1:881312315045:web:d43e66019ce64ecf623f4c",
     };
 
     const isDev = !!process && process.env.NODE_ENV !== "production";
@@ -33,8 +46,12 @@ export default class DBConnection {
     const app = initializeApp(firebaseConfig);
     this.db = getFirestore(app);
 
-    if (isDev) {
-      connectFirestoreEmulator(this.db, "127.0.0.1", 8020);
+    // Dev defaults to the local emulator; "off" talks to the real project.
+    const emulatorHost =
+      process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST || "127.0.0.1:8020";
+    if (isDev && emulatorHost !== "off") {
+      const [host, port] = emulatorHost.split(":");
+      connectFirestoreEmulator(this.db, host ?? "127.0.0.1", Number(port));
     }
 
     return this.db;

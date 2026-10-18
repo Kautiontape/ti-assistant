@@ -10,9 +10,10 @@ import styles from "./main.module.scss";
 import Phase from "./phase";
 
 const BASE_URL =
-  process.env.GAE_SERVICE === "dev"
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (process.env.GAE_SERVICE === "dev"
     ? "https://dev-dot-twilight-imperium-360307.wm.r.appspot.com"
-    : "https://ti-assistant.com";
+    : "https://ti-assistant.com");
 
 async function fetchGameData(gameId: string) {
   const dataPromise = getGameData(gameId, "archive");

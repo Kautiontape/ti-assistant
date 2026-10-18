@@ -1,7 +1,14 @@
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  getApps,
+  initializeApp,
+} from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { readFile } from "fs/promises";
 import jsSHA from "jssha";
 import { cookies } from "next/headers";
+import path from "path";
 import { createIntl, createIntlCache, IntlShape } from "react-intl";
 import "server-only";
 import { intlErrorFn } from "./util";
@@ -43,9 +50,25 @@ export function hashPassword(password: string) {
   return sha.getHash("HEX");
 }
 
+const SERVICE_ACCOUNT_PATH = path.join(
+  process.cwd(),
+  "server",
+  "twilight-imperium-360307-ea7cce25efeb.json",
+);
+
+async function getAdminCredential() {
+  // Lets other deployments supply their own service account key.
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    return applicationDefault();
+  }
+  // Read at runtime so builds don't require the key file to exist.
+  const serviceAccount = JSON.parse(
+    await readFile(SERVICE_ACCOUNT_PATH, "utf8"),
+  );
+  return cert(serviceAccount);
+}
+
 export async function getFirestoreAdmin() {
-  const serviceAccount =
-    await import("../../server/twilight-imperium-360307-ea7cce25efeb.json");
   const apps = getApps();
   if (apps.length > 0) {
     return getFirestore();
@@ -55,7 +78,7 @@ export async function getFirestoreAdmin() {
   const projectId = process.env.NEXT_PUBLIC_TI_PROJECT;
   if (env === "production" || !emulator) {
     initializeApp({
-      credential: cert(serviceAccount as any),
+      credential: await getAdminCredential(),
     });
   } else {
     initializeApp({ projectId });
