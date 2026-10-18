@@ -23,6 +23,8 @@ export type Sheet =
   | { kind: "component"; faction: FactionId }
   | { kind: "relic"; faction: FactionId }
   | { kind: "actionCard"; faction?: FactionId }
+  | { kind: "combat"; attacker: FactionId }
+  | { kind: "endCombat" }
   | { kind: "give"; giver: FactionId }
   | { kind: "reveal"; as?: FactionId }
   | { kind: "agenda"; as?: FactionId }

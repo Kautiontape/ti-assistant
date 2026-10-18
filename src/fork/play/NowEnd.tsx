@@ -2,11 +2,11 @@
 // The end of the game: a banner when someone reaches the target, and the
 // game-over screen (results, points by source, time per player).
 import Link from "next/link";
-import { useActionLog, useOptions, useTimers } from "../../context/dataHooks";
+import { useActionLog, useOptions } from "../../context/dataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
 import { computeVPs } from "../../util/factions";
-import { fmtDuration, turnSeconds } from "./logic";
+import { fmtDuration, timeByPlayer } from "./logic";
 import styles from "./play.module.scss";
 import { Chip, cx, pcolor, useRace, type Ctx } from "./ui";
 
@@ -46,10 +46,13 @@ export function GameEndBanner(ctx: Ctx) {
 export default function NowEnd(ctx: Ctx) {
   const { factions, short, w, open } = ctx;
   const rows = useRace(factions);
-  const timers = useTimers();
   const log = useActionLog();
-  const fromTimers = rows.some((r) => (timers[r.id] ?? 0) > 0);
-  const seconds = fromTimers ? Object.fromEntries(rows.map((r) => [r.id, timers[r.id] ?? 0])) : turnSeconds(log);
+  const { turns, fights } = timeByPlayer(log);
+  const time = (id: FactionId) => {
+    const t = turns[id] ?? 0, c = fights[id] ?? 0;
+    if (!t && !c) return "No time recorded";
+    return `${fmtDuration(t * 1000)} on turns${c ? ` · ${fmtDuration(c * 1000)} in combat` : ""}`;
+  };
   const top = rows[0]?.total ?? 0;
   const winners = rows.filter((r) => r.total === top && top > 0);
   return (
@@ -61,7 +64,7 @@ export default function NowEnd(ctx: Ctx) {
         </h2>
       </section>
       <section className={styles.card} aria-label="Results">
-        <p className={styles.eyebrow}><span>Results</span><span>{fromTimers ? "Time from the table clock" : "Time on turns"}</span></p>
+        <p className={styles.eyebrow}><span>Results</span></p>
         <ul className={styles.list}>
           {rows.map((r) => (
             <li key={r.id}>
@@ -69,7 +72,7 @@ export default function NowEnd(ctx: Ctx) {
                 <span className={styles.grow} style={{ display: "grid", gap: 4 }}>
                   <span className={styles.row}><Chip faction={r.id} factions={factions} short={short} small /><span className={styles.grow} /><span className={styles.vp}>{r.total}</span></span>
                   <span className={styles.srcs}>{r.groups.map((g) => `${g.label} ${g.points}`).join(" · ")}</span>
-                  <span className={styles.srcs}>{seconds[r.id] ? `${fmtDuration(seconds[r.id]! * 1000)} ${fromTimers ? "played" : "on turns"}` : "No time recorded"}</span>
+                  <span className={styles.srcs}>{time(r.id)}</span>
                 </span>
               </button>
             </li>

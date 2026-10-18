@@ -6,7 +6,7 @@ import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { pointsBySource, SFTT } from "./logic";
+import { combats, pointsBySource, SFTT } from "./logic";
 import { playedActionCards } from "./NowActionCards";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, type Ctx } from "./ui";
@@ -60,6 +60,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const laws = Object.values(agendas).filter((a): a is Agenda => !!a && a.passed === true && a.target === id);
   const throneFrom = Object.entries(objectives[SFTT]?.keyedScorers ?? {}).filter(([, holders]) => holders?.includes(id)).map(([giver]) => giver as FactionId);
   const alliances = f.alliances ?? [];
+  const fought = combats(log).filter((c) => c.end !== undefined && (c.attacker === id || c.defender === id));
+  const won = fought.filter((c) => c.winner === id).length;
   const played = playedActionCards(log, id, new Set(Object.values(actionCards).map((c) => c?.name ?? "")));
   const playArea = [...throneFrom.map((g) => `${short(g)}'s Support for the Throne`), ...alliances.map((a) => `${short(a)}'s Alliance`)];
 
@@ -121,6 +123,12 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
       {playArea.length ? (
         <Section title="In their play area">
           <p className={styles.sub}>{playArea.join(" · ")}</p>
+        </Section>
+      ) : null}
+
+      {fought.length ? (
+        <Section title="Combats" count={`${won} of ${fought.length} won`}>
+          <p className={styles.sub}>{fought.map((c) => `${c.kind === "space" ? "Space" : `Ground${c.planet ? ` (${c.planet})` : ""}`} vs ${short(c.attacker === id ? c.defender : c.attacker)}: ${c.winner === id ? "won" : c.winner === "None" ? "no winner" : "lost"}`).join(" · ")}</p>
         </Section>
       ) : null}
 

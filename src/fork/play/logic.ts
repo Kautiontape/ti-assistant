@@ -95,6 +95,10 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;
     case "MANUAL_VP_UPDATE": return `${ev.vps > 0 ? "gained" : "lost"} ${Math.abs(ev.vps)} point${Math.abs(ev.vps) === 1 ? "" : "s"} by hand`;
     case "END_GAME": return "The game ended";
+    case "START_COMBAT": return `started a ${ev.kind} combat with ${name(ev.defender)}${ev.planet ? ` on ${ev.planet}` : ""}`;
+    case "END_COMBAT":
+      return ev.winner === "None" ? `ended the combat with ${name(ev.defender)} with no winner`
+        : ev.winner === ev.faction ? `won the combat against ${name(ev.defender)}` : `lost the combat to ${name(ev.defender)}`;
     case "CONTINUE_GAME": return "The game continued";
     default: return null;
   }
@@ -240,19 +244,44 @@ export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speak
   return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
 }
 
-// Seconds each player spent on their own action-phase turns, from the log's
-// timestamps: each END_TURN closes the turn that began at the previous boundary.
-export function turnSeconds(log: ActionLog): Partial<Record<FactionId, number>> {
-  const out: Partial<Record<FactionId, number>> = {};
+// ---------- combat (fork actions, src/fork/actions) ----------
+
+export interface Combat { attacker: FactionId; defender: FactionId; kind: "space" | "ground"; planet?: PlanetId; start: number; end?: number; winner?: FactionId | "None" }
+
+// Combats in the order they started; each END_COMBAT closes the open one.
+export function combats(log: ActionLog): Combat[] {
+  const out: Combat[] = [];
+  for (const e of [...log].reverse()) {
+    const d = e.data as unknown as ForkUpdateData;
+    if (d.action === "START_COMBAT") out.push({ attacker: d.event.faction, defender: d.event.defender, kind: d.event.kind, planet: d.event.planet, start: e.timestampMillis });
+    if (d.action === "END_COMBAT") { const open = out[out.length - 1]; if (open && open.end === undefined) { open.end = e.timestampMillis; open.winner = d.event.winner; } }
+  }
+  return out;
+}
+
+export function openCombat(log: ActionLog): Optional<Combat> {
+  const last = combats(log).at(-1);
+  return last && last.end === undefined ? last : undefined;
+}
+
+// Shawn's rule: combat time counts for both players in it, and is a separate
+// block from playing the game. Turn time is each END_TURN since the previous
+// boundary, less any combat inside it; combat time goes to both combatants.
+export function timeByPlayer(log: ActionLog, now = Date.now()) {
+  const turns: Partial<Record<FactionId, number>> = {};
+  const fights: Partial<Record<FactionId, number>> = {};
+  const blocks = combats(log).map((c) => ({ ...c, end: c.end ?? now }));
+  for (const c of blocks) for (const f of [c.attacker, c.defender]) fights[f] = (fights[f] ?? 0) + (c.end - c.start) / 1000;
+  const inCombat = (a: number, b: number) => blocks.reduce((ms, c) => ms + Math.max(0, Math.min(b, c.end) - Math.max(a, c.start)), 0);
   let start: Optional<number>;
   for (const e of [...log].reverse()) {
     if (e.data.action === "ADVANCE_PHASE") { start = e.timestampMillis; continue; }
     if (e.data.action !== "END_TURN") continue;
     const f = (e.data.event as { prevFaction?: string }).prevFaction as Optional<FactionId>;
-    if (f && (f as string) !== "None" && start !== undefined) out[f] = (out[f] ?? 0) + (e.timestampMillis - start) / 1000;
+    if (f && (f as string) !== "None" && start !== undefined) turns[f] = (turns[f] ?? 0) + (e.timestampMillis - start - inCombat(start, e.timestampMillis)) / 1000;
     start = e.timestampMillis;
   }
-  return out;
+  return { turns, fights };
 }
 
 export function fmtDuration(ms: number) {

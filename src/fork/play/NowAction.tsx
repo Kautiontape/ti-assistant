@@ -9,6 +9,7 @@ import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { fmtDuration, sentence, turnStartedAt } from "./logic";
 import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
+import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import styles from "./play.module.scss";
 import { cx, pcolor, useNow, Swatch, Chip, HelpBanner, type Ctx } from "./ui";
@@ -81,6 +82,7 @@ export default function NowAction(ctx: Ctx) {
                 {selected === "Tactical" ? <button className={styles.btn} onClick={() => open({ kind: "claim", faction: active })}>Take a planet</button> : null}
                 <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>
               </div>
+              {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
                 onClick={async () => { if (await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active)) setHelping(undefined); }}>End turn</button>
             </>
