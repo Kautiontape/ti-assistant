@@ -22,6 +22,7 @@ export type Sheet =
   | { kind: "research"; faction: FactionId; follow?: boolean }
   | { kind: "component"; faction: FactionId }
   | { kind: "relic"; faction: FactionId }
+  | { kind: "actionCard"; faction?: FactionId }
   | { kind: "give"; giver: FactionId }
   | { kind: "reveal"; as?: FactionId }
   | { kind: "agenda"; as?: FactionId }

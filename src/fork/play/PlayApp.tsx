@@ -15,6 +15,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
+import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
@@ -103,6 +104,7 @@ export default function PlayApp() {
           <div className={styles.col}>
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? <ActionCardButton ctx={ctx} /> : null}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -290,6 +292,8 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       return <StatusSheet sheet={sheet} close={close} ctx={ctx} />;
     case "research":
       return <ResearchSheet faction={sheet.faction} follow={sheet.follow} close={close} ctx={ctx} />;
+    case "actionCard":
+      return <ActionCardSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "component":
       return <ComponentSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "relic":

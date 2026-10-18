@@ -33,7 +33,9 @@ export function subjectOf(e: Entry, turn?: FactionId): Optional<FactionId> {
   if (own) return own;
   if (actor?.as) return actor.as;
   if (TABLE_EVENTS.has(e.data.action)) return undefined;
-  return (turn ?? actor?.seat) as Optional<FactionId>;
+  // A phone acting for its own seat (an action card played out of turn, say)
+  // names that seat; entries from upstream's screens fall back to whose turn it was.
+  return (actor?.seat ?? turn) as Optional<FactionId>;
 }
 
 // Whose turn each action-phase entry fell in. Upstream replays the whole game to

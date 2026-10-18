@@ -1,12 +1,13 @@
 "use client";
 // A player's sheet: what they hold and how they got their points, from data
 // upstream already tracks. Each component opens to its rules text.
-import { useAgendas, useLeaders, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
+import { useActionCards, useActionLog, useAgendas, useLeaders, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { pointsBySource, SFTT } from "./logic";
+import { playedActionCards } from "./NowActionCards";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, type Ctx } from "./ui";
 
@@ -43,6 +44,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const strategyCards = useStrategyCards();
   const speaker = useSpeaker();
   const passed = usePassedFactionIds();
+  const actionCards = useActionCards();
+  const log = useActionLog();
   const f = factions[id];
   if (!f) return null;
 
@@ -57,6 +60,7 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const laws = Object.values(agendas).filter((a): a is Agenda => !!a && a.passed === true && a.target === id);
   const throneFrom = Object.entries(objectives[SFTT]?.keyedScorers ?? {}).filter(([, holders]) => holders?.includes(id)).map(([giver]) => giver as FactionId);
   const alliances = f.alliances ?? [];
+  const played = playedActionCards(log, id, new Set(Object.values(actionCards).map((c) => c?.name ?? "")));
   const playArea = [...throneFrom.map((g) => `${short(g)}'s Support for the Throne`), ...alliances.map((a) => `${short(a)}'s Alliance`)];
 
   return (
@@ -119,6 +123,11 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
           <p className={styles.sub}>{playArea.join(" · ")}</p>
         </Section>
       ) : null}
+
+      <Section title="Action cards played" count={played.length}>
+        {played.length ? played.map((name, i) => <Item key={`${name}-${i}`} name={name} text={Object.values(actionCards).find((c) => c?.name === name)?.description} />)
+          : <p className={styles.sub}>None recorded</p>}
+      </Section>
 
       {laws.length ? (
         <Section title="Laws that name them">
