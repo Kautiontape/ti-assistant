@@ -48,12 +48,18 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
       const res = await dataUpdate(withActor(event, actor));
       if (res === undefined) { ok = false; break; }
     }
+    if (ok) {
+      // Some writes cancel an earlier entry instead of adding one (taking back a
+      // tech or an objective scored this turn, "Back to the game"). Offer Undo only
+      // if the server's newest action is this one.
+      let undoable = true;
+      try { undoable = groupKey(newestGroup(await serverNewest())) === actor.id; } catch { /* offline: keep Undo; it re-checks */ }
+      lastId.current = undoable ? actor.id : undefined;
+      show({ text: actor.as ? `${label} (you helped)` : label, undo: undoable });
+    }
     busy.current = false;
     setPending(false);
-    if (ok) {
-      lastId.current = actor.id;
-      show({ text: actor.as ? `${label} (you helped)` : label, undo: true });
-    } else {
+    if (!ok) {
       show({ text: `Not saved: ${label}. Check the connection and try again.`, tone: "error" });
     }
     return ok;
