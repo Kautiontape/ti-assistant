@@ -17,6 +17,8 @@ import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
+import { PointsButton, PointsSheet } from "./NowPoints";
+import { ExpeditionCard, ExpeditionSheet } from "./NowExpedition";
 import MapTab, { SystemSheet } from "./MapTab";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
@@ -109,7 +111,7 @@ export default function PlayApp() {
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
-            {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? <ActionCardButton ctx={ctx} /> : null}
+            {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? <><ActionCardButton ctx={ctx} /><PointsButton ctx={ctx} /></> : null}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -242,6 +244,7 @@ function TableTab(ctx: Ctx) {
   const state = useGameState();
   const strategyCards = useStrategyCards();
   return (
+    <>
     <section className={styles.card} aria-label="Players">
       <p className={styles.eyebrow}><span>Players by points</span></p>
       <ul className={styles.list}>
@@ -261,6 +264,8 @@ function TableTab(ctx: Ctx) {
         ))}
       </ul>
     </section>
+    <ExpeditionCard ctx={ctx} />
+    </>
   );
 }
 
@@ -318,6 +323,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
   const strategyCards = useStrategyCards();
   const order = useOrderedFactionIds("SPEAKER");
   const checksAndBalances = useAgenda("Checks and Balances");
+  const phase = useGameState().phase;
   const [q, setQ] = useState("");
   const [to, setTo] = useState<Optional<FactionId>>();
   switch (sheet.kind) {
@@ -333,6 +339,10 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       return <EndCombatSheet before={sheet.before} close={close} ctx={ctx} />;
     case "system":
       return <SystemSheet system={sheet.system} close={close} ctx={ctx} />;
+    case "expedition":
+      return <ExpeditionSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "points":
+      return <PointsSheet phase={phase} close={close} ctx={ctx} />;
     case "actionCard":
       return <ActionCardSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "component":

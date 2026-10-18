@@ -67,6 +67,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ""}`;
     case "UNCLAIM_PLANET": return `lost ${ev.planet}`;
     case "ADD_ATTACHMENT": return `attached ${ev.attachment} to ${ev.planet}`;
+    case "REMOVE_ATTACHMENT": return `removed ${ev.attachment} from ${ev.planet}`;
     case "ADD_TECH": return `researched ${ev.tech}`;
     case "REMOVE_TECH": return `removed ${ev.tech}`;
     case "SCORE_OBJECTIVE":
@@ -82,7 +83,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "SET_SPEAKER": return "became speaker";
     case "PLAY_COMPONENT": return `used ${ev.name}`;
     case "GAIN_RELIC": return `gained ${ev.relic}`;
-    case "COMMIT_TO_EXPEDITION": return "committed to the Expedition";
+    case "COMMIT_TO_EXPEDITION": return ev.factionId ? `committed to the ${EXPEDITION_NAMES[ev.expedition] ?? ev.expedition} expedition` : `took back the ${EXPEDITION_NAMES[ev.expedition] ?? ev.expedition} expedition`;
     case "REVEAL_AGENDA": return `Agenda revealed: ${ev.agenda}`;
     case "CAST_VOTES": {
       const n = (ev.votes ?? 0) + (ev.extraVotes ?? 0);
@@ -188,6 +189,26 @@ export function planetsInSystem(planets: Partial<Record<PlanetId, Planet>>, syst
   });
 }
 
+const EXPEDITION_NAMES: Record<string, string> = { resources: "Resources", influence: "Influence", tradeGoods: "Trade goods", actionCards: "Action cards", secrets: "Secret objective", techSkip: "Technology skip" };
+
+// Attachments a planet can take, as upstream's planet row offers them
+// (availableAttachments in src/components/PlanetRow/PlanetRow.tsx), less the
+// ones already on it.
+export function attachableTo(planet: Planet, attachments: Partial<Record<AttachmentId, Attachment>>): Attachment[] {
+  const on = planet.attachments ?? [];
+  if (planet.attributes.includes("space-station") || planet.attributes.includes("ocean") || planet.attributes.includes("synthetic" as PlanetAttribute) || planet.locked) return [];
+  return Object.values(attachments).filter((a): a is Attachment => {
+    if (!a || on.includes(a.id)) return false;
+    if (planet.id === "Mecatol Rex" && a.id !== "Nano-Forge") return false;
+    if (a.id === "Terraform" && planet.owner === "Titans of Ul") return false;
+    if (a.required.type && !planet.types.includes(a.required.type)) return false;
+    if (a.required.id !== undefined && a.required.id !== planet.id) return false;
+    if (a.required.home !== undefined && a.required.home !== (planet.home ?? false)) return false;
+    if (a.required.legendary !== undefined && a.required.legendary !== planet.attributes.includes("legendary")) return false;
+    return true;
+  });
+}
+
 // Checks and Balances: the picker gives the card to a player who still has room
 // for one (upstream's ChecksAndBalancesMenu rule), or keeps it if nobody does.
 export function checksAndBalancesTargets(cards: StrategyCard[], players: FactionId[], picker: FactionId): FactionId[] {
@@ -222,10 +243,11 @@ export function scorablePublics(objectives: Objectives, factionId: FactionId, an
     !!o && !!o.selected && isPublic(o) && (anyPhase || !o.phase || o.phase === "STATUS") && !(o.scorers ?? []).includes(factionId));
 }
 
-// Status-phase secrets nobody has scored. Hands aren't tracked, so all of them.
-export function scorableSecrets(objectives: Objectives) {
+// Secrets for this phase (status, action or agenda) nobody has scored. Hands
+// aren't tracked, so all of them.
+export function scorableSecrets(objectives: Objectives, phase = "STATUS") {
   return Object.values(objectives).filter((o): o is Objective =>
-    !!o && o.type === "SECRET" && o.phase === "STATUS" && !(o.scorers ?? []).length);
+    !!o && o.type === "SECRET" && (o.phase ?? "STATUS") === phase && !(o.scorers ?? []).length);
 }
 
 // A player who doesn't control all their home planets can't score publics
