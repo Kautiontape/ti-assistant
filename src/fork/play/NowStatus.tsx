@@ -171,7 +171,7 @@ function ThroneRow({ giver, ctx }: { giver: FactionId; ctx: Ctx }) {
 // ---------- sheets ----------
 
 export function StatusSheet({ sheet, close, ctx }: { sheet: Extract<Sheet, { kind: "score" | "give" | "reveal" }>; close: () => void; ctx: Ctx }) {
-  if (sheet.kind === "score") return <ScoreSheet faction={sheet.faction} which={sheet.which} anyPhase={sheet.anyPhase} close={close} ctx={ctx} />;
+  if (sheet.kind === "score") return <ScoreSheet faction={sheet.faction} which={sheet.which} anyPhase={sheet.anyPhase} phase={sheet.phase} close={close} ctx={ctx} />;
   if (sheet.kind === "give") return <GiveSheet giver={sheet.giver} close={close} ctx={ctx} />;
   return <RevealSheet as={sheet.as} close={close} ctx={ctx} />;
 }
@@ -182,7 +182,7 @@ function Search({ q, setQ, placeholder }: { q: string; setQ: (q: string) => void
 
 const matches = (o: Objective, q: string) => !q || o.name.toLowerCase().includes(q.toLowerCase());
 
-export function ScoreSheet({ faction, which, anyPhase, close, ctx }: { faction: FactionId; which: "public" | "secret"; anyPhase?: boolean; close: () => void; ctx: Ctx }) {
+export function ScoreSheet({ faction, which, anyPhase, phase = "STATUS", close, ctx }: { faction: FactionId; which: "public" | "secret"; anyPhase?: boolean; phase?: string; close: () => void; ctx: Ctx }) {
   const { short, w } = ctx;
   const objectives = useObjectives();
   const currentTurn = useCurrentTurn();
@@ -190,7 +190,7 @@ export function ScoreSheet({ faction, which, anyPhase, close, ctx }: { faction: 
   const [q, setQ] = useState("");
   const now = scoredThisPhase(currentTurn, objectives, faction);
   const done = which === "public" ? now.publics : now.secrets;
-  const list = (which === "public" ? scorablePublics(objectives, faction, anyPhase) : scorableSecrets(objectives))
+  const list = (which === "public" ? scorablePublics(objectives, faction, anyPhase) : scorableSecrets(objectives, phase))
     .filter((o) => matches(o, q))
     .sort((a, b) => a.points - b.points || a.name.localeCompare(b.name));
   const missing = which === "public" ? missingHomePlanets(planets, faction) : [];
@@ -209,9 +209,9 @@ export function ScoreSheet({ faction, which, anyPhase, close, ctx }: { faction: 
           <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => takeBack(id)}>Take it back</button>
         </div>
       ))}
-      {done.length ? <p className={styles.sub}>{anyPhase ? "Imperial scores one public objective." : `Players normally score one ${which} objective each status phase.`}</p> : null}
+      {done.length && phase === "STATUS" ? <p className={styles.sub}>{anyPhase ? "Imperial scores one public objective." : `Players normally score one ${which} objective each status phase.`}</p> : null}
       {missing.length ? <p className={styles.sub}>{short(faction)} doesn't control {missing.map((p) => p.name).join(" and ")}. A player without all their home planets can't score public objectives.</p> : null}
-      {which === "secret" ? <p className={styles.sub}>Hands aren't tracked, so every unscored secret is listed. It's public once scored.</p> : null}
+      {which === "secret" ? <p className={styles.sub}>Hands aren't tracked, so every unscored {phase === "STATUS" ? "" : `${phase.toLowerCase()}-phase `}secret is listed. It's public once scored.</p> : null}
       <Search q={q} setQ={setQ} placeholder={which === "public" ? "Find an objective" : "Find a secret"} />
       <div>
         {list.map((o) => (

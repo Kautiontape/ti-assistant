@@ -222,10 +222,11 @@ export function scorablePublics(objectives: Objectives, factionId: FactionId, an
     !!o && !!o.selected && isPublic(o) && (anyPhase || !o.phase || o.phase === "STATUS") && !(o.scorers ?? []).includes(factionId));
 }
 
-// Status-phase secrets nobody has scored. Hands aren't tracked, so all of them.
-export function scorableSecrets(objectives: Objectives) {
+// Secrets for this phase (status, action or agenda) nobody has scored. Hands
+// aren't tracked, so all of them.
+export function scorableSecrets(objectives: Objectives, phase = "STATUS") {
   return Object.values(objectives).filter((o): o is Objective =>
-    !!o && o.type === "SECRET" && o.phase === "STATUS" && !(o.scorers ?? []).length);
+    !!o && o.type === "SECRET" && (o.phase ?? "STATUS") === phase && !(o.scorers ?? []).length);
 }
 
 // A player who doesn't control all their home planets can't score publics
