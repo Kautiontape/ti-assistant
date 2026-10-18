@@ -23,6 +23,10 @@ service cloud.firestore {
     match /archiveTimers/{gameId} {
       allow get: if true;
     }
+    // Fork: a Milty draft (/draft). Phones watch one draft; the API writes it.
+    match /forkDrafts/{draftId} {
+      allow get: if true;
+    }
     // Everything else (passwords, sessions, processed, and the fork's
     // private collections) is denied by default.
   }

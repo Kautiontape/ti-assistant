@@ -273,6 +273,30 @@ export function draftOrder(players: number, seed: string, keep: boolean) {
 
 export interface Pick { player: number; kind: PickKind; value: number | string; by?: number; at: number }
 
+// A draft as stored in forkDrafts/{id}. Players are numbered by their place in
+// `players`; positions are 0 for the speaker, then clockwise.
+export interface Draft {
+  id: string;
+  name: string;
+  createdAt: number;
+  players: string[];
+  order: number[];
+  slices: string[][];
+  factions: string[];
+  seed: string;
+  limits: DraftLimits;
+  expansions: string[];
+  victoryPoints: number;
+  picks: Pick[];
+  gameId?: string;
+  creating?: number;
+}
+
+// Firestore has no arrays of arrays, so each slice is stored as {tiles}.
+export type StoredDraft = Omit<Draft, "slices"> & { slices: { tiles: string[] }[] };
+export const toStored = <T extends { slices: string[][] }>(d: T) => ({ ...d, slices: d.slices.map((tiles) => ({ tiles })) });
+export const fromStored = (d: StoredDraft): Draft => ({ ...d, slices: d.slices.map((s) => s.tiles) });
+
 // Snake order: the draft order, then reversed, then the draft order again.
 export function pickerAt(order: number[], index: number): number | undefined {
   const n = order.length;
