@@ -37,6 +37,32 @@ Planned, not yet added:
 - **S6, archive fix.** `processGames` in `app/[locale]/stats/processor.ts` fires
   every game at once with unawaited writes. Better sent upstream than carried here.
 
+## Upstream internals `/play` imports
+
+Not seams (no upstream file is edited), but if an upstream merge breaks the
+build in `src/fork/play/`, these are where to look. Beyond the event
+constructors and data hooks:
+
+- Rules helpers: `computeRemainingVotes`, `canFactionVote`, `getTargets` and
+  `translateOutcome` from `src/components/VoteBlock/VoteBlock.tsx`;
+  `computeVotes` from the page file
+  `app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase.tsx`; `computeVPs`
+  (`src/util/factions.ts`); `getSelectedActionFromLog` (`src/util/api/data.ts`);
+  `getClaimedPlanets`, `getActiveAgenda` and `getAllVotes`
+  (`src/util/actionLog.ts`); `getCurrentPhasePreviousLogEntries`
+  (`src/util/api/actionLog.ts`); `sortStrategyCards`; `getStrategyCardsForFaction`.
+- `DBConnection` and `useUndo`, for undo's check against the server's newest
+  entries.
+- Log-entry shapes: `/play` reads `END_TURN`'s `prevFaction`, and relies on
+  upstream storing each event as sent except for `REVEAL_OBJECTIVE`,
+  `HIDE_OBJECTIVE` and `REMOVE_TECH`, which are rebuilt from `event` alone
+  (`src/fork/play/useWrite.ts` handles those).
+- Some upstream rules are copied rather than imported, because upstream keeps
+  them inline in components: the claim rule (`ActionPhase.tsx`), status-phase
+  scoring and reveal (`StatusPhase.tsx`), Checks and Balances
+  (`StrategyPhase.tsx`) and the voting order (`VotingColumn.tsx`). Each copy in
+  `src/fork/play/logic.ts` names its source.
+
 ## Things that need no seam
 
 - **Cron.** `/api/process-games` only checks that an `X-Appengine-Cron` header

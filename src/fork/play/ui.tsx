@@ -1,6 +1,8 @@
 "use client";
 // Pieces shared by the /play screens: types, chips, banners, sheets and clocks.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useObjectives } from "../../context/objectiveDataHooks";
+import { pointsBySource } from "./logic";
 import FactionIcon from "../../components/FactionIcon/FactionIcon";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
@@ -92,4 +94,13 @@ export function SheetFrame({ title, close, children }: { title: string; close: (
       </section>
     </div>
   );
+}
+
+// Players by points, with points by source (the same sums as upstream's computeVPs).
+export function useRace(factions: Ctx["factions"]) {
+  const objectives = useObjectives();
+  return useMemo(() => Object.values(factions)
+    .filter((f): f is Faction => !!f)
+    .map((f) => ({ id: f.id, ...pointsBySource(objectives, f.id, f.vps ?? 0) }))
+    .sort((a, b) => b.total - a.total), [factions, objectives]);
 }

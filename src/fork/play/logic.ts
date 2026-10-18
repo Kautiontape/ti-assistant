@@ -18,7 +18,7 @@ export function actorOf(e: Optional<Entry>): Optional<Actor> {
   return d?.actor ?? d?.event?.actor;
 }
 
-const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "SWAP_MAP_TILES"]);
+const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "CONTINUE_GAME", "SWAP_MAP_TILES"]);
 
 // The faction an entry is about, if any. `turn` is whose turn the entry fell in
 // (see turnOwners), for entries such as SELECT_ACTION that name no faction.
@@ -93,6 +93,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;
     case "MANUAL_VP_UPDATE": return `${ev.vps > 0 ? "gained" : "lost"} ${Math.abs(ev.vps)} point${Math.abs(ev.vps) === 1 ? "" : "s"} by hand`;
     case "END_GAME": return "The game ended";
+    case "CONTINUE_GAME": return "The game continued";
     default: return null;
   }
 }
@@ -234,6 +235,21 @@ export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speak
   const speakerOrder = factions[speaker]?.order ?? 1;
   const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
   return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+}
+
+// Seconds each player spent on their own action-phase turns, from the log's
+// timestamps: each END_TURN closes the turn that began at the previous boundary.
+export function turnSeconds(log: ActionLog): Partial<Record<FactionId, number>> {
+  const out: Partial<Record<FactionId, number>> = {};
+  let start: Optional<number>;
+  for (const e of [...log].reverse()) {
+    if (e.data.action === "ADVANCE_PHASE") { start = e.timestampMillis; continue; }
+    if (e.data.action !== "END_TURN") continue;
+    const f = (e.data.event as { prevFaction?: string }).prevFaction as Optional<FactionId>;
+    if (f && (f as string) !== "None" && start !== undefined) out[f] = (out[f] ?? 0) + (e.timestampMillis - start) / 1000;
+    start = e.timestampMillis;
+  }
+  return out;
 }
 
 export function fmtDuration(ms: number) {

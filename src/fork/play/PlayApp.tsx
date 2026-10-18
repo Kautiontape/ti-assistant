@@ -4,7 +4,7 @@
 // Strings are English and live in fork code, so upstream's message files stay untouched.
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useActionLog, useAgenda, useCurrentTurn, useGameId, usePlanets, useStrategyCards } from "../../context/dataHooks";
+import { useActionLog, useAgenda, useCurrentTurn, useGameId, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
@@ -17,9 +17,10 @@ import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
+import NowEnd, { GameEndBanner } from "./NowEnd";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
-import { PHASES, cx, pcolor, useMounted, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
+import { PHASES, cx, pcolor, useMounted, useRace, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
 
 type Tab = "now" | "table" | "log";
 
@@ -98,7 +99,8 @@ export default function PlayApp() {
       {tab === "now" ? (
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
-            {phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
+            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -163,17 +165,9 @@ function CardBoard({ factions, short, open }: Ctx) {
   );
 }
 
-function useRace(factions: Ctx["factions"]) {
-  const objectives = useObjectives();
-  return useMemo(() => Object.values(factions)
-    .filter((f): f is Faction => !!f)
-    .map((f) => ({ id: f.id, ...pointsBySource(objectives, f.id, f.vps ?? 0) }))
-    .sort((a, b) => b.total - a.total), [factions, objectives]);
-}
-
 function Race({ factions, short, open }: Ctx) {
   const rows = useRace(factions);
-  const target = 10;
+  const target = useOptions()["victory-points"] ?? 10;
   return (
     <section className={styles.card} aria-label="Score race">
       <p className={styles.eyebrow}><span>Race to {target}</span></p>
