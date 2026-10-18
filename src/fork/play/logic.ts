@@ -82,8 +82,13 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "GAIN_RELIC": return `gained ${ev.relic}`;
     case "COMMIT_TO_EXPEDITION": return "committed to the Expedition";
     case "REVEAL_AGENDA": return `Agenda revealed: ${ev.agenda}`;
-    case "CAST_VOTES": return ev.votes ? `cast ${ev.votes + (ev.extraVotes ?? 0)} votes for ${who(ev.target)}` : "abstained";
+    case "CAST_VOTES": {
+      const n = (ev.votes ?? 0) + (ev.extraVotes ?? 0);
+      return ev.votes ? `cast ${n} vote${n === 1 ? "" : "s"} for ${who(ev.target)}` : "abstained";
+    }
     case "RESOLVE_AGENDA": return `${ev.agenda}: ${who(ev.target)}`;
+    case "START_VOTING": return "Voting started";
+    case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;
     case "PLAY_PROMISSORY_NOTE": return `played ${ev.card}`;
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;
     case "MANUAL_VP_UPDATE": return `${ev.vps > 0 ? "gained" : "lost"} ${Math.abs(ev.vps)} point${Math.abs(ev.vps) === 1 ? "" : "s"} by hand`;
@@ -220,6 +225,15 @@ export function revealableObjectives(objectives: Objectives, round: number) {
 // Who holds the giver's Support for the Throne, if anyone.
 export function throneHolder(objectives: Objectives, giver: FactionId): Optional<FactionId> {
   return objectives[SFTT]?.keyedScorers?.[giver]?.[0];
+}
+
+// ---------- agenda phase: upstream's rules (agenda/components/VotingColumn.tsx) ----------
+
+// Argent Flight first, then from the player after the speaker round to the speaker.
+export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speaker: FactionId): FactionId[] {
+  const speakerOrder = factions[speaker]?.order ?? 1;
+  const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
+  return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
 }
 
 export function fmtDuration(ms: number) {

@@ -18,7 +18,10 @@ export type Sheet =
   | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }
   | { kind: "score"; faction: FactionId; which: "public" | "secret" }
   | { kind: "give"; giver: FactionId }
-  | { kind: "reveal"; as?: FactionId };
+  | { kind: "reveal"; as?: FactionId }
+  | { kind: "agenda"; as?: FactionId }
+  | { kind: "vote"; faction: FactionId }
+  | { kind: "resolve"; as?: FactionId };
 
 export type Ctx = {
   factions: Partial<Record<FactionId, Faction>>;
