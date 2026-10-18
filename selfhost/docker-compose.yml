@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase_sa
+      GOOGLE_CLOUD_PROJECT: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
     secrets:
       - firebase_sa
     ports:

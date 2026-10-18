@@ -37,7 +37,8 @@ FROM node:24-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=build /app/build ./build
+# next start writes its image-optimisation cache under build/cache.
+COPY --chown=node:node --from=build /app/build ./build
 COPY --from=build /app/public ./public
 COPY --from=build /app/server ./server
 COPY package.json next.config.js ./

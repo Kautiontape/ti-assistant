@@ -40,7 +40,9 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <pr
 ## 3. Service account (vault)
 
 The server signs in with a service account key, stored in the vault per
-`~/.dotfiles/secrets/README.md`. It never lives on disk.
+`~/.dotfiles/secrets/README.md`. It is never in the repo or your home
+directory. Docker does keep a copy inside the container (that's how Compose
+delivers secrets), and the copy goes away when you remove the container.
 
 1. Project settings → Service accounts → Firebase Admin SDK → **Generate new
    private key**.

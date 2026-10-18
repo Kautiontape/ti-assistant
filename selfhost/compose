@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # docker compose wrapper that reads the Firebase service account from the
-# vault (~/.dotfiles/secrets/README.md) so the key never touches disk.
+# vault (~/.dotfiles/secrets/README.md) and hands it to Compose as a secret,
+# so no key file sits in the repo or home directory.
 #   selfhost/compose up -d --build
 #   selfhost/compose logs -f app
 set -euo pipefail
