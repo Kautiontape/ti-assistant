@@ -4,6 +4,7 @@ import LangSelectHoverMenu from "../../src/components/LangSelectHoverMenu/LangSe
 import Sidebars from "../../src/components/Sidebars/Sidebars";
 import SiteLogo from "../../src/components/SiteLogo/SiteLogo";
 import DataStoreWrapper from "../../src/context/DataStoreWrapper";
+import HideOnPlay from "../../src/fork/play/HideOnPlay";
 import ModalProvider from "../../src/context/ModalProvider";
 import TimerProvider from "../../src/context/TimerProvider";
 import NavBarButtons from "./NavBarButtons";
@@ -28,6 +29,7 @@ export async function InnerLayout({
         <SettingsProvider>
           <TimerProvider>
             <ModalProvider>
+              <HideOnPlay>
               <div className={styles.NavBar}>
                 <div className="flexRow" style={{ marginInlineEnd: "auto" }}>
                   <Link href={"/"} className={styles.HomeLink}>
@@ -50,6 +52,7 @@ export async function InnerLayout({
                 </div>
                 <NavBarButtons />
               </div>
+              </HideOnPlay>
               {children}
             </ModalProvider>
           </TimerProvider>

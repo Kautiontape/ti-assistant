@@ -25,6 +25,7 @@ listed below, so an upstream merge can only conflict in those spots.
 | S1 | `src/util/server.ts` (`getAdminCredential`) | Use `GOOGLE_APPLICATION_CREDENTIALS` when set; otherwise read upstream's key file at runtime instead of importing it, so builds don't need the key. | Candidate |
 | S2 | `src/data/DBConnection.ts` | Firebase web config from `NEXT_PUBLIC_FIREBASE_*`, defaulting to upstream's project. `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST` overrides the dev emulator address (`off` disables it). | Candidate |
 | S3 | `src/components/Header/Header.tsx`, `src/components/QRCode/QRCodeButtonWrapper.tsx`, `app/[locale]/archive/[gameId]/layout.tsx` | `NEXT_PUBLIC_BASE_URL` for share links and QR codes, falling back to upstream's URLs. | Candidate |
+| S7 | `app/[locale]/inner-layout.tsx` | Wraps upstream's NavBar in `HideOnPlay` (`src/fork/play/HideOnPlay.tsx`), so `/play` can use its own top bar. Three lines: one import and the wrapper's open and close tags. | No (fork-only screen) |
 
 Planned, not yet added:
 
