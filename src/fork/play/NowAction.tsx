@@ -1,9 +1,10 @@
 "use client";
 // Now, action phase.
 import Link from "next/link";
-import { useActionLog, useCurrentTurn, useStrategyCards } from "../../context/dataHooks";
+import { useActionLog, useCurrentTurn, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOnDeckFactionId } from "../../context/gameDataHooks";
+import { getClaimedPlanets } from "../../util/actionLog";
 import { getSelectedActionFromLog } from "../../util/api/data";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
@@ -24,6 +25,7 @@ export default function NowAction(ctx: Ctx) {
   const log = useActionLog();
   const now = useNow();
   const combat = openCombat(log);
+  const planets = usePlanets();
   if (!active) {
     return (
       <section className={styles.card} aria-label="Everyone has passed">
@@ -83,6 +85,7 @@ export default function NowAction(ctx: Ctx) {
                 {selected === "Tactical" ? <button className={styles.btn} onClick={() => open({ kind: "claim", faction: active })}>Take a planet</button> : null}
                 <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>
               </div>
+              {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
               {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
                 onClick={async () => {
@@ -120,5 +123,18 @@ export default function NowAction(ctx: Ctx) {
       ) : null}
       {isCard ? <SecondariesCard card={isCard as StrategyCard} active={active} ctx={ctx} /> : null}
     </>
+  );
+}
+
+// Exploring a planet taken this turn often gives an attachment. Planets taken
+// in one turn share a system, so this opens that system's sheet.
+function AttachButton({ active, currentTurn, planets, ctx }: { active: FactionId; currentTurn: ReturnType<typeof useCurrentTurn>; planets: ReturnType<typeof usePlanets>; ctx: Ctx }) {
+  const taken = getClaimedPlanets(currentTurn, active).map((c) => planets[c.planet]).filter((p): p is Planet => !!p);
+  const last = taken.at(-1);
+  if (!last || last.system === undefined) return null;
+  return (
+    <button className={cx(styles.btn, styles.block)} onClick={() => ctx.open({ kind: "system", system: String(last.system) })}>
+      Explored? Add an attachment<small>{taken.map((p) => p.name).join(", ")}</small>
+    </button>
   );
 }

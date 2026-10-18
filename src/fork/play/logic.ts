@@ -67,6 +67,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ""}`;
     case "UNCLAIM_PLANET": return `lost ${ev.planet}`;
     case "ADD_ATTACHMENT": return `attached ${ev.attachment} to ${ev.planet}`;
+    case "REMOVE_ATTACHMENT": return `removed ${ev.attachment} from ${ev.planet}`;
     case "ADD_TECH": return `researched ${ev.tech}`;
     case "REMOVE_TECH": return `removed ${ev.tech}`;
     case "SCORE_OBJECTIVE":
@@ -185,6 +186,24 @@ export function planetsInSystem(planets: Partial<Record<PlanetId, Planet>>, syst
     if (systemNumber === "82A" || systemNumber === "82B") return system === "82A" || system === "82B";
     if (typeof system === "number") return system === parseInt(systemNumber);
     return system === systemNumber;
+  });
+}
+
+// Attachments a planet can take, as upstream's planet row offers them
+// (availableAttachments in src/components/PlanetRow/PlanetRow.tsx), less the
+// ones already on it.
+export function attachableTo(planet: Planet, attachments: Partial<Record<AttachmentId, Attachment>>): Attachment[] {
+  const on = planet.attachments ?? [];
+  if (planet.attributes.includes("space-station") || planet.attributes.includes("ocean") || planet.attributes.includes("synthetic" as PlanetAttribute) || planet.locked) return [];
+  return Object.values(attachments).filter((a): a is Attachment => {
+    if (!a || on.includes(a.id)) return false;
+    if (planet.id === "Mecatol Rex" && a.id !== "Nano-Forge") return false;
+    if (a.id === "Terraform" && planet.owner === "Titans of Ul") return false;
+    if (a.required.type && !planet.types.includes(a.required.type)) return false;
+    if (a.required.id !== undefined && a.required.id !== planet.id) return false;
+    if (a.required.home !== undefined && a.required.home !== (planet.home ?? false)) return false;
+    if (a.required.legendary !== undefined && a.required.legendary !== planet.attributes.includes("legendary")) return false;
+    return true;
   });
 }
 

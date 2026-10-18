@@ -14,7 +14,7 @@ import { getWormholeNexusSystemNumber } from "../../util/map";
 import { getMapString } from "../../util/options";
 import { applyAllPlanetAttachments, fracturePlanetsOwned } from "../../util/planets";
 import { Optional } from "../../util/types/types";
-import { claimablePlanets, planetsInSystem } from "./logic";
+import { attachableTo, claimablePlanets, planetsInSystem } from "./logic";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, type Ctx } from "./ui";
 
@@ -138,7 +138,6 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
               <span className={styles.num}>{p.resources}/{p.influence}</span>
             </div>
             {facts.length ? <p className={styles.sub}>{facts.join(" · ")}</p> : null}
-            {p.attachments?.length ? <p className={styles.sub}>Attached: {p.attachments.map((id) => attachments[id]?.name ?? id).join(", ")}</p> : null}
             {p.ability ? <p className={styles.sub}>{p.ability}</p> : null}
             <div className={styles.row}>
               {p.owner ? (
@@ -147,6 +146,7 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
                 </button>
               ) : <span className={styles.sub}>Nobody controls it.</span>}
             </div>
+            <Attachments planet={p} ctx={ctx} />
             {taker && takeable.includes(p.id) ? (
               <button className={cx(styles.btn, styles.block)} disabled={w.pending} onClick={async () => {
                 if (await w.write([Events.ClaimPlanetEvent(taker, p.id)], `${short(taker)} took control of ${p.name}${p.owner ? ` from ${short(p.owner)}` : ""}`, taker)) close();
@@ -156,5 +156,65 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
         );
       })}
     </SheetFrame>
+  );
+}
+
+// Attachments on a planet: remove one, or add one the planet can take.
+function Attachments({ planet, ctx }: { planet: Planet; ctx: Ctx }) {
+  const { short, seat, helping, w } = ctx;
+  const attachments = useAttachments();
+  const planets = usePlanets();
+  const currentTurn = useCurrentTurn();
+  const [adding, setAdding] = useState(false);
+  const on = planet.attachments ?? [];
+  const who = planet.owner ?? helping ?? seat;
+  const effect = (a: Attachment) => [
+    a.resources || a.influence ? `+${a.resources ?? 0}/+${a.influence ?? 0}` : "",
+    a.attribute ? (SKIPS[a.attribute] ?? a.attribute.replace(/-/g, " ")) : "",
+    a.required.type ? `${a.required.type.charAt(0)}${a.required.type.slice(1).toLowerCase()} planets` : "",
+  ].filter(Boolean).join(" · ");
+  const list = adding ? attachableTo(planet, attachments).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  // Where an attachment is now: upstream records it on the planets, not the attachment.
+  const elsewhere = (a: Attachment) => Object.values(planets).filter((x): x is Planet => !!x && x.id !== planet.id && (x.attachments ?? []).includes(a.id));
+  // An attachment added this turn is taken back: upstream deletes that entry,
+  // and returns the attachment to the planet it came from only if told which.
+  const addedNow = (a: Attachment) => currentTurn.map((e) => e.data as unknown as { action: string; event: { planet?: string; attachment?: string; prevPlanet?: PlanetId } })
+    .find((d) => d.action === "ADD_ATTACHMENT" && d.event.planet === planet.id && d.event.attachment === a.id);
+  const change = async (add: boolean, a: Attachment) => {
+    const prev = add ? undefined : addedNow(a)?.event.prevPlanet;
+    const label = add ? `${short(who)} attached ${a.name} to ${planet.name}`
+      : addedNow(a) ? `${short(who)} took back ${a.name}${prev ? `; it's on ${planets[prev]?.name ?? prev} again` : ""}`
+      : `${short(who)} removed ${a.name} from ${planet.name}`;
+    const remove = Events.RemoveAttachmentEvent(planet.id, a.id);
+    const event = add ? Events.AddAttachmentEvent(planet.id, a.id) : prev ? { ...remove, event: { ...remove.event, prevPlanet: prev } } : remove;
+    if (await w.write([event], label, who)) setAdding(false);
+  };
+  if (!on.length && !attachableTo(planet, attachments).length) return null;
+  return (
+    <div>
+      {on.map((id) => {
+        const a = attachments[id];
+        return a ? (
+          <div key={id} className={styles.row}>
+            <span className={styles.grow}><b>{a.name}</b> <span className={styles.sub}>{effect(a)}</span></span>
+            <button className={cx(styles.btn, styles.smallBtn)} disabled={w.pending} onClick={() => change(false, a)}>
+              {addedNow(a) ? `Take it back${addedNow(a)?.event.prevPlanet ? ` (returns to ${planets[addedNow(a)!.event.prevPlanet!]?.name})` : ""}` : "Remove"}
+            </button>
+          </div>
+        ) : null;
+      })}
+      {!adding ? (
+        <button className={cx(styles.btn, styles.block)} onClick={() => setAdding(true)}>Add an attachment</button>
+      ) : (
+        <div>
+          <p className={styles.eyebrow}><span>Attach to {planet.name}</span><button className={styles.link} onClick={() => setAdding(false)}>Cancel</button></p>
+          {list.map((a) => (
+            <button key={a.id} className={styles.opt} disabled={w.pending} onClick={() => change(true, a)}>
+              <b>{a.name}</b><span className={styles.meta}>{effect(a)}{elsewhere(a).map((x) => ` · moves from ${x.name}`).join("")}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
