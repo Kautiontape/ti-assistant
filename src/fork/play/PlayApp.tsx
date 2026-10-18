@@ -17,6 +17,7 @@ import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
+import { ComponentSheet, RelicSheet } from "./NowComponent";
 import NowEnd, { GameEndBanner } from "./NowEnd";
 import { PlayerSheet } from "./PlayerSheet";
 import NowStatus, { StatusSheet } from "./NowStatus";
@@ -289,6 +290,10 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       return <StatusSheet sheet={sheet} close={close} ctx={ctx} />;
     case "research":
       return <ResearchSheet faction={sheet.faction} follow={sheet.follow} close={close} ctx={ctx} />;
+    case "component":
+      return <ComponentSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "relic":
+      return <RelicSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "agenda":
     case "vote":
     case "resolve":

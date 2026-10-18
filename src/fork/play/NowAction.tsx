@@ -9,6 +9,7 @@ import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { fmtDuration, sentence, turnStartedAt } from "./logic";
 import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
+import { ComponentControls } from "./NowComponent";
 import styles from "./play.module.scss";
 import { cx, pcolor, useNow, Swatch, Chip, HelpBanner, type Ctx } from "./ui";
 
@@ -41,7 +42,7 @@ export default function NowAction(ctx: Ctx) {
   const isCard = selected && strategyCards[selected as StrategyCardId];
   const started = turnStartedAt(log);
   const steps = [...currentTurn].reverse()
-    .filter((e) => e.data.action !== "SELECT_ACTION")
+    .filter((e) => e.data.action !== "SELECT_ACTION" && !(mine && e.data.action === "PLAY_COMPONENT"))
     .map((e) => sentence(e, short, ctx.isFaction)).filter((s): s is string => !!s);
   const select = (action: Action, label: string) => w.write([Events.SelectActionEvent(action)], label, active);
   const actionName = selected === "Tactical" ? "Tactical action" : selected === "Component" ? "Component action" : selected ? `${selected}: primary` : null;
@@ -72,9 +73,10 @@ export default function NowAction(ctx: Ctx) {
           ) : (
             <>
               <h2 className={styles.title}>{actionName}</h2>
-              {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : CARDS_WITH_CONTROLS.has(selected) ? null : <p className={styles.sub}>Nothing recorded yet. Record what happens on the board, or just end the turn.</p>}
+              {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : CARDS_WITH_CONTROLS.has(selected) || selected === "Component" ? null : <p className={styles.sub}>Nothing recorded yet. Record what happens on the board, or just end the turn.</p>}
               {isCard ? <p className={styles.sub}>{(isCard as StrategyCard).primary}</p> : null}
               {isCard ? <CardControls card={selected as StrategyCardId} active={active} ctx={ctx} /> : null}
+              {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
               <div className={styles.grid2}>
                 {selected === "Tactical" ? <button className={styles.btn} onClick={() => open({ kind: "claim", faction: active })}>Take a planet</button> : null}
                 <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>

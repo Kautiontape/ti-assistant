@@ -20,6 +20,8 @@ export type Sheet =
   | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }
   | { kind: "score"; faction: FactionId; which: "public" | "secret"; anyPhase?: boolean }
   | { kind: "research"; faction: FactionId; follow?: boolean }
+  | { kind: "component"; faction: FactionId }
+  | { kind: "relic"; faction: FactionId }
   | { kind: "give"; giver: FactionId }
   | { kind: "reveal"; as?: FactionId }
   | { kind: "agenda"; as?: FactionId }
