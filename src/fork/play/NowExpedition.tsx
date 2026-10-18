@@ -11,6 +11,7 @@ import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, type Ctx } from "./ui";
+import { RowLink } from "../ui/kit";
 
 export const EXPEDITIONS: [ExpeditionId, string][] = [
   ["resources", "Resources"], ["influence", "Influence"], ["tradeGoods", "Trade goods"],
@@ -39,11 +40,7 @@ export function ExpeditionButton({ active, ctx }: { active: FactionId; ctx: Ctx 
   const taken = Object.keys(expedition).length;
   const mine = getLatestExpedition(currentTurn, active);
   if (taken >= 6 && !mine) return null;
-  return (
-    <button className={cx(styles.btn, styles.block)} onClick={() => ctx.open({ kind: "expedition", faction: active })}>
-      Thunder's Edge expedition<small>{mine ? `${ctx.short(active)} committed: ${nameOf(mine.expedition)}` : `${taken} of 6 slots taken`}</small>
-    </button>
-  );
+  return <RowLink onClick={() => ctx.open({ kind: "expedition", faction: active })} title="Thunder's Edge expedition" detail={mine ? `${ctx.short(active)} committed: ${nameOf(mine.expedition)}` : `${taken} of 6 slots taken`} />;
 }
 
 export function ExpeditionSheet({ faction, close, ctx }: { faction: FactionId; close: () => void; ctx: Ctx }) {

@@ -1,64 +1,7 @@
-// The fork's player screen. Tokens follow the Twilight Table prototype
-// (prototype/play): dark first, one teal accent (hue ~195) that no player colour uses.
-.root {
-  --bg: oklch(0.17 0.022 252);
-  --panel: oklch(0.215 0.026 252);
-  --raise: oklch(0.265 0.03 252);
-  --line: oklch(0.335 0.03 252);
-  --ink: oklch(0.955 0.008 252);
-  --muted: oklch(0.74 0.02 252);
-  --faint: oklch(0.6 0.02 252);
-  --accent: oklch(0.8 0.115 195);
-  --accent-ink: oklch(0.2 0.04 215);
-  --accent-soft: oklch(0.31 0.055 200);
-  --scrim: oklch(0.08 0.01 252 / 0.62);
-  --shadow: 0 18px 44px -20px oklch(0 0 0 / 0.85);
-  --p-red: oklch(0.68 0.19 29);
-  --p-orange: oklch(0.76 0.15 62);
-  --p-yellow: oklch(0.86 0.15 95);
-  --p-green: oklch(0.73 0.18 145);
-  --p-blue: oklch(0.69 0.15 262);
-  --p-purple: oklch(0.69 0.17 300);
-  --p-magenta: oklch(0.71 0.21 350);
-  --p-black: oklch(0.11 0.005 252);
-  --p-black-ring: oklch(0.93 0.01 252);
-  --display: var(--play-display), "Eurostile", sans-serif;
-  --body: var(--play-body), "Segoe UI", system-ui, sans-serif;
-  --mono: var(--play-mono), ui-monospace, monospace;
-  --tabs-h: 62px;
-  --gutter: 16px;
-  color-scheme: dark;
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  overflow-y: auto;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--body);
-  font-size: 16px;
-  line-height: 1.45;
-  display: flex;
-  flex-direction: column;
-
-  // Upstream's site.css resets every button with `all: unset` and adds global
-  // hover and disabled colours; the rules below are nested under .root so they win.
-  *, *::before, *::after { box-sizing: border-box; }
-  button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
-  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-}
-
-@mixin light {
-  --bg: oklch(0.965 0.006 252); --panel: oklch(0.995 0.003 252); --raise: oklch(0.93 0.01 252); --line: oklch(0.86 0.012 252);
-  --ink: oklch(0.22 0.025 252); --muted: oklch(0.45 0.025 252); --faint: oklch(0.58 0.02 252);
-  --accent: oklch(0.52 0.1 205); --accent-ink: oklch(0.99 0.01 200); --accent-soft: oklch(0.9 0.04 200);
-  --scrim: oklch(0.2 0.02 252 / 0.4); --shadow: 0 18px 44px -24px oklch(0.2 0.03 252 / 0.45);
-  --p-red: oklch(0.55 0.19 29); --p-orange: oklch(0.62 0.15 62); --p-yellow: oklch(0.72 0.15 95); --p-green: oklch(0.56 0.17 145);
-  --p-blue: oklch(0.52 0.16 262); --p-purple: oklch(0.52 0.18 300); --p-magenta: oklch(0.56 0.21 350);
-  --p-black: oklch(0.2 0.01 252); --p-black-ring: oklch(0.2 0.01 252);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: light) { :global(:root:not([data-theme="dark"])) .root { @include light; } }
-:global(:root[data-theme="light"]) .root { @include light; }
+// Layout for the fork's player screen (/play) and the draft (/draft). Tokens,
+// the base page and the shared controls are in src/fork/ui/kit.module.scss;
+// every root element carries both kit.root and this module's .root.
+.root { min-width: 0; }
 
 .root {
   .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -85,6 +28,8 @@
     width: 100%; max-width: 720px; margin: 0 auto;
   }
   .col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+  // A sheet docked beside the screen (kit .dock) takes the right-hand column.
+  &[data-docked] .main { max-width: none; margin: 0; padding-right: calc(var(--dock-w) + var(--gutter)); }
   @media (min-width: 760px) {
     .split { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; max-width: 1180px; }
   }
@@ -171,7 +116,6 @@
   .sw {
     flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
     background: oklch(0.14 0.01 252); box-shadow: inset 0 0 0 3px var(--c, var(--line));
-    &[data-c="Black"] { box-shadow: inset 0 0 0 3px var(--p-black), 0 0 0 1.5px var(--p-black-ring); }
   }
   .swSmall { width: 22px; height: 22px; box-shadow: inset 0 0 0 2.5px var(--c, var(--line)); }
   .swLarge { width: 42px; height: 42px; box-shadow: inset 0 0 0 4px var(--c, var(--line)); }

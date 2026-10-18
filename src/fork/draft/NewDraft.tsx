@@ -7,6 +7,7 @@ import { BASE_OPTIONS } from "../../../server/data/options";
 import { getDefaultMapString } from "../../util/map";
 import styles from "../play/play.module.scss";
 import { cx } from "../play/ui";
+import { kit } from "../ui/kit";
 import { DEFAULT_LIMITS, draftOrder, generateSlices, newSeed, pickFactions, tilePool, wedges, type DraftLimits } from "./milty";
 import { useBase } from "./useDraft";
 
@@ -89,7 +90,7 @@ export default function NewDraft() {
   );
 
   return (
-    <div className={styles.root}>
+    <div className={cx(kit.root, styles.root)}>
       <header className={styles.top}>
         <div className={styles.phase}><span className={styles.phaseName}>Milty draft</span><span className={styles.round}>6 players</span></div>
       </header>

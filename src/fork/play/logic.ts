@@ -11,6 +11,7 @@ export interface Actor {
   seat?: FactionId; // the phone's seat, if any
   as?: FactionId; // the faction the action was for, when it isn't the seat's
   id: string; // shared by every entry of one action, for grouped undo
+  table?: boolean; // sent from a shared screen ("Always show actions")
 }
 
 export function actorOf(e: Optional<Entry>): Optional<Actor> {

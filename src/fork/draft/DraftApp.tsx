@@ -10,6 +10,7 @@ import { getDefaultMapString, getFactionSystemNumber } from "../../util/map";
 import { Optional } from "../../util/types/types";
 import styles from "../play/play.module.scss";
 import { cx, SheetFrame } from "../play/ui";
+import { kit } from "../ui/kit";
 import { buildMapString, holdings, newSeed, pickerAt, pickFactions, sliceStats, toPixel, wedges, type Draft, type PickKind, type TileInfo, type Wedges } from "./milty";
 import { draftableFactions, makeSlices } from "./NewDraft";
 import { useBase, useDraft, useDraftApi } from "./useDraft";
@@ -33,7 +34,7 @@ export default function DraftApp({ id }: { id: string }) {
   const { draft, missing, error } = useDraft(id);
   if (error) {
     return (
-      <div className={styles.root}><main className={styles.main}>
+      <div className={cx(kit.root, styles.root)}><main className={styles.main}>
         <section className={styles.card}><h2 className={styles.title}>The draft couldn't be read</h2>
           <p className={styles.sub}>The server refused to send it. On a new install this usually means the Firestore rules for drafts haven't been deployed yet (docs/ktn/ci-cd.md).</p>
           <Link className={cx(styles.btn, styles.block)} href="/draft">Make or join a draft</Link></section>
@@ -42,13 +43,13 @@ export default function DraftApp({ id }: { id: string }) {
   }
   if (missing) {
     return (
-      <div className={styles.root}><main className={styles.main}>
+      <div className={cx(kit.root, styles.root)}><main className={styles.main}>
         <section className={styles.card}><h2 className={styles.title}>No draft with the code {id}</h2>
           <Link className={cx(styles.btn, styles.block)} href="/draft">Make or join a draft</Link></section>
       </main></div>
     );
   }
-  if (!draft) return <div className={styles.root}><main className={styles.main}><p className={styles.sub}>Loading the draft…</p></main></div>;
+  if (!draft) return <div className={cx(kit.root, styles.root)}><main className={styles.main}><p className={styles.sub}>Loading the draft…</p></main></div>;
   return <Live draft={draft} />;
 }
 
@@ -100,7 +101,7 @@ function Live({ draft: d }: { draft: Draft }) {
   const need = acting !== undefined ? (["slice", "faction", "position"] as PickKind[]).filter((k) => holdings(d.picks, acting)[k] === undefined) : [];
 
   return (
-    <div className={styles.root}>
+    <div className={cx(kit.root, styles.root)}>
       <header className={styles.top}>
         <div className={styles.phase}>
           <span className={styles.phaseName}>Milty draft</span>

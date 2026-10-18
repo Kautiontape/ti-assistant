@@ -21,7 +21,7 @@ function withActor(e: GameUpdateData, actor: Actor) {
 
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
-export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string) {
+export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false) {
   const dataUpdate = useDataUpdate();
   const undo = useUndo();
   const gameId = useGameId();
@@ -42,7 +42,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     if (busy.current) return false;
     busy.current = true;
     setPending(true);
-    const actor: Actor = { seat, as: as && as !== seat ? as : undefined, id: `${seat ?? "nobody"}:${Date.now()}` };
+    const actor: Actor = { seat, as: as && as !== seat ? as : undefined, id: `${seat ?? "nobody"}:${Date.now()}`, ...(table ? { table: true } : {}) };
     let ok = true;
     for (const event of events) {
       const res = await dataUpdate(withActor(event, actor));
@@ -55,7 +55,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
       let undoable = true;
       try { undoable = groupKey(newestGroup(await serverNewest())) === actor.id; } catch { /* offline: keep Undo; it re-checks */ }
       lastId.current = undoable ? actor.id : undefined;
-      show({ text: actor.as ? `${label} (you helped)` : label, undo: undoable });
+      show({ text: actor.as && !table ? `${label} (you helped)` : label, undo: undoable });
     }
     busy.current = false;
     setPending(false);

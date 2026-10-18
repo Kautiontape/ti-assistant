@@ -2,7 +2,6 @@
 // The fork's phone-first player screen (/[locale]/play/[gameId]). See the
 // "Interface design" note in Trilium and prototype/play for the design.
 // Strings are English and live in fork code, so upstream's message files stay untouched.
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useActionLog, useAgenda, useCurrentTurn, useGameId, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
@@ -27,7 +26,9 @@ import NowEnd, { GameEndBanner } from "./NowEnd";
 import { PlayerSheet } from "./PlayerSheet";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
-import { PHASES, cx, pcolor, useMounted, useRace, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
+import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
+import { PlayPopouts } from "./things";
+import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
 
@@ -66,7 +67,11 @@ export default function PlayApp() {
     }).filter(Boolean);
     return parts.join(", then ") || "the last change";
   };
-  const w = useWrite(seat, describe);
+  const { prefs, setPrefs } = useDevicePrefs();
+  const table = prefs.always;
+  const w = useWrite(seat, describe, table);
+  const wide = useMedia(WIDE);
+  const dockInfo = wide && prefs.dock === "beside";
 
   useEffect(() => {
     if (!w.toast) return;
@@ -85,10 +90,14 @@ export default function PlayApp() {
   useEffect(() => {
     if ((phase === "ACTION" || phase === "STRATEGY") && helping && helping !== active) setHelping(undefined);
   }, [phase, active, helping]);
-  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, w, open: setSheet, gameId };
+  const controls = (id: Optional<FactionId>) => !!id && (id === seat || id === helping || table);
+  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, table, controls, w, open: setSheet, gameId };
+  const docked = !!sheet && dockInfo && INFO_SHEETS.has(sheet.kind);
 
   return (
-    <div className={styles.root}>
+    <DockContext.Provider value={dockInfo}>
+    <div className={cx(kit.root, styles.root)} data-accent={prefs.accent === "neutral" ? "neutral" : undefined} data-docked={docked || undefined}>
+    <PlayPopouts>
       <header className={styles.top}>
         <div className={styles.phase}>
           <span className={styles.phaseName}>{PHASES[phase] ?? phase}</span>
@@ -96,12 +105,12 @@ export default function PlayApp() {
         </div>
         <div className={styles.turn}>
           {active && (phase === "ACTION" || phase === "STRATEGY") ? (
-            <span className={cx(styles.pill, styles.pillNow)}>{phase === "STRATEGY" ? "Picking" : "Up"}: {short(active)}</span>
+            <Tag tone="now">{phase === "STRATEGY" ? "Picking" : "Up"}: {short(active)}</Tag>
           ) : null}
         </div>
         <button className={styles.seatBtn} onClick={() => setSheet({ kind: "seat" })} aria-label="Change seat">
           {seat ? <Swatch faction={seat} color={factions[seat]?.color} small /> : null}
-          <span><small>You</small><b>{seat ? short(seat) : "Watching"}</b></span>
+          <span><small>{table ? "All actions" : "You"}</small><b>{seat ? short(seat) : table ? "Shared screen" : "Watching"}</b></span>
         </button>
       </header>
 
@@ -111,7 +120,12 @@ export default function PlayApp() {
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
-            {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? <><ActionCardButton ctx={ctx} /><PointsButton ctx={ctx} /></> : null}
+            {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
+              <section className={kit.card} aria-label="Anything else">
+                <p className={kit.eyebrow}><span>Anything else?</span></p>
+                <Rows flush><ActionCardButton ctx={ctx} /><PointsButton ctx={ctx} /></Rows>
+              </section>
+            ) : null}
           </div>
           <div className={styles.col}>
             {phase === "ACTION" ? <CardBoard {...ctx} /> : null}
@@ -125,7 +139,7 @@ export default function PlayApp() {
       {tab === "log" ? <main className={styles.main}><LogTab {...ctx} log={log} /></main> : null}
 
       {w.toast ? (
-        <div className={cx(styles.toast, w.toast.tone === "error" && styles.toastError)} role="status">
+        <div className={cx(kit.toast, w.toast.tone === "error" && kit.toastError)} role="status">
           <span>{w.toast.text}</span>
           {w.toast.undo ? <button onClick={() => w.undoNewest()} disabled={w.pending}>Undo</button> : null}
         </div>
@@ -137,51 +151,59 @@ export default function PlayApp() {
         ))}
       </nav>
 
-      {sheet ? <Sheets sheet={sheet} close={() => setSheet(undefined)} {...ctx} setSeat={setSeat} /> : null}
+      {sheet ? <Sheets sheet={sheet} close={() => setSheet(undefined)} {...ctx} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} /> : null}
+    </PlayPopouts>
     </div>
+    </DockContext.Provider>
   );
 }
 
+// Sheets about a thing rather than a step: on a wide screen they can open beside it.
+const INFO_SHEETS = new Set<Sheet["kind"]>(["player", "system"]);
+
 function NotNativeYet({ phase, gameId, seat }: { phase: string; gameId: string; seat: Optional<FactionId> }) {
   return (
-    <section className={styles.card}>
-      <p className={styles.eyebrow}><span>{PHASES[phase] ?? phase} phase</span></p>
+    <section className={kit.card}>
+      <p className={kit.eyebrow}><span>{PHASES[phase] ?? phase} phase</span></p>
       {phase === "SETUP" ? (
         <>
-          <h2 className={styles.title}>Setup is on the table screen</h2>
-          <p className={styles.sub}>Choose starting technologies and the like there, then start the game. This screen takes over from the first strategy phase.</p>
+          <h2 className={kit.title}>Setup is on the table screen</h2>
+          <p className={kit.sub}>Choose starting technologies and the like there, then start the game. This screen takes over from the first strategy phase.</p>
         </>
       ) : (
         <>
-          <h2 className={styles.title}>This phase isn't on the new screen yet</h2>
-          <p className={styles.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
+          <h2 className={kit.title}>This phase isn't on the new screen yet</h2>
+          <p className={kit.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
         </>
       )}
-      {seat ? <Link className={cx(styles.btn, styles.primary, styles.block)} href={`/game/${gameId}/${encodeURIComponent(seat)}`}>Open your faction's full screen</Link> : null}
-      <Link className={cx(styles.btn, styles.block)} href={`/game/${gameId}/main`}>Open the table screen</Link>
+      <Rows>
+        {seat ? <RowLink href={`/game/${gameId}/${encodeURIComponent(seat)}`} external title="Your faction's full screen" detail="Upstream's page for your faction" /> : null}
+        <RowLink href={`/game/${gameId}/main`} external title="The table screen" detail="Upstream's page for the whole table" />
+      </Rows>
     </section>
   );
 }
 
 // ---------- shared panels ----------
 
-function CardBoard({ factions, short, open }: Ctx) {
+// Every card picked this round, in its colour: filled until it's played.
+function CardBoard({ factions, short }: Ctx) {
   const strategyCards = useStrategyCards();
   const passed = usePassedFactionIds();
   const picked = Object.values(strategyCards).filter((c): c is StrategyCard => !!c?.faction).sort((a, b) => a.order - b.order);
   const left = picked.filter((c) => !c.used).length;
   return (
-    <section className={styles.card} aria-label="Strategy cards">
-      <p className={styles.eyebrow}><span>Strategy cards</span><span className={styles.num}>{left ? `${left} left` : "All played"}</span></p>
-      <div>
+    <section className={kit.card} aria-label="Strategy cards">
+      <p className={kit.eyebrow}><span>Strategy cards</span><span className={kit.num}>{left ? `${left} left` : "All played"}</span></p>
+      <ul className={styles.list}>
         {picked.map((c) => (
-          <button key={c.id} className={cx(styles.sc, c.used && styles.scUsed)} onClick={() => open({ kind: "card", card: c.id })}>
-            <span className={styles.num} style={{ color: "var(--muted)" }}>{c.order}</span>
-            <span className={styles.row}><b className={styles.scName}>{c.name}</b><Chip faction={c.faction!} factions={factions} short={short} small player={false} /></span>
-            <span className={styles.pill}>{c.used ? "Played" : passed.includes(c.faction!) ? "Passed" : "Ready"}</span>
-          </button>
+          <li key={c.id}>
+            <CardTag card={c} used={c.used} />
+            <span className={kit.grow}><Chip faction={c.faction!} factions={factions} short={short} small player={false} /></span>
+            <Tag tone={c.used ? undefined : "done"}>{c.used ? "Played" : passed.includes(c.faction!) ? "Passed" : "Ready"}</Tag>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -190,22 +212,19 @@ function Race({ factions, short, open }: Ctx) {
   const rows = useRace(factions);
   const target = useOptions()["victory-points"] ?? 10;
   return (
-    <section className={styles.card} aria-label="Score race">
-      <p className={styles.eyebrow}><span>Race to {target}</span></p>
-      <ul className={styles.list}>
+    <section className={kit.card} aria-label="Score race">
+      <p className={kit.eyebrow}><span>Race to {target}</span></p>
+      <Rows flush>
         {rows.map((r) => (
-          <li key={r.id}>
-            <button className={styles.raceRow} onClick={() => open({ kind: "player", faction: r.id })} aria-label={`${short(r.id)}: ${r.total} points`}>
-              <Chip faction={r.id} factions={factions} short={short} small />
-              <span className={styles.grow} style={{ display: "grid", gap: 4 }}>
-                <span className={styles.bar} style={{ ["--c" as string]: pcolor(factions[r.id]?.color) }}><i style={{ width: `${Math.min(100, (r.total / target) * 100)}%` }} /></span>
-                <span className={styles.srcs}>{r.groups.map((g, k) => <span key={g.label}>{k ? "· " : ""}{g.label} {g.points}</span>)}</span>
-              </span>
-              <span className={styles.vp}>{r.total}</span>
-            </button>
-          </li>
+          <RowLink key={r.id} onClick={() => open({ kind: "player", faction: r.id })} label={`${short(r.id)}: ${r.total} points`}
+            title={<Chip faction={r.id} factions={factions} short={short} small />}
+            detail={<span style={{ display: "grid", gap: 4 }}>
+              <span className={styles.bar} style={{ ["--c" as string]: pcolor(factions[r.id]?.color) }}><i style={{ width: `${Math.min(100, (r.total / target) * 100)}%` }} /></span>
+              <span className={styles.srcs}>{r.groups.map((g, k) => <span key={g.label}>{k ? "· " : ""}{g.label} {g.points}</span>)}</span>
+            </span>}
+            end={<span className={styles.vp}>{r.total}</span>} />
         ))}
-      </ul>
+      </Rows>
     </section>
   );
 }
@@ -217,10 +236,12 @@ function FeedRow({ e, factions, short, isFaction, subject }: { e: ActionLogEntry
   const who = subject(e);
   const actor = actorOf(e);
   const capital = /^[A-Z]/.test(s);
+  const by = actor?.as && actor.seat ? `${short(actor.seat)} did this for ${short(actor.as)}${actor.table ? " on the shared screen" : ""}`
+    : actor?.table ? "On the shared screen" : null;
   return (
     <li>
       {who ? <Swatch faction={who} color={factions[who]?.color} small /> : <span />}
-      <span>{who && !capital ? <b>{short(who)} </b> : null}{s}{actor?.as && actor.seat ? <span className={styles.feedBy}>{short(actor.seat)} did this for {short(actor.as)}</span> : null}</span>
+      <span>{who && !capital ? <b>{short(who)} </b> : null}{s}{by ? <span className={styles.feedBy}>{by}</span> : null}</span>
       <span className={styles.feedTime}>{mounted ? new Date(e.timestampMillis).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span>
     </li>
   );
@@ -229,8 +250,8 @@ function FeedRow({ e, factions, short, isFaction, subject }: { e: ActionLogEntry
 function Recent({ log, onLog, ...ctx }: Ctx & { log: ActionLog; onLog: () => void }) {
   const items = log.filter((e) => sentence(e, ctx.short, ctx.isFaction)).slice(0, 3);
   return (
-    <section className={styles.card} aria-label="What just happened">
-      <p className={styles.eyebrow}><span>Just happened</span><button className={styles.link} onClick={onLog}>Full log</button></p>
+    <section className={kit.card} aria-label="What just happened">
+      <p className={kit.eyebrow}><span>Just happened</span><Button kind="quiet" onClick={onLog}>Full log</Button></p>
       <ul className={styles.feed}>{items.map((e, i) => <FeedRow key={`${e.timestampMillis}-${i}`} e={e} {...ctx} />)}</ul>
     </section>
   );
@@ -245,24 +266,21 @@ function TableTab(ctx: Ctx) {
   const strategyCards = useStrategyCards();
   return (
     <>
-    <section className={styles.card} aria-label="Players">
-      <p className={styles.eyebrow}><span>Players by points</span></p>
-      <ul className={styles.list}>
+    <section className={kit.card} aria-label="Players">
+      <p className={kit.eyebrow}><span>Players by points</span></p>
+      <Rows flush>
         {rows.map((r) => (
-          <li key={r.id}>
-            <button className={styles.opt} style={{ border: 0, padding: 0 }} onClick={() => open({ kind: "player", faction: r.id })}>
-              <Chip faction={r.id} factions={factions} short={short} />
-              <span className={cx(styles.meta, styles.row)} style={{ gap: 6 }}>
-                {r.id === active ? <span className={cx(styles.pill, styles.pillNow)}>Playing</span> : null}
-                {passed.includes(r.id) ? <span className={styles.pill}>Passed</span> : null}
-                {state.speaker === r.id ? <span className={styles.pill}>Speaker</span> : null}
-                {getStrategyCardsForFaction(strategyCards, r.id).map((c) => <span key={c.id} className={cx(styles.pill, !c.used && styles.pillOn)}>{c.order} {c.name}</span>)}
-                <span className={styles.vp} style={{ color: "var(--ink)" }}>{r.total}</span>
-              </span>
-            </button>
-          </li>
+          <RowLink key={r.id} onClick={() => open({ kind: "player", faction: r.id })} label={`${short(r.id)}: ${r.total} points`}
+            title={<Chip faction={r.id} factions={factions} short={short} />}
+            detail={<span className={kit.line} style={{ flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+              {r.id === active ? <Tag tone="now">Playing</Tag> : null}
+              {passed.includes(r.id) ? <Tag>Passed</Tag> : null}
+              {state.speaker === r.id ? <Tag>Speaker</Tag> : null}
+              {getStrategyCardsForFaction(strategyCards, r.id).map((c) => <CardTag key={c.id} card={c} used={c.used} still />)}
+            </span>}
+            end={<span className={styles.vp} style={{ color: "var(--ink)" }}>{r.total}</span>} />
         ))}
-      </ul>
+      </Rows>
     </section>
     <ExpeditionCard ctx={ctx} />
     </>
@@ -270,25 +288,21 @@ function TableTab(ctx: Ctx) {
 }
 
 function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
-  const [who, setWho] = useState<Optional<FactionId>>();
+  const [who, setWho] = useState<string>("everyone");
   const order = useOrderedFactionIds("SPEAKER");
   const group = newestGroup(log);
-  const rows = log.filter((e) => sentence(e, ctx.short, ctx.isFaction) && (!who || ctx.subject(e) === who)).slice(0, 300);
+  const rows = log.filter((e) => sentence(e, ctx.short, ctx.isFaction) && (who === "everyone" || ctx.subject(e) === who)).slice(0, 300);
   return (
-    <section className={styles.card} aria-label="Game log">
-      <p className={styles.eyebrow}><span>Game log</span><span>Newest first</span></p>
+    <section className={kit.card} aria-label="Game log">
+      <p className={kit.eyebrow}><span>Game log</span><span>Newest first</span></p>
       {group.length ? (
-        <div className={styles.banner}>
-          <span className={styles.grow}>Newest: {ctx.describe(group)}</span>
-          <button className={cx(styles.btn, styles.smallBtn)} disabled={ctx.w.pending} onClick={() => ctx.w.undoNewest(groupKey(group))}>Undo</button>
+        <div className={kit.banner}>
+          <span className={kit.grow}>Newest: {ctx.describe(group)}</span>
+          <Button size="small" disabled={ctx.w.pending} onClick={() => ctx.w.undoNewest(groupKey(group))}>Undo</Button>
         </div>
       ) : null}
-      <div className={styles.row} style={{ overflowX: "auto", gap: 6, paddingBottom: 4 }}>
-        <button className={cx(styles.pill, !who && styles.pillOn)} style={{ minHeight: 44, background: "none", cursor: "pointer" }} onClick={() => setWho(undefined)}>Everyone</button>
-        {order.map((id) => (
-          <button key={id} className={cx(styles.pill, who === id && styles.pillOn)} style={{ minHeight: 44, background: "none", cursor: "pointer" }} onClick={() => setWho(who === id ? undefined : id)}>{ctx.short(id)}</button>
-        ))}
-      </div>
+      <Choices label="Show" value={who} onChange={setWho}
+        options={[{ value: "everyone", label: "Everyone" }, ...order.map((id) => ({ value: id as string, label: ctx.short(id) }))]} />
       <ul className={styles.feed}>{rows.map((e, i) => <FeedRow key={`${e.timestampMillis}-${i}`} e={e} {...ctx} />)}</ul>
     </section>
   );
@@ -298,25 +312,47 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
 
 // Upstream's theme script (src/util/theme.ts) keeps the choice in localStorage and
 // exposes __setPreferredTheme; its toggle lives in the top bar /play hides.
-function ThemeChoice() {
+function useTheme() {
   const [theme, setTheme] = useState<Optional<string>>();
   useEffect(() => setTheme(document.documentElement.dataset.theme), []);
-  const choose = (t: "dark" | "light") => {
+  const choose = (t: string) => {
     (window as unknown as { __setPreferredTheme?: (t: string) => void }).__setPreferredTheme?.(t);
     setTheme(t);
   };
+  return [theme, choose] as const;
+}
+
+type DeviceProps = { setSeat: (id: Optional<FactionId>) => void; prefs: Prefs; setPrefs: (p: Partial<Prefs>) => void; wide: boolean };
+
+// This device: whose phone it is, whether it shows every player's actions, and how it looks.
+function DeviceSheet({ close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & DeviceProps & { close: () => void }) {
+  const { factions, short } = ctx;
+  const order = useOrderedFactionIds("SPEAKER");
+  const [theme, setTheme] = useTheme();
   return (
-    <>
-      <p className={styles.eyebrow}><span>Theme</span></p>
-      <div className={styles.pick}>
-        <button aria-pressed={theme === "dark"} onClick={() => choose("dark")}><b>Dark</b></button>
-        <button aria-pressed={theme === "light"} onClick={() => choose("light")}><b>Light</b></button>
+    <KitSheet title="This device" close={close}>
+      <Choices label="Whose phone is this?" value={ctx.seat ?? "watching"} onChange={(v) => setSeat(v === "watching" ? undefined : v as FactionId)}
+        options={[...order.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small /> })), { value: "watching", label: "Nobody's: just watching" }]} />
+      <p className={kit.sub}>Your seat decides what this phone leads with. It doesn't limit what you can do.</p>
+      <div className={kit.section}>
+        <Choices label="Show actions" value={prefs.always ? "always" : "seat"} onChange={(v) => setPrefs({ always: v === "always" })}
+          options={[{ value: "seat", label: "For this seat's turn", note: "others tap “Do it for…”" }, { value: "always", label: "Always, for whoever is up", note: "a shared iPad or laptop" }]} />
       </div>
-    </>
+      <div className={kit.section}>
+        <Choices label="Theme" value={theme} onChange={setTheme} options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]} />
+      </div>
+      {wide ? (
+        <div className={kit.section}>
+          <Choices label="On a wide screen, a player's or a system's details open" value={prefs.dock} onChange={(v) => setPrefs({ dock: v })}
+            options={[{ value: "beside", label: "Beside the screen" }, { value: "over", label: "Over the screen" }]} />
+        </div>
+      ) : null}
+      <Button kind="primary" block onClick={close}>Done</Button>
+    </KitSheet>
   );
 }
 
-function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: () => void; setSeat: (id: Optional<FactionId>) => void }) {
+function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & DeviceProps & { sheet: Sheet; close: () => void }) {
   const { factions, short, w } = ctx;
   const planets = usePlanets();
   const currentTurn = useCurrentTurn();
@@ -354,43 +390,34 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
     case "seat":
-      return (
-        <SheetFrame title="Whose phone is this?" close={close}>
-          <p className={styles.sub}>Your seat decides what this phone leads with. It doesn't limit what you can do.</p>
-          <div className={styles.pick}>
-            {order.map((id) => <button key={id} aria-pressed={ctx.seat === id} onClick={() => { setSeat(id); close(); }}><Chip faction={id} factions={factions} short={short} small /></button>)}
-            <button aria-pressed={!ctx.seat} onClick={() => { setSeat(undefined); close(); }}><b>Just watching</b></button>
-          </div>
-          <ThemeChoice />
-        </SheetFrame>
-      );
+      return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {
       const list = claimablePlanets(planets, sheet.faction, currentTurn)
         .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(!!a.owner) - Number(!!b.owner) || a.name.localeCompare(b.name));
       return (
-        <SheetFrame title={`${short(sheet.faction)} takes control of…`} close={close}>
-          <input className={styles.search} id="play-planet-search" type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
-          <div>
+        <KitSheet title={`${short(sheet.faction)} takes control of…`} close={close}>
+          <input className={kit.search} id="play-planet-search" type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
+          <Rows>
             {list.slice(0, 80).map((p) => (
-              <button key={p.id} className={styles.opt} disabled={w.pending} onClick={async () => {
-                if (await w.write([Events.ClaimPlanetEvent(sheet.faction, p.id)], `${short(sheet.faction)} took control of ${p.name}${p.owner ? ` from ${short(p.owner)}` : ""}`, sheet.faction)) close();
-              }}>
-                <b>{p.name}</b><span className={styles.meta}>{p.resources}/{p.influence}{p.owner ? ` · ${short(p.owner)}` : ""}</span>
-              </button>
+              <RowAction key={p.id} verb="Take" disabled={w.pending} title={p.name} detail={p.owner ? `${short(p.owner)}'s` : undefined}
+                end={<span className={kit.num}>{p.resources}/{p.influence}</span>}
+                onClick={async () => {
+                  if (await w.write([Events.ClaimPlanetEvent(sheet.faction, p.id)], `${short(sheet.faction)} took control of ${p.name}${p.owner ? ` from ${short(p.owner)}` : ""}`, sheet.faction)) close();
+                }} />
             ))}
-          </div>
-        </SheetFrame>
+          </Rows>
+        </KitSheet>
       );
     }
     case "pass":
       return (
-        <SheetFrame title="Pass for the round?" close={close}>
-          <p className={styles.title} style={{ fontWeight: 400 }}>{short(sheet.faction)} passes and takes no more turns this round.</p>
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={async () => {
+        <KitSheet title="Pass for the round?" close={close}>
+          <p className={kit.confirm}>{short(sheet.faction)} passes and takes no more turns this round.</p>
+          <Button kind="primary" size="tall" block disabled={w.pending} onClick={async () => {
             if (await w.write([Events.SelectActionEvent("Pass"), Events.EndTurnEvent({})], `${short(sheet.faction)} passed`, sheet.faction)) close();
-          }}>Pass</button>
-        </SheetFrame>
+          }}>Pass</Button>
+        </KitSheet>
       );
     case "card": {
       const c = strategyCards[sheet.card];
@@ -404,29 +431,28 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
         if (await w.write([Events.AssignStrategyCardEvent(target, c.id, picker)], label, picker)) { setTo(undefined); close(); }
       };
       return (
-        <SheetFrame title={c?.name ?? sheet.card} close={close}>
-          <p className={styles.eyebrow}><span>Primary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.primary}</p>
-          <p className={styles.eyebrow}><span>Secondary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.secondary}</p>
+        <KitSheet title={c?.name ?? sheet.card} close={close}>
+          {c ? <div><CardTag card={c} used={!!c.faction || !!c.invalid} large still /></div> : null}
+          <p className={kit.eyebrow}><span>Primary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.primary}</p>
+          <p className={kit.eyebrow}><span>Secondary</span></p><p style={{ whiteSpace: "pre-line", margin: 0 }}>{c?.secondary}</p>
           {canPick && !giving ? (
-            <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={() => pick(picker)}>
+            <Button kind="primary" size="tall" block disabled={w.pending} onClick={() => pick(picker)}>
               {picker === ctx.seat ? `Pick ${c.name}` : `Pick ${c.name} for ${short(picker)}`}
-            </button>
+            </Button>
           ) : null}
           {giving ? (
-            <>
-              <p className={styles.eyebrow}><span>Checks and Balances: who gets it?</span></p>
-              <div className={styles.pick}>
-                {targets.map((id) => <button key={id} aria-pressed={to === id} onClick={() => setTo(id)}><Chip faction={id} factions={factions} short={short} small /></button>)}
-              </div>
+            <div className={kit.section}>
+              <Choices label="Checks and Balances: who gets it?" value={to} onChange={(v) => setTo(v as FactionId)}
+                options={targets.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small /> }))} />
               {to ? (
                 <>
-                  <p className={styles.title} style={{ fontWeight: 400 }}>{to === picker ? `${short(picker)} keeps ${c.name}, since nobody else has room for a card.` : `${short(picker)} gives ${c.name} to ${short(to)}.`}</p>
-                  <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={() => pick(to)}>Confirm</button>
+                  <p className={kit.confirm}>{to === picker ? `${short(picker)} keeps ${c.name}, since nobody else has room for a card.` : `${short(picker)} gives ${c.name} to ${short(to)}.`}</p>
+                  <Button kind="primary" size="tall" block disabled={w.pending} onClick={() => pick(to)}>Confirm</Button>
                 </>
               ) : null}
-            </>
+            </div>
           ) : null}
-        </SheetFrame>
+        </KitSheet>
       );
     }
     case "player":

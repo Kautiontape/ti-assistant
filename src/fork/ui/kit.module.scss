@@ -1,0 +1,307 @@
+// The fork's design kit: tokens and the controls every fork screen shares
+// (/play, /draft). The rules for which control does what are in
+// docs/ktn/design.md; screen layout stays in each screen's own module.
+//
+// Upstream's site.css resets every button with `all: unset` and adds global
+// hover and disabled colours, so every rule here is nested under .root to win.
+
+@mixin dark {
+  --bg: oklch(0.17 0.022 252);
+  --panel: oklch(0.215 0.026 252);
+  --raise: oklch(0.265 0.03 252);
+  --line: oklch(0.335 0.03 252);
+  --line-strong: oklch(0.5 0.03 252);
+  --ink: oklch(0.955 0.008 252);
+  --muted: oklch(0.74 0.02 252);
+  --faint: oklch(0.6 0.02 252);
+  --accent: oklch(0.8 0.115 195);
+  --accent-ink: oklch(0.2 0.04 215);
+  --accent-soft: oklch(0.31 0.055 200);
+  --scrim: oklch(0.08 0.01 252 / 0.62);
+  --shadow: 0 18px 44px -20px oklch(0 0 0 / 0.85);
+  // Player colours. TI has no white pieces, so black is drawn near-white here
+  // and near-black in the light theme: upstream's mid grey reads as neither.
+  --p-red: oklch(0.68 0.19 29);
+  --p-orange: oklch(0.76 0.15 62);
+  --p-yellow: oklch(0.86 0.15 95);
+  --p-green: oklch(0.73 0.18 145);
+  --p-blue: oklch(0.69 0.15 262);
+  --p-purple: oklch(0.69 0.17 300);
+  --p-magenta: oklch(0.71 0.21 350);
+  --p-black: oklch(0.92 0.005 252);
+  // Strategy cards, by upstream's card.color: the fill (available), the text on
+  // it, and the line (outline, and text on a panel). Contrast checked: fills
+  // carry their text at 4.5:1 or more, lines sit on the panel at 6:1 or more.
+  --sc-red: oklch(0.64 0.2 27); --sc-red-ink: var(--sc-dark-ink); --sc-red-line: oklch(0.72 0.17 27);
+  --sc-orange: oklch(0.74 0.16 55); --sc-orange-ink: var(--sc-dark-ink); --sc-orange-line: oklch(0.78 0.15 55);
+  --sc-yellow: oklch(0.86 0.16 95); --sc-yellow-ink: var(--sc-dark-ink); --sc-yellow-line: oklch(0.88 0.15 95);
+  --sc-green: oklch(0.7 0.17 145); --sc-green-ink: var(--sc-dark-ink); --sc-green-line: oklch(0.76 0.17 145);
+  --sc-turquoise: oklch(0.76 0.12 182); --sc-turquoise-ink: var(--sc-dark-ink); --sc-turquoise-line: oklch(0.8 0.12 182);
+  --sc-blue: oklch(0.7 0.13 240); --sc-blue-ink: var(--sc-dark-ink); --sc-blue-line: oklch(0.76 0.12 240);
+  --sc-darkblue: oklch(0.48 0.17 266); --sc-darkblue-ink: var(--sc-light-ink); --sc-darkblue-line: oklch(0.7 0.14 266);
+  --sc-purple: oklch(0.54 0.2 305); --sc-purple-ink: var(--sc-light-ink); --sc-purple-line: oklch(0.72 0.16 305);
+  --sc-magenta: oklch(0.68 0.21 350); --sc-magenta-ink: var(--sc-dark-ink); --sc-magenta-line: oklch(0.74 0.19 350);
+  --sc-dark-ink: oklch(0.2 0.03 252);
+  --sc-light-ink: oklch(0.98 0.005 252);
+  color-scheme: dark;
+}
+
+@mixin light {
+  --bg: oklch(0.965 0.006 252); --panel: oklch(0.995 0.003 252); --raise: oklch(0.93 0.01 252); --line: oklch(0.86 0.012 252);
+  --line-strong: oklch(0.62 0.02 252);
+  --ink: oklch(0.22 0.025 252); --muted: oklch(0.45 0.025 252); --faint: oklch(0.58 0.02 252);
+  --accent: oklch(0.52 0.1 205); --accent-ink: oklch(0.99 0.01 200); --accent-soft: oklch(0.9 0.04 200);
+  --scrim: oklch(0.2 0.02 252 / 0.4); --shadow: 0 18px 44px -24px oklch(0.2 0.03 252 / 0.45);
+  --p-red: oklch(0.55 0.19 29); --p-orange: oklch(0.62 0.15 62); --p-yellow: oklch(0.72 0.15 95); --p-green: oklch(0.56 0.17 145);
+  --p-blue: oklch(0.52 0.16 262); --p-purple: oklch(0.52 0.18 300); --p-magenta: oklch(0.56 0.21 350);
+  --p-black: oklch(0.24 0.01 252);
+  --sc-red-line: oklch(0.52 0.19 27); --sc-orange-line: oklch(0.56 0.15 55); --sc-yellow-line: oklch(0.55 0.12 95);
+  --sc-green-line: oklch(0.5 0.15 145); --sc-turquoise-line: oklch(0.5 0.1 182); --sc-blue-line: oklch(0.5 0.14 240);
+  --sc-darkblue-line: oklch(0.42 0.17 266); --sc-purple-line: oklch(0.45 0.2 305); --sc-magenta-line: oklch(0.5 0.2 350);
+  color-scheme: light;
+}
+
+// A neutral accent, for comparing against the teal (the Trade card is turquoise).
+@mixin neutral-accent-dark { --accent: oklch(0.93 0.008 252); --accent-ink: oklch(0.2 0.025 252); --accent-soft: oklch(0.32 0.02 252); }
+@mixin neutral-accent-light { --accent: oklch(0.26 0.025 252); --accent-ink: oklch(0.98 0.005 252); --accent-soft: oklch(0.9 0.01 252); }
+
+.root {
+  @include dark;
+  --display: var(--play-display), "Eurostile", sans-serif;
+  --body: var(--play-body), "Segoe UI", system-ui, sans-serif;
+  --mono: var(--play-mono), ui-monospace, monospace;
+  --tabs-h: 62px;
+  --top-h: 57px;
+  --gutter: 16px;
+  --dock-w: 420px;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  &[data-accent="neutral"] { @include neutral-accent-dark; }
+}
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme="dark"])) .root { @include light; &[data-accent="neutral"] { @include neutral-accent-light; } }
+}
+:global(:root[data-theme="light"]) .root { @include light; &[data-accent="neutral"] { @include neutral-accent-light; } }
+
+.root {
+  // ---------- Text ----------
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    font-family: var(--display); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+    margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  }
+  .title { margin: 0; font-size: 1.12rem; line-height: 1.25; text-wrap: balance; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0; }
+  // The question a group of choices answers ("Whose points changed?").
+  .label { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .confirm { margin: 0; font-size: 1.08rem; line-height: 1.35; text-wrap: balance; }
+
+  // ---------- Containers ----------
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  // A section inside a card or sheet: a heading and a rule, never a nested card.
+  .section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); min-width: 0; }
+  .section:first-child { padding-top: 0; border-top: 0; }
+  .banner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent); }
+  .grow { flex: 1; min-width: 0; }
+  .line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  // ---------- Act: buttons ----------
+  // Rectangles with a verb. One primary per step; the rest are secondary.
+  .btn {
+    min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise);
+    cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 700; text-align: center; text-decoration: none; color: var(--ink);
+    box-shadow: 0 1px 0 oklch(0 0 0 / 0.25);
+    &:hover:not(:disabled) { border-color: var(--accent); }
+    &:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+    small { font-weight: 400; font-size: 0.78rem; opacity: 0.85; }
+  }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  // Acting on another player's behalf: the same button, dashed.
+  .forOther { border-style: dashed; border-color: var(--accent); }
+  // Small verbs beside something (Cancel, Change, Full log): accent text, no box.
+  .quiet {
+    min-height: 44px; padding: 0 6px; border: 0; background: none; box-shadow: none; color: var(--accent);
+    font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+  }
+  .tall { min-height: 64px; font-size: 1.05rem; }
+  .small { min-height: 44px; padding: 0 12px; font-size: 0.9rem; }
+  .block { width: 100%; }
+  .buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .buttons.big .btn { min-height: 72px; }
+
+  // ---------- Open, and pick-to-act: rows ----------
+  // Full-width rows in a group. The trailing mark says what a tap does:
+  // a chevron opens the next step, an arrow leaves for another page, and an
+  // accent verb ("Take", "Score") acts at once.
+  .rows { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+  .rows > * + * { border-top: 1px solid var(--line); }
+  .rows.flush { border: 0; border-radius: 0; background: none; margin: 0 -6px; }
+  .rows.flush .rowBtn { padding-inline: 6px; border-radius: 10px; }
+  .rowBtn {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    min-height: 56px; width: 100%; padding: 8px 12px; border: 0; background: none; cursor: pointer; text-align: left; color: var(--ink);
+    text-decoration: none;
+    &:hover:not(:disabled) { background: var(--raise); }
+    &:active:not(:disabled) { background: var(--accent-soft); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+  .rowBtn.noLead { grid-template-columns: minmax(0, 1fr) auto; }
+  .rowText { display: grid; gap: 2px; min-width: 0; b { font-weight: 700; } }
+  .rowDetail { color: var(--muted); font-size: 0.86rem; }
+  .rowEnd { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+  .chev { width: 18px; height: 18px; flex: none; color: var(--muted); }
+  .verb { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+
+  // ---------- Choose: pills with a radio mark ----------
+  // Sets something on this screen; never writes to the game by itself.
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choices.list { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .choice {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 14px 4px 10px;
+    border-radius: 999px; border: 1.5px solid var(--line-strong); background: transparent; cursor: pointer; color: var(--ink);
+    font-weight: 600; font-size: 0.92rem; text-align: left;
+    &:hover:not(:disabled) { border-color: var(--accent); }
+    &[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+  }
+  .choices.list .choice { border-radius: 0; border: 0; min-height: 52px; padding: 6px 12px; width: 100%; background: none; }
+  .choices.list .choice + .choice { border-top: 1px solid var(--line); }
+  .choices.list .choice[aria-checked="true"] { background: var(--accent-soft); }
+  .radio { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); display: grid; place-items: center; }
+  .choice[aria-checked="true"] > .radio { border-color: var(--accent); }
+  .choice[aria-checked="true"] > .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .choiceNote { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+
+  .stepper {
+    display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 10px;
+    button { display: grid; place-items: center; min-height: 56px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--raise); font-size: 1.5rem; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    output { text-align: center; font-family: var(--mono); font-size: 2rem; font-variant-numeric: tabular-nums; }
+  }
+  .search { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); padding: 0 14px; font: inherit; }
+
+  // ---------- Learn: names that open a popout ----------
+  .cite {
+    display: inline; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; font-weight: 700; text-align: inherit;
+    text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px;
+    &:hover { text-decoration-style: solid; }
+  }
+
+  // ---------- State: tags ----------
+  // Flat, borderless and never tappable.
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: var(--raise);
+    color: var(--muted); font-size: 0.76rem; font-weight: 700; white-space: nowrap;
+  }
+  // "Up now": a dot, not a fill, so it can't pass for a button.
+  .tagNow { background: var(--accent-soft); color: var(--ink); }
+  .tagNow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .tagDone { color: var(--ink); }
+
+  // ---------- Strategy cards ----------
+  // Always in the card's colour: filled while it's available (unpicked in the
+  // strategy phase, unplayed in the action phase), an outline once it isn't.
+  .sc {
+    --sc: var(--raise); --sc-ink: var(--ink); --sc-line: var(--line-strong);
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 10px 2px 4px; border-radius: 8px;
+    border: 2px solid var(--sc-line); background: var(--sc); color: var(--sc-ink); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
+    &[data-used] { background: transparent; color: var(--ink); }
+    &[data-used] .scNum { background: transparent; color: var(--sc-line); }
+  }
+  button.sc { cursor: pointer; }
+  button.sc .scName { text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+  .scNum {
+    display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; font-family: var(--mono); font-size: 0.85rem;
+    background: color-mix(in oklch, var(--sc-ink) 18%, transparent);
+  }
+  .scLarge { min-height: 44px; font-size: 1rem; padding-right: 14px; .scNum { min-width: 28px; height: 28px; } }
+  @each $c in red, orange, yellow, green, turquoise, blue, darkblue, purple, magenta {
+    .sc[data-c="#{$c}"] { --sc: var(--sc-#{$c}); --sc-ink: var(--sc-#{$c}-ink); --sc-line: var(--sc-#{$c}-line); }
+  }
+
+  // ---------- Players ----------
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+  .chipName { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chipPlayer { color: var(--muted); white-space: nowrap; }
+  .sw {
+    flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: oklch(0.14 0.01 252); box-shadow: inset 0 0 0 3px var(--c, var(--line));
+  }
+  .swSmall { width: 22px; height: 22px; box-shadow: inset 0 0 0 2.5px var(--c, var(--line)); }
+  .swLarge { width: 42px; height: 42px; box-shadow: inset 0 0 0 4px var(--c, var(--line)); }
+
+  // ---------- Sheets ----------
+  // A bottom sheet on a phone, a centred dialog from tablet width, and (for
+  // sheets about a thing, on a wide screen, if the device says so) a column
+  // beside the screen.
+  .scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet {
+    width: 100%; max-width: 640px; max-height: 88vh; max-height: 88dvh; overflow: auto; overscroll-behavior: contain; background: var(--panel);
+    border-radius: 18px 18px 0 0; border: 1px solid var(--line); padding: 10px var(--gutter) calc(18px + env(safe-area-inset-bottom, 0px));
+    box-shadow: var(--shadow); display: grid; gap: 12px; align-content: start;
+    &:focus { outline: none; }
+    > header { display: flex; align-items: center; gap: 10px; position: sticky; top: -10px; z-index: 1; margin: -10px calc(-1 * var(--gutter)) 0; padding: 10px var(--gutter) 6px; background: var(--panel); }
+    h2 { flex: 1; margin: 0; font-size: 1.08rem; }
+  }
+  @media (min-width: 700px) {
+    .scrim { align-items: center; padding: 24px; }
+    .sheet { max-width: 560px; max-height: min(86vh, 900px); border-radius: 18px; padding-bottom: 18px; }
+  }
+  // Below the screen's top bar and above its tabs; the screen makes room (play.module.scss).
+  .dock {
+    position: fixed; z-index: 4; top: calc(var(--top-h) + env(safe-area-inset-top, 0px)); right: 0;
+    bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px)); width: var(--dock-w); overflow: auto; overscroll-behavior: contain;
+    background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow);
+    padding: 10px var(--gutter) 18px;
+    display: grid; gap: 12px; align-content: start;
+    &:focus { outline: none; }
+    > header { display: flex; align-items: center; gap: 10px; position: sticky; top: -10px; z-index: 1; margin: -10px calc(-1 * var(--gutter)) 0; padding: 10px var(--gutter) 6px; background: var(--panel); }
+    h2 { flex: 1; margin: 0; font-size: 1.08rem; }
+  }
+  .close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--line-strong); background: none; cursor: pointer; font-size: 1rem; }
+
+  // ---------- Popout ----------
+  // A card's text, beside the name that opened it (a bottom sheet on a phone).
+  .popScrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); }
+  .popScrimClear { background: transparent; }
+  .popout {
+    position: fixed; z-index: 31; width: min(360px, calc(100vw - 16px)); max-height: min(70vh, 520px); overflow: auto;
+    background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow);
+    padding: 12px 14px; display: grid; gap: 8px; align-content: start; font-size: 0.94rem;
+    &:focus { outline: none; }
+    header { display: flex; align-items: flex-start; gap: 8px; }
+    h3 { flex: 1; margin: 0; font-size: 1.02rem; line-height: 1.3; }
+    p { margin: 0; white-space: pre-line; }
+  }
+  .popPeek { pointer-events: none; }
+  .popSheet { left: 0; right: 0; bottom: 0; width: 100%; max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .popKind { font-family: var(--display); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .popText { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 8px 8px 0; }
+
+  // ---------- Toast ----------
+  .toast {
+    position: fixed; z-index: 15; left: var(--gutter); right: var(--gutter);
+    bottom: calc(var(--tabs-h) + 12px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px; margin: 0 auto; background: var(--ink); color: var(--bg); border-radius: 14px;
+    padding: 6px 6px 6px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow);
+    span { flex: 1; min-width: 0; }
+    button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 0; background: color-mix(in oklch, var(--bg) 18%, var(--ink)); color: var(--bg); font-weight: 700; cursor: pointer; }
+  }
+  .toastError { outline: 3px solid var(--accent); }
+}

@@ -1,6 +1,5 @@
 "use client";
 // Now, action phase.
-import Link from "next/link";
 import { useActionLog, useCurrentTurn, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOnDeckFactionId } from "../../context/gameDataHooks";
@@ -14,7 +13,8 @@ import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import { ExpeditionButton } from "./NowExpedition";
 import styles from "./play.module.scss";
-import { cx, pcolor, useNow, Swatch, Chip, HelpBanner, type Ctx } from "./ui";
+import { useNow, HelpBanner, type Ctx } from "./ui";
+import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
 
 export default function NowAction(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open } = ctx;
@@ -29,18 +29,18 @@ export default function NowAction(ctx: Ctx) {
   const planets = usePlanets();
   if (!active) {
     return (
-      <section className={styles.card} aria-label="Everyone has passed">
-        <p className={styles.eyebrow}><span>Action phase</span></p>
-        <h2 className={styles.title}>Everyone has passed</h2>
-        <p className={styles.sub}>The status phase is next: scoring, then cleanup.</p>
-        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-          onClick={() => (combat ? open({ kind: "endCombat", before: "the status phase starts" }) : w.write([Events.AdvancePhaseEvent()], "The status phase started"))}>Start the status phase</button>
+      <section className={kit.card} aria-label="Everyone has passed">
+        <p className={kit.eyebrow}><span>Action phase</span></p>
+        <h2 className={kit.title}>Everyone has passed</h2>
+        <p className={kit.sub}>The status phase is next: scoring, then cleanup.</p>
+        <Button kind="primary" size="tall" block disabled={w.pending}
+          onClick={() => (combat ? open({ kind: "endCombat", before: "the status phase starts" }) : w.write([Events.AdvancePhaseEvent()], "The status phase started"))}>Start the status phase</Button>
       </section>
     );
   }
 
   const f = factions[active];
-  const mine = active === seat || active === helping;
+  const mine = ctx.controls(active);
   const selected = getSelectedActionFromLog(currentTurn);
   const cards = getStrategyCardsForFaction(strategyCards, active);
   const canPass = !passed.includes(active) && cards.every((c) => c.used);
@@ -56,70 +56,74 @@ export default function NowAction(ctx: Ctx) {
   const myPrompt = isCard && seat && seat !== active
     && !currentTurn.some((e) => e.data.action === "MARK_SECONDARY" && (e.data.event as { faction?: string }).faction === seat)
     && (factions[seat]?.secondary ?? "PENDING") === "PENDING";
+  const whose = active === seat ? "Your turn" : `${short(active)}'s turn`;
 
   return (
     <>
       {mine ? (
-        <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Your turn">
+        <section className={cx(kit.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Your turn">
           {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
-          <p className={styles.eyebrow}><span>{active === seat ? "Your turn" : `${short(active)}'s turn`}</span><span className={styles.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
+          <p className={kit.eyebrow}><span>{whose}</span><span className={kit.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
+          {active !== seat && !helping ? <div className={kit.line}><Chip faction={active} factions={factions} short={short} large /></div> : null}
           {!selected ? (
             <>
-              <h2 className={styles.title}>Choose an action</h2>
-              <div className={styles.choices}>
-                <button className={cx(styles.btn, styles.primary)} disabled={w.pending} onClick={() => select("Tactical", `${short(active)} took a tactical action`)}>Tactical<small>Activate a system</small></button>
-                <button className={styles.btn} disabled={w.pending} onClick={() => select("Component", `${short(active)} took a component action`)}>Component<small>Ability, tech, relic, card</small></button>
+              <h2 className={kit.title}>Choose an action</h2>
+              <div className={cx(kit.buttons, kit.big)}>
+                <Button kind="primary" disabled={w.pending} detail="Activate a system" onClick={() => select("Tactical", `${short(active)} took a tactical action`)}>Tactical</Button>
+                <Button disabled={w.pending} detail="Ability, tech, relic, card" onClick={() => select("Component", `${short(active)} took a component action`)}>Component</Button>
                 {cards.filter((c) => !c.used).map((c) => (
-                  <button key={c.id} className={styles.btn} disabled={w.pending} onClick={() => select(c.id, `${short(active)} played ${c.name}`)}>{c.name}<small>Your strategy card</small></button>
+                  <Button key={c.id} disabled={w.pending} aria-label={`${c.name}: play the primary`} detail="Play the primary" onClick={() => select(c.id, `${short(active)} played ${c.name}`)}>
+                    <CardTag card={c} still />
+                  </Button>
                 ))}
-                <button className={styles.btn} disabled={!canPass || w.pending} onClick={() => open({ kind: "pass", faction: active })}>Pass<small>{canPass ? "Done for the round" : "Play your card first"}</small></button>
+                <Button disabled={!canPass || w.pending} detail={canPass ? "Done for the round" : "Play your card first"} onClick={() => open({ kind: "pass", faction: active })}>Pass</Button>
               </div>
             </>
           ) : (
             <>
-              <h2 className={styles.title}>{actionName}</h2>
-              {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : CARDS_WITH_CONTROLS.has(selected) || selected === "Component" ? null : <p className={styles.sub}>Nothing recorded yet. Record what happens on the board, or just end the turn.</p>}
-              {isCard ? <p className={styles.sub}>{(isCard as StrategyCard).primary}</p> : null}
+              <h2 className={kit.title}>{actionName}</h2>
+              {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : CARDS_WITH_CONTROLS.has(selected) || selected === "Component" ? null : <p className={kit.sub}>Nothing recorded yet. Record what happens on the board, or just end the turn.</p>}
+              {isCard ? <p className={kit.sub}>{(isCard as StrategyCard).primary}</p> : null}
               {isCard ? <CardControls card={selected as StrategyCardId} active={active} ctx={ctx} /> : null}
               {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
-              <div className={styles.grid2}>
-                {selected === "Tactical" ? <button className={styles.btn} onClick={() => open({ kind: "claim", faction: active })}>Take a planet</button> : null}
-                <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>
-              </div>
-              {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
-              {selected ? <ExpeditionButton active={active} ctx={ctx} /> : null}
-              {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
-              <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
+              <Rows label="Record">
+                {selected === "Tactical" ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
+                {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
+                <ExpeditionButton active={active} ctx={ctx} />
+                <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
+              </Rows>
+              <Button kind="primary" size="tall" block disabled={w.pending}
                 onClick={async () => {
                   if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
                   await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
-                }}>End turn</button>
+                }}>End turn</Button>
             </>
           )}
         </section>
       ) : (
-        <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Now playing">
-          <p className={styles.eyebrow}><span>Now playing</span><span className={styles.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
-          <div className={styles.row}><Chip faction={active} factions={factions} short={short} large /></div>
-          <p className={styles.title} style={{ fontWeight: 400 }}>{actionName ?? "Choosing an action"}{steps.length ? ":" : ""}</p>
+        <section className={cx(kit.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Now playing">
+          <p className={kit.eyebrow}><span>Now playing</span><span className={kit.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
+          <div className={kit.line}><Chip faction={active} factions={factions} short={short} large /></div>
+          <p className={kit.title} style={{ fontWeight: 400 }}>{actionName ?? "Choosing an action"}{steps.length ? ":" : ""}</p>
           {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : null}
-          <div className={styles.row} style={{ flexWrap: "wrap", gap: "8px 14px" }}>
-            {onDeck ? <span className={styles.row} style={{ gap: 6 }}><span className={styles.sub}>Next</span><Chip faction={onDeck} factions={factions} short={short} small /></span> : null}
-            {passed.length ? <span className={styles.row} style={{ gap: 4 }}><span className={styles.sub}>Passed</span>{passed.map((id) => <Swatch key={id} faction={id} color={factions[id]?.color} small />)}</span> : null}
+          <div className={kit.line} style={{ flexWrap: "wrap", gap: "8px 14px" }}>
+            {onDeck ? <span className={kit.line} style={{ gap: 6 }}><span className={kit.sub}>Next</span><Chip faction={onDeck} factions={factions} short={short} small /></span> : null}
+            {passed.length ? <span className={kit.line} style={{ gap: 4 }}><span className={kit.sub}>Passed</span>{passed.map((id) => <Swatch key={id} faction={id} color={factions[id]?.color} small />)}</span> : null}
           </div>
-          <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(active)}>Do it for {short(active)}</button>
+          <Button forOther block onClick={() => setHelping(active)}>Do it for {short(active)}</Button>
         </section>
       )}
       {myPrompt ? (
-        <section className={styles.card} aria-label="Secondary">
-          <p className={styles.eyebrow}><span>{(isCard as StrategyCard).name} was played</span></p>
-          <h2 className={styles.title}>Follow the secondary?</h2>
-          <p className={styles.sub}>{(isCard as StrategyCard).secondary}</p>
-          <div className={styles.grid2}>
-            <button className={cx(styles.btn, styles.primary)} disabled={w.pending} onClick={() => selected === "Technology"
+        <section className={kit.card} aria-label="Secondary">
+          <p className={kit.eyebrow}><span>{(isCard as StrategyCard).name} was played</span></p>
+          <h2 className={kit.title}>Follow the secondary?</h2>
+          <p className={kit.sub}>{(isCard as StrategyCard).secondary}</p>
+          <div className={kit.buttons}>
+            <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology"
               ? open({ kind: "research", faction: seat!, follow: true })
-              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</button>
-            <button className={styles.btn} disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</button>
+              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</Button>
+            <Button disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</Button>
           </div>
         </section>
       ) : null}
@@ -134,9 +138,5 @@ function AttachButton({ active, currentTurn, planets, ctx }: { active: FactionId
   const taken = getClaimedPlanets(currentTurn, active).map((c) => planets[c.planet]).filter((p): p is Planet => !!p);
   const last = taken.at(-1);
   if (!last || last.system === undefined) return null;
-  return (
-    <button className={cx(styles.btn, styles.block)} onClick={() => ctx.open({ kind: "system", system: String(last.system) })}>
-      Explored? Add an attachment<small>{taken.map((p) => p.name).join(", ")}</small>
-    </button>
-  );
+  return <RowLink onClick={() => ctx.open({ kind: "system", system: String(last.system) })} title="Explored? Add an attachment" detail={taken.map((p) => p.name).join(", ")} />;
 }

@@ -9,6 +9,7 @@ import { Optional } from "../../util/types/types";
 import { fmtDuration, openCombat } from "./logic";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, useNow, type Ctx } from "./ui";
+import { RowLink } from "../ui/kit";
 
 export function useOpenCombat() {
   return openCombat(useActionLog());
@@ -35,7 +36,7 @@ export function CombatBanner({ ctx }: { ctx: Ctx }) {
 
 export function StartCombatButton({ attacker, ctx }: { attacker: FactionId; ctx: Ctx }) {
   if (useOpenCombat()) return null;
-  return <button className={cx(styles.btn, styles.block)} onClick={() => ctx.open({ kind: "combat", attacker })}>Start a combat<small>Space or ground</small></button>;
+  return <RowLink onClick={() => ctx.open({ kind: "combat", attacker })} title="Start a combat" detail="Space or ground" />;
 }
 
 export function StartCombatSheet({ attacker, close, ctx }: { attacker: FactionId; close: () => void; ctx: Ctx }) {

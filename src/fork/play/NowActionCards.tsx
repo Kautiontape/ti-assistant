@@ -9,6 +9,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import { actorOf } from "./logic";
 import styles from "./play.module.scss";
 import { Chip, cx, SheetFrame, type Ctx } from "./ui";
+import { RowLink } from "../ui/kit";
 
 // Upstream reads the target of these as the player who played them (vote tallies).
 const TARGET_IS_PLAYER = new Set(["Distinguished Councilor", "Council Preserve", "Predictive Intelligence"]);
@@ -37,11 +38,7 @@ export function playedActionCards(log: ActionLog, factionId: FactionId, cardName
 }
 
 export function ActionCardButton({ ctx }: { ctx: Ctx }) {
-  return (
-    <button className={cx(styles.btn, styles.block)} onClick={() => ctx.open({ kind: "actionCard" })}>
-      Played an action card?<small>Record who played which card</small>
-    </button>
-  );
+  return <RowLink onClick={() => ctx.open({ kind: "actionCard" })} title="Played an action card?" detail="Record who played which card" />;
 }
 
 export function ActionCardSheet({ faction, close, ctx }: { faction?: FactionId; close: () => void; ctx: Ctx }) {
