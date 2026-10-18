@@ -253,7 +253,7 @@
     background: color-mix(in oklch, var(--sc-ink) 18%, transparent);
   }
   .scLarge { min-height: 44px; font-size: calc(var(--fs) * 1); padding-right: 14px; .scNum { min-width: 28px; height: 28px; } }
-  @each $c in red, orange, yellow, green, turquoise, blue, darkblue, purple, magenta {
+  @each $c in "red", "orange", "yellow", "green", "turquoise", "blue", "darkblue", "purple", "magenta" {
     .sc[data-c="#{$c}"] { --sc: var(--sc-#{$c}); --sc-ink: var(--sc-#{$c}-ink); --sc-line: var(--sc-#{$c}-line); }
   }
 
