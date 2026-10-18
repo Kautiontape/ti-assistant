@@ -276,6 +276,26 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
 
 // ---------- sheets ----------
 
+// Upstream's theme script (src/util/theme.ts) keeps the choice in localStorage and
+// exposes __setPreferredTheme; its toggle lives in the top bar /play hides.
+function ThemeChoice() {
+  const [theme, setTheme] = useState<Optional<string>>();
+  useEffect(() => setTheme(document.documentElement.dataset.theme), []);
+  const choose = (t: "dark" | "light") => {
+    (window as unknown as { __setPreferredTheme?: (t: string) => void }).__setPreferredTheme?.(t);
+    setTheme(t);
+  };
+  return (
+    <>
+      <p className={styles.eyebrow}><span>Theme</span></p>
+      <div className={styles.pick}>
+        <button aria-pressed={theme === "dark"} onClick={() => choose("dark")}><b>Dark</b></button>
+        <button aria-pressed={theme === "light"} onClick={() => choose("light")}><b>Light</b></button>
+      </div>
+    </>
+  );
+}
+
 function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: () => void; setSeat: (id: Optional<FactionId>) => void }) {
   const { factions, short, w } = ctx;
   const planets = usePlanets();
@@ -310,6 +330,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
             {order.map((id) => <button key={id} aria-pressed={ctx.seat === id} onClick={() => { setSeat(id); close(); }}><Chip faction={id} factions={factions} short={short} small /></button>)}
             <button aria-pressed={!ctx.seat} onClick={() => { setSeat(undefined); close(); }}><b>Just watching</b></button>
           </div>
+          <ThemeChoice />
         </SheetFrame>
       );
     case "claim": {
