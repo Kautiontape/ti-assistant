@@ -35,6 +35,16 @@ In `/opt/services/ti-assistant/`, next to the synced compose file:
 The container is capped at 384 MB with a 256 MB Node heap, the same as
 upstream's App Engine setting. ktn is short on RAM.
 
+## Repo settings this depends on
+
+- `ktn` is the default branch. Scheduled and `workflow_run` workflows only
+  run from the default branch.
+- Actions variables hold the `NEXT_PUBLIC_*` values (`gh variable list`).
+- Fork-PR workflows need approval for **all** outside contributors. This repo
+  is public and can reach the self-hosted ktn runner.
+- When fleet plan D5 moves deploys to Komodo, `ktn-deploy.yml` goes with the
+  other runner deploys.
+
 ## Upstream sync
 
 **ktn upstream sync** runs Mondays (and by hand):
