@@ -65,6 +65,26 @@ constructors and data hooks:
   (`StrategyPhase.tsx`) and the voting order (`VotingColumn.tsx`). Each copy in
   `src/fork/play/logic.ts` names its source.
 
+## Upstream internals `/draft` uses
+
+The Milty draft (`src/fork/draft/`) adds no seam. It keeps drafts in its own
+collection, `forkDrafts`, which browsers may read one document at a time
+(`deploy/ktn/firebase/firestore.rules`). If an upstream merge breaks it, look at:
+
+- Upstream's `create-game` route handler, which `src/fork/draft/server.ts`
+  calls in-process with `{factions, speaker, options}`. It relies on the
+  `factions` array order becoming `mapPosition` (P1 first), `speaker` being an
+  index into that array, and each faction needing `id`, `name` and `color`.
+- `getDefaultMapString` and `getFactionSystemNumber` (`src/util/map.ts`): the
+  6-player standard map with `P1`…`P6` homes at indices 19, 22, 25, 28, 31
+  and 34, which `wedges()` in `src/fork/draft/milty.ts` turns into slices.
+- `BASE_OPTIONS` (`server/data/options.ts`), `getFactions`, base data through
+  `DatabaseFnsContext.getBaseValue`, and `GameMap` for the preview.
+- Copied rather than imported: the hex spiral (`hexGrid.ts`), optimal value
+  (`computeNearbyValues` in `MapBuilder.tsx`), the faction filter and colour
+  choice (`setup-page.tsx`). The anomaly list in `milty.ts` comes from the
+  tile art, since upstream's data has none.
+
 ## Things that need no seam
 
 - **Cron.** `/api/process-games` only checks that an `X-Appengine-Cron` header
