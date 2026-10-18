@@ -1,0 +1,10 @@
+.git
+.next
+build
+node_modules
+npm-debug.log*
+*-debug.log
+**/.env
+**/.env.*
+# Never bake credentials into the image.
+server/twilight-imperium-360307-*.json

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# docker compose wrapper that reads the Firebase service account from the
+# vault (~/.dotfiles/secrets/README.md) so the key never touches disk.
+#   selfhost/compose up -d --build
+#   selfhost/compose logs -f app
+set -euo pipefail
+cd "$(dirname "$0")"
+
+item="${TI_FIREBASE_SA_ITEM:-}"
+if [[ -z "$item" && -f .env ]]; then
+  item="$(sed -n 's/^TI_FIREBASE_SA_ITEM=//p' .env | tail -n1)"
+fi
+item="${item:-personal/ti-assistant-firebase-sa}"
+
+secret_bin="$(command -v secret || echo "$HOME/.dotfiles/bin/secret")"
+FIREBASE_SERVICE_ACCOUNT_JSON="$("$secret_bin" "$item")"
+export FIREBASE_SERVICE_ACCOUNT_JSON
+
+exec docker compose "$@"

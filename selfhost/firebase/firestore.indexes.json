@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "actionLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "data.action", "order": "ASCENDING" },
+        { "fieldPath": "timestampMillis", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

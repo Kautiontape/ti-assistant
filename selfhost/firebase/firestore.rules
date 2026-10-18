@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Browsers only listen to single game/timer docs and their action logs
+// (src/context/DBListener.tsx). Every write goes through the API routes,
+// which use the admin SDK and bypass these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /games/{gameId} {
+      allow get: if true;
+      match /actionLog/{entryId} {
+        allow read: if true;
+      }
+    }
+    match /timers/{gameId} {
+      allow get: if true;
+    }
+    match /archive/{gameId} {
+      allow get: if true;
+      match /actionLog/{entryId} {
+        allow read: if true;
+      }
+    }
+    match /archiveTimers/{gameId} {
+      allow get: if true;
+    }
+    // Everything else (passwords, sessions, processed, and the fork's
+    // private collections) is denied by default.
+  }
+}
