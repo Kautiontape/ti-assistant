@@ -139,6 +139,12 @@
     output { text-align: center; font-family: var(--mono); font-size: 2rem; font-variant-numeric: tabular-nums; }
   }
   .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .item {
+    border-top: 1px solid var(--line);
+    summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    p { margin: 0 0 10px; }
+  }
   .textLink { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-weight: 700; }
   .link { background: none; border: 0; min-height: 44px; padding: 0 4px; color: var(--accent); cursor: pointer; font-weight: 700; }
 

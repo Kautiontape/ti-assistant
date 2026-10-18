@@ -7,11 +7,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useActionLog, useAgenda, useCurrentTurn, useGameId, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
-import { useObjectives } from "../../context/objectiveDataHooks";
 import { useGameState } from "../../context/stateDataHooks";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, pointsBySource, sentence, subjectOf, turnOwners } from "./logic";
+import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, sentence, subjectOf, turnOwners } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
@@ -19,6 +18,7 @@ import NowAction from "./NowAction";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
 import NowEnd, { GameEndBanner } from "./NowEnd";
+import { PlayerSheet } from "./PlayerSheet";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, cx, pcolor, useMounted, useRace, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
@@ -278,7 +278,6 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
   const planets = usePlanets();
   const currentTurn = useCurrentTurn();
   const strategyCards = useStrategyCards();
-  const objectives = useObjectives();
   const order = useOrderedFactionIds("SPEAKER");
   const checksAndBalances = useAgenda("Checks and Balances");
   const [q, setQ] = useState("");
@@ -369,22 +368,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
         </SheetFrame>
       );
     }
-    case "player": {
-      const f = factions[sheet.faction];
-      const pts = pointsBySource(objectives, sheet.faction, f?.vps ?? 0);
-      const owned = Object.values(planets).filter((p): p is Planet => p?.owner === sheet.faction);
-      const res = owned.reduce((n, p) => n + p.resources, 0), inf = owned.reduce((n, p) => n + p.influence, 0);
-      return (
-        <SheetFrame title={f?.name ?? sheet.faction} close={close}>
-          <p className={styles.sub}>{f?.playerName}</p>
-          <p className={styles.eyebrow}><span>Points</span><span className={styles.num}>{pts.total}</span></p>
-          <ul className={styles.list}>{pts.groups.map((g) => <li key={g.label}><span className={styles.grow}><b>{g.label}</b><br /><span className={styles.sub}>{g.items.join(", ")}</span></span><span className={styles.num}>{g.points}</span></li>)}</ul>
-          <p className={styles.eyebrow}><span>Planets</span><span className={styles.num}>{owned.length} · {res} res · {inf} inf</span></p>
-          <p className={styles.sub}>{owned.map((p) => p.name).sort().join(", ") || "None"}</p>
-          <p className={styles.eyebrow}><span>Technology</span><span className={styles.num}>{Object.keys(f?.techs ?? {}).length}</span></p>
-          <p className={styles.sub}>{Object.keys(f?.techs ?? {}).join(", ") || "None"}</p>
-        </SheetFrame>
-      );
-    }
+    case "player":
+      return <PlayerSheet faction={sheet.faction} close={close} ctx={ctx} />;
   }
 }

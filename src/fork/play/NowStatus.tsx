@@ -38,7 +38,6 @@ export default function NowStatus(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open, gameId } = ctx;
   const objectives = useObjectives();
   const currentTurn = useCurrentTurn();
-  const planets = usePlanets();
   const relics = useRelics();
   const round = useRound();
   const speaker = useSpeaker();
