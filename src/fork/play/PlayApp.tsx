@@ -76,6 +76,8 @@ export default function PlayApp() {
 
   // Helping lasts as long as what it was for: the phase, and in turn-based
   // phases the helped player's turn (they may end it from their own phone).
+  // Only these effects stop it: a write that returns late must not stop a help
+  // started for the next player in the meantime.
   useEffect(() => setHelping(undefined), [phase]);
   useEffect(() => {
     if ((phase === "ACTION" || phase === "STRATEGY") && helping && helping !== active) setHelping(undefined);
@@ -363,7 +365,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
         <SheetFrame title="Pass for the round?" close={close}>
           <p className={styles.title} style={{ fontWeight: 400 }}>{short(sheet.faction)} passes and takes no more turns this round.</p>
           <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending} onClick={async () => {
-            if (await w.write([Events.SelectActionEvent("Pass"), Events.EndTurnEvent({})], `${short(sheet.faction)} passed`, sheet.faction)) { ctx.setHelping(undefined); close(); }
+            if (await w.write([Events.SelectActionEvent("Pass"), Events.EndTurnEvent({})], `${short(sheet.faction)} passed`, sheet.faction)) close();
           }}>Pass</button>
         </SheetFrame>
       );
@@ -376,7 +378,7 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       const pick = async (target: FactionId) => {
         if (!picker || !c) return;
         const label = target === picker ? `${short(picker)} picked ${c.name}` : `${short(picker)} gave ${c.name} to ${short(target)}`;
-        if (await w.write([Events.AssignStrategyCardEvent(target, c.id, picker)], label, picker)) { ctx.setHelping(undefined); setTo(undefined); close(); }
+        if (await w.write([Events.AssignStrategyCardEvent(target, c.id, picker)], label, picker)) { setTo(undefined); close(); }
       };
       return (
         <SheetFrame title={c?.name ?? sheet.card} close={close}>

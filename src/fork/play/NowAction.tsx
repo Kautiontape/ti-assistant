@@ -87,7 +87,7 @@ export default function NowAction(ctx: Ctx) {
               <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
                 onClick={async () => {
                   if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
-                  if (await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active)) setHelping(undefined);
+                  await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
                 }}>End turn</button>
             </>
           )}
