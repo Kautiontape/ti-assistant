@@ -196,10 +196,11 @@ export function scoredThisPhase(currentTurn: ActionLog, objectives: Objectives, 
   };
 }
 
-// Revealed public objectives scored in the status phase that this player hasn't scored.
-export function scorablePublics(objectives: Objectives, factionId: FactionId) {
+// Revealed public objectives this player hasn't scored: those scored in the status
+// phase, or any of them for Imperial's primary (anyPhase).
+export function scorablePublics(objectives: Objectives, factionId: FactionId, anyPhase = false) {
   return Object.values(objectives).filter((o): o is Objective =>
-    !!o && !!o.selected && isPublic(o) && (!o.phase || o.phase === "STATUS") && !(o.scorers ?? []).includes(factionId));
+    !!o && !!o.selected && isPublic(o) && (anyPhase || !o.phase || o.phase === "STATUS") && !(o.scorers ?? []).includes(factionId));
 }
 
 // Status-phase secrets nobody has scored. Hands aren't tracked, so all of them.

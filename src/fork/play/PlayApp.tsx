@@ -17,6 +17,7 @@ import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
+import { ResearchSheet } from "./NowCards";
 import NowEnd, { GameEndBanner } from "./NowEnd";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
@@ -287,6 +288,8 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
     case "give":
     case "reveal":
       return <StatusSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "research":
+      return <ResearchSheet faction={sheet.faction} follow={sheet.follow} close={close} ctx={ctx} />;
     case "agenda":
     case "vote":
     case "resolve":
