@@ -1,5 +1,6 @@
 import Negotiator from "negotiator";
 import { NextRequest, NextResponse } from "next/server";
+import { forkStart } from "./src/fork/home/proxy"; // ktn seam S8
 
 const locales = ["en", "de", "fr", "ru", "pl", "pt-BR"];
 
@@ -24,7 +25,7 @@ export function proxy(request: NextRequest) {
   );
 
   if (pathnameHasLocale) {
-    return;
+    return forkStart(request); // ktn seam S8: the fork's start page at /<locale>
   }
 
   // Redirect if there is no locale

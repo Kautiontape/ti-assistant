@@ -36,8 +36,9 @@ function useSeat(gameId: string) {
   const key = `play-seat-${gameId}`;
   const [seat, setSeatState] = useState<Optional<FactionId>>();
   useEffect(() => {
-    try { setSeatState((localStorage.getItem(key) || undefined) as Optional<FactionId>); } catch {}
-  }, [key]);
+    // "play-last" is the start page's "Back to game".
+    try { setSeatState((localStorage.getItem(key) || undefined) as Optional<FactionId>); localStorage.setItem("play-last", gameId); } catch {}
+  }, [key, gameId]);
   const setSeat = (id: Optional<FactionId>) => {
     setSeatState(id);
     try { id ? localStorage.setItem(key, id) : localStorage.removeItem(key); } catch {}

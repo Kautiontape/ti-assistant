@@ -11,7 +11,7 @@ New code goes in new places. Upstream files are only edited at the seams
 listed below, so an upstream merge can only conflict in those spots.
 
 - Fork-only paths: `deploy/ktn/`, `docs/ktn/`, `.github/`, `src/fork/`,
-  `app/[locale]/play/`, `app/[locale]/draft/`, `app/api/fork/`, `sidecar/`,
+  `app/[locale]/play/`, `app/[locale]/draft/`, `app/[locale]/start/`, `app/api/fork/`, `sidecar/`,
   `prototype/` (design prototypes, published as private claude.ai pages; never deployed).
 - New UI imports upstream's engine (`src/util/api/events.ts`,
   `useDataUpdate`, the `src/context/*DataHooks.ts` hooks, `src/components/*`)
@@ -27,6 +27,7 @@ listed below, so an upstream merge can only conflict in those spots.
 | S3 | `src/components/Header/Header.tsx`, `src/components/QRCode/QRCodeButtonWrapper.tsx`, `app/[locale]/archive/[gameId]/layout.tsx` | `NEXT_PUBLIC_BASE_URL` for share links and QR codes, falling back to upstream's URLs. | Candidate |
 | S4 | `app/api/[gameId]/dataUpdate/route.ts`, `src/util/api/gameLog.ts` (`getHandler`), `src/util/api/opposite.ts` (`getOppositeHandler`), `src/components/LogEntry.tsx`, `src/util/types/api.d.ts` (`GameUpdateData`) | Fork action registry: each switch falls back to `src/fork/actions/registry.ts` for actions it doesn't know, LogEntry draws them with `ForkLogEntry`, and the union gains `ForkUpdateData` (`src/fork/actions/types.d.ts`). One import and one line per file, marked `ktn seam S4`. A new fork action never touches these files again. | No (fork-only actions) |
 | S7 | `app/[locale]/inner-layout.tsx` | Wraps upstream's NavBar in `HideOnPlay` (`src/fork/play/HideOnPlay.tsx`), so `/play` can use its own top bar. Three lines: one import and the wrapper's open and close tags. | No (fork-only screen) |
+| S8 | `proxy.ts` | The site's base address (`/<locale>`) shows the fork's start page (`src/fork/home/StartPage.tsx`, route `app/[locale]/start/`) instead of upstream's home: a rewrite from `forkStart` in `src/fork/home/proxy.ts`. One import and one changed `return`, marked `ktn seam S8`. Upstream's home links Archive, Stats, Supporters and "Help support", which this copy doesn't run. | No (fork-only page) |
 
 Planned, not yet added:
 
