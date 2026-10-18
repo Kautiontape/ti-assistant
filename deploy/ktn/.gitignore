@@ -1,3 +1,4 @@
 .env
+firebase-sa.json
 # The root .gitignore ignores firebase.json everywhere; keep ours.
 !firebase/firebase.json

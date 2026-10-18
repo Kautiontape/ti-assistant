@@ -1,0 +1,38 @@
+# Pulls the image the build published and restarts it on ktn. ktn only pulls.
+name: ktn deploy
+
+on:
+  workflow_run:
+    workflows: ["ktn build & publish"]
+    types: [completed]
+    branches: [ktn]
+  workflow_dispatch:
+
+concurrency:
+  group: ktn-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+    runs-on: [self-hosted, ktn]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ktn
+          sparse-checkout: |
+            deploy/ktn
+          sparse-checkout-cone-mode: false
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # .env and firebase-sa.json live only on the host, beside the compose file.
+      - name: Sync compose, pull, and restart in place
+        run: |
+          install -D -m 0644 deploy/ktn/docker-compose.yml /opt/services/ti-assistant/docker-compose.yml
+          cd /opt/services/ti-assistant
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker image prune -f

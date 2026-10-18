@@ -1,0 +1,41 @@
+# Canonical compose for TI Assistant on ktn. The ktn-deploy workflow syncs
+# this file to /opt/services/ti-assistant/ and runs `docker compose pull &&
+# up -d` there. Host-only files beside it: .env (GOOGLE_CLOUD_PROJECT) and
+# firebase-sa.json (mode 0600). See docs/ktn/ci-cd.md.
+services:
+  app:
+    image: ghcr.io/kautiontape/ti-assistant:latest
+    container_name: ti-assistant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8119:3000"
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase_sa
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:?set in /opt/services/ti-assistant/.env}
+      # Same heap cap upstream runs with on App Engine; ktn is short on RAM.
+      NODE_OPTIONS: --max-old-space-size=256
+    secrets:
+      - firebase_sa
+    mem_limit: 384m
+
+  # Stands in for App Engine's cron.yaml. The route only checks that the
+  # X-Appengine-Cron header exists, so nginx strips it from outside requests.
+  cron:
+    image: curlimages/curl:8.11.1
+    container_name: ti-assistant-cron
+    restart: unless-stopped
+    depends_on:
+      - app
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sleep 86400
+          curl -fsS -H "X-Appengine-Cron: true" http://app:3000/api/process-games \
+            || echo "process-games failed"
+        done
+    mem_limit: 32m
+
+secrets:
+  firebase_sa:
+    file: ./firebase-sa.json

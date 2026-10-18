@@ -1,4 +1,5 @@
-# Merges ti-assistant/ti-assistant main into this fork. See FORK.md.
+# Keeps main an exact mirror of upstream and opens a PR merging it into ktn.
+# See docs/ktn/ci-cd.md.
 # Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and
 # approve pull requests".
 name: Upstream sync
@@ -21,10 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      SYNC_BRANCH: upstream-sync
+      SYNC_BRANCH: sync/upstream
+      BASE_BRANCH: ktn
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ktn
           fetch-depth: 0
 
       - name: Fetch upstream
@@ -33,6 +36,10 @@ jobs:
           git remote add upstream https://github.com/ti-assistant/ti-assistant.git
           git fetch upstream main
           echo "behind=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
+
+      # Fast-forward only: main never carries fork commits.
+      - name: Mirror upstream to main
+        run: git push origin refs/remotes/upstream/main:refs/heads/main
 
       - name: Merge
         if: steps.fetch.outputs.behind != '0'
@@ -76,7 +83,7 @@ jobs:
             echo
             echo "**Build:** ${{ steps.build.outcome }}"
             echo
-            echo "**Files both sides changed** (re-check these seams against FORK.md):"
+            echo "**Files both sides changed** (re-check these seams against docs/ktn/README.md):"
             if [ -s overlap.txt ]; then sed 's/^/- `/; s/$/`/' overlap.txt; else echo "none"; fi
             echo
             echo "<details><summary>Upstream commits</summary>"
@@ -88,7 +95,7 @@ jobs:
           if gh pr view "$SYNC_BRANCH" --json state -q .state 2>/dev/null | grep -q OPEN; then
             gh pr edit "$SYNC_BRANCH" --body-file body.md
           else
-            gh pr create --base main --head "$SYNC_BRANCH" \
+            gh pr create --base "$BASE_BRANCH" --head "$SYNC_BRANCH" \
               --title "upstream: Merge ti-assistant/main" --body-file body.md
           fi
 
@@ -96,11 +103,11 @@ jobs:
         if: steps.merge.outputs.conflict == 'true'
         run: |
           {
-            echo "Merging upstream/main into main conflicts in:"
+            echo "Merging upstream/main into ktn conflicts in:"
             echo
             sed 's/^/- `/; s/$/`/' conflicts.txt
             echo
-            echo "Resolve by hand (see FORK.md, Merging upstream)."
+            echo "Resolve by hand (see docs/ktn/ci-cd.md, Upstream sync)."
           } > body.md
           title="upstream: Merge conflict with ti-assistant/main"
           existing="$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')"

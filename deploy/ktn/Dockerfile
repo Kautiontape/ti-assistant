@@ -1,4 +1,4 @@
-# Self-hosted image, built from the repo root by selfhost/docker-compose.yml.
+# TI Assistant image for ktn, built from the repo root by ktn-build-publish.yml.
 # Ignore rules live in Dockerfile.dockerignore next to this file.
 # glibc base (not Alpine) so sharp's prebuilt binaries work.
 # --ignore-scripts: the only package that needs its install script is pprof

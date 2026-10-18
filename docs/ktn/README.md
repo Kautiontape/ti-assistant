@@ -1,15 +1,17 @@
-# Fork notes
+# ktn fork notes
 
-This is the Kautiontape fork of [ti-assistant/ti-assistant](https://github.com/ti-assistant/ti-assistant).
-It adds self-hosting and features for our group, and merges upstream regularly.
+This is the Kautiontape fork of [ti-assistant/ti-assistant](https://github.com/ti-assistant/ti-assistant),
+served at https://ti.kautiontape.com from ktn. `ktn` is the deployed (default)
+branch; `main` is an exact mirror of upstream. Build, deploy and sync are in
+[ci-cd.md](ci-cd.md).
 
 ## The rule
 
 New code goes in new places. Upstream files are only edited at the seams
 listed below, so an upstream merge can only conflict in those spots.
 
-- Fork-only directories: `selfhost/`, `src/fork/`, `app/[locale]/play/`,
-  `app/[locale]/draft/`, `app/api/fork/`, `sidecar/`, `.github/`.
+- Fork-only paths: `deploy/ktn/`, `docs/ktn/`, `.github/`, `src/fork/`,
+  `app/[locale]/play/`, `app/[locale]/draft/`, `app/api/fork/`, `sidecar/`.
 - New UI imports upstream's engine (`src/util/api/events.ts`,
   `useDataUpdate`, the `src/context/*DataHooks.ts` hooks, `src/components/*`)
   instead of changing it.
@@ -36,25 +38,10 @@ Planned, not yet added:
 ## Things that need no seam
 
 - **Cron.** `/api/process-games` only checks that an `X-Appengine-Cron` header
-  exists. The reverse proxy strips that header and blocks the path; the `cron`
-  service in `selfhost/docker-compose.yml` calls it on the internal network.
-- **Docker.** Everything lives in `selfhost/`, so upstream adding its own
+  exists. nginx strips that header and blocks the path; the `cron` service in
+  `deploy/ktn/docker-compose.yml` calls it on the Docker network.
+- **Docker.** Everything lives in `deploy/ktn/`, so upstream adding its own
   Dockerfile won't collide.
-
-## Merging upstream
-
-`.github/workflows/upstream-sync.yml` runs weekly (or by hand). It merges
-`upstream/main` into a branch called `upstream-sync`, runs the build, and opens
-a PR. If the merge conflicts, it opens an issue listing the files instead. The PR
-body lists files both sides changed; re-check those seams before merging.
-
-By hand:
-
-```sh
-git fetch upstream
-git switch main && git merge upstream/main   # merge, never rebase
-npm ci && npm run build
-```
 
 ## Local development
 
