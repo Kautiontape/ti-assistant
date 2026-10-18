@@ -4,32 +4,22 @@
 // Strings are English and live in fork code, so upstream's message files stay untouched.
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import FactionIcon from "../../components/FactionIcon/FactionIcon";
-import { useAbilities, useActionLog, useAgenda, useCurrentTurn, useGameId, usePlanets, useStrategyCards } from "../../context/dataHooks";
-import { useFactionHasTech, useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
-import { useActiveFactionId, useOnDeckFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
+import { useActionLog, useAgenda, useCurrentTurn, useGameId, usePlanets, useStrategyCards } from "../../context/dataHooks";
+import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
+import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useGameState } from "../../context/stateDataHooks";
-import { getSelectedActionFromLog } from "../../util/api/data";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { sortStrategyCards } from "../../util/strategyCards";
-import { actorOf, checksAndBalancesTargets, claimablePlanets, fmtDuration, groupKey, newestGroup, pointsBySource, sentence, subjectOf, turnOwners, turnStartedAt } from "./logic";
+import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, pointsBySource, sentence, subjectOf, turnOwners } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
-
-const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strategy", ACTION: "Action", STATUS: "Status", AGENDA: "Agenda", END: "Game over" };
-const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
-const pcolor = (c?: string) => `var(--p-${(c ?? "black").toLowerCase()})`;
+import NowAction from "./NowAction";
+import NowStrategy from "./NowStrategy";
+import { PHASES, cx, pcolor, useMounted, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
 
 type Tab = "now" | "table" | "log";
-type Sheet =
-  | { kind: "seat" }
-  | { kind: "claim"; faction: FactionId }
-  | { kind: "pass"; faction: FactionId }
-  | { kind: "player"; faction: FactionId }
-  | { kind: "card"; card: StrategyCardId; pickFor?: FactionId };
 
 function useSeat(gameId: string) {
   const key = `play-seat-${gameId}`;
@@ -42,23 +32,6 @@ function useSeat(gameId: string) {
     try { id ? localStorage.setItem(key, id) : localStorage.removeItem(key); } catch {}
   };
   return [seat, setSeat] as const;
-}
-
-// Clocks and times render only in the browser: the server's clock and time zone differ.
-function useNow(ms = 1000) {
-  const [now, setNow] = useState<Optional<number>>();
-  useEffect(() => {
-    setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(t);
-  }, [ms]);
-  return now;
-}
-
-function useMounted() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted;
 }
 
 export default function PlayApp() {
@@ -143,228 +116,6 @@ export default function PlayApp() {
 
       {sheet ? <Sheets sheet={sheet} close={() => setSheet(undefined)} {...ctx} setSeat={setSeat} /> : null}
     </div>
-  );
-}
-
-type Ctx = {
-  factions: Partial<Record<FactionId, Faction>>;
-  short: (id: Optional<string>) => string;
-  isFaction: (id: string) => boolean;
-  subject: (e: ActionLogEntry<GameUpdateData>) => Optional<FactionId>;
-  describe: (entries: ActionLog) => string;
-  seat: Optional<FactionId>;
-  helping: Optional<FactionId>;
-  setHelping: (id: Optional<FactionId>) => void;
-  w: ReturnType<typeof useWrite>;
-  open: (s: Sheet) => void;
-  gameId: string;
-};
-
-function Swatch({ faction, color, small, large }: { faction: FactionId; color?: string; small?: boolean; large?: boolean }) {
-  const size = small ? 14 : large ? 26 : 19;
-  return (
-    <span className={cx(styles.sw, small && styles.swSmall, large && styles.swLarge)} data-c={color} style={{ ["--c" as string]: pcolor(color) }}>
-      <FactionIcon factionId={faction} size={size} />
-    </span>
-  );
-}
-
-function Chip({ faction, factions, short, small, large, player = true }: { faction: FactionId; factions: Ctx["factions"]; short: Ctx["short"]; small?: boolean; large?: boolean; player?: boolean }) {
-  const f = factions[faction];
-  return (
-    <span className={styles.chip}>
-      <Swatch faction={faction} color={f?.color} small={small} large={large} />
-      <span className={styles.chipName}>{short(faction)}</span>
-      {player && f?.playerName ? <span className={styles.chipPlayer}>{f.playerName}</span> : null}
-    </span>
-  );
-}
-
-// ---------- Now: action phase ----------
-
-function NowAction(ctx: Ctx) {
-  const { factions, short, seat, helping, setHelping, w, open } = ctx;
-  const active = useActiveFactionId();
-  const onDeck = useOnDeckFactionId();
-  const passed = usePassedFactionIds();
-  const currentTurn = useCurrentTurn();
-  const strategyCards = useStrategyCards();
-  const log = useActionLog();
-  const now = useNow();
-  if (!active) {
-    return (
-      <section className={styles.card} aria-label="Everyone has passed">
-        <p className={styles.eyebrow}><span>Action phase</span></p>
-        <h2 className={styles.title}>Everyone has passed</h2>
-        <p className={styles.sub}>The status phase is next: scoring, then cleanup.</p>
-        <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-          onClick={() => w.write([Events.AdvancePhaseEvent()], "The status phase started")}>Start the status phase</button>
-      </section>
-    );
-  }
-
-  const f = factions[active];
-  const mine = active === seat || active === helping;
-  const selected = getSelectedActionFromLog(currentTurn);
-  const cards = getStrategyCardsForFaction(strategyCards, active);
-  const canPass = !passed.includes(active) && cards.every((c) => c.used);
-  const isCard = selected && strategyCards[selected as StrategyCardId];
-  const started = turnStartedAt(log);
-  const steps = [...currentTurn].reverse()
-    .filter((e) => e.data.action !== "SELECT_ACTION")
-    .map((e) => sentence(e, short, ctx.isFaction)).filter((s): s is string => !!s);
-  const select = (action: Action, label: string) => w.write([Events.SelectActionEvent(action)], label, active);
-  const actionName = selected === "Tactical" ? "Tactical action" : selected === "Component" ? "Component action" : selected ? `${selected}: primary` : null;
-  const factionPage = `/game/${ctx.gameId}/${encodeURIComponent(active)}`;
-
-  const myPrompt = isCard && seat && seat !== active
-    && !currentTurn.some((e) => e.data.action === "MARK_SECONDARY" && (e.data.event as { faction?: string }).faction === seat)
-    && (factions[seat]?.secondary ?? "PENDING") === "PENDING";
-
-  return (
-    <>
-      {mine ? (
-        <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Your turn">
-          {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
-          <p className={styles.eyebrow}><span>{active === seat ? "Your turn" : `${short(active)}'s turn`}</span><span className={styles.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
-          {!selected ? (
-            <>
-              <h2 className={styles.title}>Choose an action</h2>
-              <div className={styles.choices}>
-                <button className={cx(styles.btn, styles.primary)} disabled={w.pending} onClick={() => select("Tactical", `${short(active)} took a tactical action`)}>Tactical<small>Activate a system</small></button>
-                <button className={styles.btn} disabled={w.pending} onClick={() => select("Component", `${short(active)} took a component action`)}>Component<small>Ability, tech, relic, card</small></button>
-                {cards.filter((c) => !c.used).map((c) => (
-                  <button key={c.id} className={styles.btn} disabled={w.pending} onClick={() => select(c.id, `${short(active)} played ${c.name}`)}>{c.name}<small>Your strategy card</small></button>
-                ))}
-                <button className={styles.btn} disabled={!canPass || w.pending} onClick={() => open({ kind: "pass", faction: active })}>Pass<small>{canPass ? "Done for the round" : "Play your card first"}</small></button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className={styles.title}>{actionName}</h2>
-              {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : <p className={styles.sub}>Nothing recorded yet. Record what happens on the board, or just end the turn.</p>}
-              {isCard ? <p className={styles.sub}>{(isCard as StrategyCard).primary}</p> : null}
-              <div className={styles.grid2}>
-                {selected === "Tactical" ? <button className={styles.btn} onClick={() => open({ kind: "claim", faction: active })}>Take a planet</button> : null}
-                <Link className={styles.btn} href={factionPage}>More controls<small>Upstream's full page</small></Link>
-              </div>
-              <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-                onClick={async () => { if (await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active)) setHelping(undefined); }}>End turn</button>
-            </>
-          )}
-        </section>
-      ) : (
-        <section className={cx(styles.card, styles.hero)} style={{ ["--c" as string]: pcolor(f?.color) }} aria-label="Now playing">
-          <p className={styles.eyebrow}><span>Now playing</span><span className={styles.num}>{started && now ? fmtDuration(now - started) : ""}</span></p>
-          <div className={styles.row}><Chip faction={active} factions={factions} short={short} large /></div>
-          <p className={styles.title} style={{ fontWeight: 400 }}>{actionName ?? "Choosing an action"}{steps.length ? ":" : ""}</p>
-          {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : null}
-          <div className={styles.row} style={{ flexWrap: "wrap", gap: "8px 14px" }}>
-            {onDeck ? <span className={styles.row} style={{ gap: 6 }}><span className={styles.sub}>Next</span><Chip faction={onDeck} factions={factions} short={short} small /></span> : null}
-            {passed.length ? <span className={styles.row} style={{ gap: 4 }}><span className={styles.sub}>Passed</span>{passed.map((id) => <Swatch key={id} faction={id} color={factions[id]?.color} small />)}</span> : null}
-          </div>
-          <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(active)}>Do it for {short(active)}</button>
-        </section>
-      )}
-      {myPrompt ? (
-        <section className={styles.card} aria-label="Secondary">
-          <p className={styles.eyebrow}><span>{(isCard as StrategyCard).name} was played</span></p>
-          <h2 className={styles.title}>Follow the secondary?</h2>
-          <p className={styles.sub}>{(isCard as StrategyCard).secondary}</p>
-          <div className={styles.grid2}>
-            <button className={cx(styles.btn, styles.primary)} disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>Follow</button>
-            <button className={styles.btn} disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</button>
-          </div>
-        </section>
-      ) : null}
-    </>
-  );
-}
-
-function HelpBanner({ who, short, stop }: { who: FactionId; short: Ctx["short"]; stop: () => void }) {
-  return (
-    <div className={styles.banner}>
-      <span className={styles.grow}>You're helping <b>{short(who)}</b>. Everything you do is logged as you, for {short(who)}.</span>
-      <button className={cx(styles.btn, styles.smallBtn)} onClick={stop}>Stop</button>
-    </div>
-  );
-}
-
-// ---------- Now: strategy phase ----------
-
-// Abilities that change cards after everyone has picked. The frame leaves them to
-// upstream's table screen (main/phase/strategy/StrategyPhase.tsx).
-function useEndOfStrategyAbilities(factions: Ctx["factions"]) {
-  const arbiter = useAgenda("Imperial Arbiter");
-  const abilities = useAbilities();
-  const hacan = useFactionHasTech("Emirates of Hacan", "Quantum Datahub Node");
-  const nekro = useFactionHasTech("Nekro Virus", "Quantum Datahub Node");
-  const out: string[] = [];
-  if (factions["Naalu Collective"]) out.push("Gift of Prescience");
-  if (hacan || nekro || abilities["Quantum Datahub Node"]?.owner) out.push("Quantum Datahub Node");
-  if (arbiter?.resolved && arbiter.target) out.push("Imperial Arbiter");
-  return out;
-}
-
-function NowStrategy(ctx: Ctx) {
-  const { factions, short, seat, helping, setHelping, w, open, gameId } = ctx;
-  const active = useActiveFactionId();
-  const order = useOrderedFactionIds("SPEAKER");
-  const strategyCards = useStrategyCards();
-  const endAbilities = useEndOfStrategyAbilities(factions);
-  const cards = sortStrategyCards(Object.values(strategyCards).filter((c): c is StrategyCard => !!c), true);
-  const picks = (id: FactionId) => cards.filter((c) => c.faction === id);
-  const mine = !!active && (active === seat || active === helping);
-
-  return (
-    <>
-      {active && mine ? (
-        <section className={styles.card} aria-label="Pick a card">
-          {helping && helping !== seat ? <HelpBanner who={active} short={short} stop={() => setHelping(undefined)} /> : null}
-          <p className={styles.eyebrow}><span>{active === seat ? "Your pick" : `${short(active)}'s pick`}</span></p>
-          <div>
-            {cards.map((c) => (
-              <button key={c.id} className={styles.opt} disabled={!!c.faction || !!c.invalid} onClick={() => open({ kind: "card", card: c.id, pickFor: active })}>
-                <span className={styles.num} style={{ color: "var(--faint)", minWidth: "1.5ch" }}>{c.order}</span>
-                <b>{c.name}</b>{c.faction ? <span className={styles.sub}>{short(c.faction)}</span> : null}
-                <span className={styles.meta}>{c.tradeGoods ? `${c.tradeGoods} trade good${c.tradeGoods > 1 ? "s" : ""}` : ""}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className={cx(styles.card, styles.hero)} style={active ? { ["--c" as string]: pcolor(factions[active]?.color) } : undefined} aria-label="Pick order">
-        <p className={styles.eyebrow}><span>Pick order</span><span className={styles.num}>{order.filter((id) => picks(id).length).length} of {order.length}</span></p>
-        <ul className={styles.list}>
-          {order.map((id, i) => (
-            <li key={id} className={styles.row}>
-              <span className={styles.num} style={{ color: "var(--faint)" }}>{i + 1}</span>
-              <Chip faction={id} factions={factions} short={short} small />
-              <span className={styles.grow} />
-              {picks(id).map((c) => <span key={c.id} className={styles.pill}>{c.name}</span>)}
-              {id === active ? <span className={cx(styles.pill, styles.pillNow)}>Picking</span> : !picks(id).length ? <span className={styles.sub}>Waiting</span> : null}
-            </li>
-          ))}
-        </ul>
-        {active && !mine ? <button className={cx(styles.btn, styles.help, styles.block)} onClick={() => setHelping(active)}>Pick for {short(active)}</button> : null}
-      </section>
-
-      {!active ? (
-        <section className={styles.card} aria-label="Everyone has picked">
-          <p className={styles.eyebrow}><span>Strategy phase</span></p>
-          <h2 className={styles.title}>Everyone has picked</h2>
-          {endAbilities.length ? (
-            <p className={styles.sub}>
-              {endAbilities.join(", ")} can still change cards before the action phase. {endAbilities.length > 1 ? "They're" : "It's"} on the table screen.{" "}
-              <Link href={`/game/${gameId}/main`} style={{ color: "var(--accent)" }}>Open the table screen</Link>
-            </p>
-          ) : null}
-          <button className={cx(styles.btn, styles.primary, styles.tall, styles.block)} disabled={w.pending}
-            onClick={() => w.write([Events.AdvancePhaseEvent()], "The action phase started")}>Start the action phase</button>
-        </section>
-      ) : null}
-    </>
   );
 }
 
@@ -517,17 +268,6 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
 }
 
 // ---------- sheets ----------
-
-function SheetFrame({ title, close, children }: { title: string; close: () => void; children: React.ReactNode }) {
-  return (
-    <div className={styles.scrim} onClick={(e) => e.target === e.currentTarget && close()}>
-      <section className={styles.sheet} role="dialog" aria-modal="true" aria-label={title}>
-        <header><h2>{title}</h2><button className={styles.close} onClick={close} aria-label="Close">✕</button></header>
-        {children}
-      </section>
-    </div>
-  );
-}
 
 function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: () => void; setSeat: (id: Optional<FactionId>) => void }) {
   const { factions, short, w } = ctx;
