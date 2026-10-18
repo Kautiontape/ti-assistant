@@ -29,7 +29,8 @@ export type Sheet =
   | { kind: "reveal"; as?: FactionId }
   | { kind: "agenda"; as?: FactionId }
   | { kind: "vote"; faction: FactionId }
-  | { kind: "resolve"; as?: FactionId };
+  | { kind: "resolve"; as?: FactionId }
+  | { kind: "system"; system: string };
 
 export type Ctx = {
   factions: Partial<Record<FactionId, Faction>>;

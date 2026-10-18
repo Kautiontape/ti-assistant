@@ -17,6 +17,7 @@ import { useWrite } from "./useWrite";
 import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
+import MapTab, { SystemSheet } from "./MapTab";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
@@ -26,7 +27,7 @@ import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, cx, pcolor, useMounted, useRace, Swatch, Chip, SheetFrame, type Sheet, type Ctx } from "./ui";
 
-type Tab = "now" | "table" | "log";
+type Tab = "now" | "table" | "map" | "log";
 
 function useSeat(gameId: string) {
   const key = `play-seat-${gameId}`;
@@ -118,6 +119,7 @@ export default function PlayApp() {
         </main>
       ) : null}
       {tab === "table" ? <main className={styles.main}><TableTab {...ctx} /></main> : null}
+      {tab === "map" ? <main className={styles.main}><MapTab {...ctx} /></main> : null}
       {tab === "log" ? <main className={styles.main}><LogTab {...ctx} log={log} /></main> : null}
 
       {w.toast ? (
@@ -128,8 +130,8 @@ export default function PlayApp() {
       ) : null}
 
       <nav className={styles.tabs} aria-label="Sections">
-        {(["now", "table", "log"] as Tab[]).map((t) => (
-          <button key={t} aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>{t === "now" ? "Now" : t === "table" ? "Table" : "Log"}</button>
+        {(["now", "table", "map", "log"] as Tab[]).map((t) => (
+          <button key={t} aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>{t === "now" ? "Now" : t === "table" ? "Table" : t === "map" ? "Map" : "Log"}</button>
         ))}
       </nav>
 
@@ -320,6 +322,8 @@ function Sheets({ sheet, close, setSeat, ...ctx }: Ctx & { sheet: Sheet; close: 
       return <StartCombatSheet attacker={sheet.attacker} close={close} ctx={ctx} />;
     case "endCombat":
       return <EndCombatSheet before={sheet.before} close={close} ctx={ctx} />;
+    case "system":
+      return <SystemSheet system={sheet.system} close={close} ctx={ctx} />;
     case "actionCard":
       return <ActionCardSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "component":

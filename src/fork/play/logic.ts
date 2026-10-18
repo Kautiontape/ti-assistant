@@ -175,6 +175,19 @@ export function claimablePlanets(planets: Partial<Record<PlanetId, Planet>>, fac
   });
 }
 
+// The planets in a map tile, matched as upstream's PlanetOverlay does
+// (src/components/Map/PlanetOverlay.tsx): Mecatol Rex is 18 or 112, the Wormhole Nexus 82A or 82B.
+export function planetsInSystem(planets: Partial<Record<PlanetId, Planet>>, systemNumber: string): Planet[] {
+  return Object.values(planets).filter((planet): planet is Planet => {
+    const system = planet?.system as Optional<string | number>;
+    if (system === undefined) return false;
+    if (systemNumber === "18" || systemNumber === "112") return system === 18 || system === 112;
+    if (systemNumber === "82A" || systemNumber === "82B") return system === "82A" || system === "82B";
+    if (typeof system === "number") return system === parseInt(systemNumber);
+    return system === systemNumber;
+  });
+}
+
 // Checks and Balances: the picker gives the card to a player who still has room
 // for one (upstream's ChecksAndBalancesMenu rule), or keeps it if nobody does.
 export function checksAndBalancesTargets(cards: StrategyCard[], players: FactionId[], picker: FactionId): FactionId[] {

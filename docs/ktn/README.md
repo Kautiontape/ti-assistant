@@ -49,6 +49,12 @@ constructors and data hooks:
   (`src/util/api/actionLog.ts`); `sortStrategyCards`; `getStrategyCardsForFaction`.
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
+- The Map tab draws upstream's `GameMap` (`src/components/Map/`) with the same
+  inputs as the footer's map (`getMapString`, `getWormholeNexusSystemNumber`,
+  `fracturePlanetsOwned`). It reads taps from the tile images' alt text
+  (`System 25 Tile`, set in `SystemImage.tsx`), so if upstream changes that text,
+  tapping a system stops opening its sheet. The planet-to-tile match is copied
+  from `PlanetOverlay.tsx` (`planetsInSystem` in `src/fork/play/logic.ts`).
 - Log-entry shapes: `/play` reads `END_TURN`'s `prevFaction`, and relies on
   upstream storing each event as sent except for `REVEAL_OBJECTIVE`,
   `HIDE_OBJECTIVE` and `REMOVE_TECH`, which are rebuilt from `event` alone

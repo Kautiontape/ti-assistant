@@ -91,9 +91,9 @@
 
   .tabs {
     position: fixed; z-index: 6; left: 0; right: 0; bottom: 0;
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr);
     background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px);
-    button { min-height: var(--tabs-h); border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+    button { min-height: var(--tabs-h); border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 0.85rem; text-align: center; }
     button[aria-current="page"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 3px 0 var(--accent); }
   }
 
@@ -197,6 +197,15 @@
     &:disabled { opacity: 0.45; }
   }
   .meta { margin-left: auto; color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
+  .seg {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    button { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; font-size: 0.88rem; }
+    button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 700; }
+  }
+  // Upstream's GameMap places tiles by percentage, so it needs a square box.
+  .board { width: 100%; max-width: 640px; aspect-ratio: 1; margin: 0 auto; overflow: auto; border-radius: 12px; background: var(--bg); overscroll-behavior: contain; }
+  .boardInner { position: relative; width: 100%; height: 100%; cursor: pointer; }
+  .boardZoom { width: 200%; height: 200%; }
   .pick {
     display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     button { min-height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
