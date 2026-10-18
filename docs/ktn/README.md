@@ -11,7 +11,8 @@ New code goes in new places. Upstream files are only edited at the seams
 listed below, so an upstream merge can only conflict in those spots.
 
 - Fork-only paths: `deploy/ktn/`, `docs/ktn/`, `.github/`, `src/fork/`,
-  `app/[locale]/play/`, `app/[locale]/draft/`, `app/api/fork/`, `sidecar/`.
+  `app/[locale]/play/`, `app/[locale]/draft/`, `app/api/fork/`, `sidecar/`,
+  `prototype/` (design prototypes, published as private claude.ai pages; never deployed).
 - New UI imports upstream's engine (`src/util/api/events.ts`,
   `useDataUpdate`, the `src/context/*DataHooks.ts` hooks, `src/components/*`)
   instead of changing it.
