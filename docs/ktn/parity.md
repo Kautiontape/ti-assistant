@@ -269,9 +269,9 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Turn timer / faction timers | src/components/TurnTimer, TimerDisplay | Native | Active player's faction timer runs; totals on the Table tab; the turn clock is in the hero |
 | Map view | src/components/Map, main page | Native | MapTab (zoom, find a planet) |
 | Map interactions: system details, claim planet, attachments | src/components/Map, PlanetModal | Native | SystemSheet |
-| Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration not handled |
+| Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration is recorded from the tactical action (Frontier.tsx, a relic or Mirage). Systems can't be added to the map (Star Chart, Azdel's Key) |
 | Combat tracking | n/a (fork-only) | Native | Combat.tsx |
-| Game password / lock | game/[gameId]/layout.tsx, Header | Native | /play's layout reads the password and session like upstream's; unlocking lasts for the session (two weeks), across reloads. Setting a password at setup is section 1 |
+| Game password / lock | game/[gameId]/layout.tsx, Header | Native | /play's layout reads the password and session like upstream's; unlocking lasts for the session (two weeks), across reloads. Setting a password at setup is in Game setup |
 | Share link and QR code | src/components/QRCode | Native | GameInfo.tsx "This game" on the Table tab: share (the phone's share sheet, or copy) and a QR code, both for the /play link (NEXT_PUBLIC_BASE_URL wins, as seam S3). Check: parity-global-check.cjs |
 | Game code display | game/[gameId]/game-code.tsx | Native | Same card shows the code. Check: parity-global-check.cjs |
 | Settings modal (victory points, factions, options) | src/components/SettingsModal | Native | "Game settings" from the same card: points to win, each player's name and colour (confirmed), with upstream's changeOption and updateFaction. Upstream's display settings are for its own layout. Check: parity-global-check.cjs |
@@ -285,10 +285,10 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Demo game | game/[gameId]/demo | Not needed | Group has its own games |
 | FAQ | app/[locale]/FAQ | Native | The start page links upstream's FAQ page. Check: parity-global-check.cjs |
 | Map builder | app/[locale]/map-builder | Table screen | Start page external link |
-| New game setup | app/[locale]/setup | Native | /start/new (NewGame.tsx); see section 1 |
+| New game setup | app/[locale]/setup | Native | /start/new (NewGame.tsx); see Game setup |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Missing | Applies if HideOnPlay doesn't skip it; no offline or install prompt in /play (not verified at runtime) |
-| Setup phase (starting techs, map string) | main/phase/setup | Native | See section 1's game-phase SETUP row |
+| Setup phase (starting techs, map string) | main/phase/setup | Native | See the game-phase setup row in Game setup |
 | Fallback link to upstream faction page | (faction)/[factionId] | Table screen | NotNativeYet links to /game/<id>/<faction> |
 | Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Native | Ctx.tracks() in PlayApp. With a section off, /play leaves out what upstream's Conditional hides: research (Technology card, secondaries, components, player edit), planet claims (tactical, map, Faunus, follow-ups), objective scoring (Imperial, tactical secrets, Prove Endurance, points sheet), relic rows, the player sheet's sections and the results' Technology view. Status, setup and agenda screens already checked it. Check: parity-hidden-check.cjs |
 
@@ -303,18 +303,12 @@ Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS 
 
 ## Biggest gaps
 
-From setup to the action phase:
+What's left, by the rows above that aren't Native or Not needed:
 
-1. Setup: native (/start/new and the Milty draft). Twilight's Fall games are left for that branch.
-2. Faction-specific and card-specific component actions (about 35 cases: PurgePlanet, Overrule, Strategize, Z'eu, Transpose, Plagiarize beyond tech, AddSystemToMap, etc.): /play only records the component, then needs "More controls".
-3. Tactical extras: frontier exploration (+ Mirage), action-phase objective scoring, Become a Martyr, Nekro Technological Singularity, Adjudicator Ba'al, Prove Endurance, Faunus: none native; only reachable through the faction page.
-4. Turn-flow controls: mark-primary "Done" is not sent (by design; it only collapses upstream's panel).
-5. Twilight's Fall (splices, TF strategy cards, Lux/Civitas/Amicus) has no /play counterpart yet; that's the Twilight's Fall branch's.
-
-From the status phase to the whole game:
-
-1. Agenda special cases: post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
-2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
-3. (Timers and the results timer view are native now.)
-4. Results extras: done (stage 4).
-5. Sharing and settings: done (stage 5).
+1. Map tile placement: Star Chart, Azdel's Key and Age of Exploration add a system to the map; /play has no way to place a tile, so they go through "More controls".
+2. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel, Nekro's Technological Singularity and Adjudicator Ba'al.
+3. Strategy cards shown as text only: Diplomacy (Xxcha's Peace Accords claim, readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
+4. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
+5. History: only the newest group can be undone; upstream can't edit older entries either, but its table screen shows more of them at once.
+6. PWA: no offline mode or install prompt (not checked at runtime).
+7. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
