@@ -313,8 +313,8 @@ From setup to the action phase:
 
 From the status phase to the whole game:
 
-1. Agenda special cases: riders, Covert Legislation, extra votes, Veto/Hack Election, and post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
+1. Agenda special cases: riders, Veto/Hack Election, and post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
 3. Timers (game, turn, agenda, faction) are not shown anywhere, and so the results timer view is missing.
 4. Results extras: VP graph, tech graph, map lapse, annotated log, and export/download.
-5. Locked games and sharing: no password prompt (view-only games fail silently), no share link or QR, no game code display, no in-game settings, no language picker.
+5. Sharing and settings: no share link or QR, no game code display, no in-game settings, no language picker.
