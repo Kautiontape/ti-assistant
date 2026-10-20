@@ -12,6 +12,7 @@ import { hasTech } from "../../util/api/techs";
 import { getFactionSystemId } from "../../util/map";
 import { applyAllPlanetAttachments } from "../../util/planets";
 import { Optional } from "../../util/types/types";
+import { MapTileFollowUp, MAP_TILE_COMPONENTS } from "./MapTiles";
 import { CardControls } from "./NowCards";
 import type { Ctx } from "./ui";
 import { Button, CardTag, Chip, Choices, kit, RowAction, RowLink, Rows } from "../ui/kit";
@@ -21,6 +22,7 @@ export const FOLLOW_UPS = new Set([
   "Share Knowledge", "Divert Funding", "Visionaria Select", "Vaults of the Heir", "Ta Zern",
   "Stellar Converter", "Conventions of War Abandoned", "Nano-Forge", "Terraform", "Z'eu",
   "Overrule", "Mathis Mathinus", "Strategize", "The Silver Flame",
+  ...MAP_TILE_COMPONENTS,
 ]);
 
 // Follow-ups upstream hides when the game doesn't track their section
@@ -47,6 +49,8 @@ export function ComponentFollowUp({ played, active, ctx }: { played: string; act
       return <CardFollowUp played={played} active={active} ctx={ctx} />;
     case "The Silver Flame":
       return <SilverFlame active={active} ctx={ctx} />;
+    case "Star Chart": case "Azdel's Key": case "Age of Exploration":
+      return <MapTileFollowUp played={played} active={active} ctx={ctx} />;
   }
   return null;
 }

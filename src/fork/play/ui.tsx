@@ -37,6 +37,7 @@ export type Sheet =
   | { kind: "claim"; faction: FactionId; peace?: boolean }
   | { kind: "pass"; faction: FactionId }
   | { kind: "singularity" }
+  | { kind: "mapTile"; component: string; faction: FactionId }
   | { kind: "baal" }
   | { kind: "player"; faction: FactionId }
   | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }

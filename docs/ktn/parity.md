@@ -4,10 +4,10 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 177 | Works in `/play`. |
-| Partial | 23 | Works in `/play`, with the gap named in Notes. |
+| Native | 180 | Works in `/play`. |
+| Partial | 21 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 1 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
 | Not needed | 16 | Left out on purpose; the reason is in Notes. |
 | Twilight's Fall branch | 5 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
@@ -118,8 +118,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Native | Attach to one of the player's planets (upstream's targets), with take back |
 | Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Partial | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's (that branch's) |
 | Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Partial | Native: Overrule and Mathis Mathinus (pick a card, run its primary with /play's card controls), Strategize (its secondary), Vaults of the Heir (purge a technology, gain a relic), Ta Zern (purge for everyone, replacements), The Silver Flame (point or purge the home system). Left: Planetary Rigs (Discordant Stars), Executive Order (a whole agenda inside the action), Sins of the Father (Twilight's Fall). Check: parity-components-check.cjs |
-| Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Partial | Native: Industrial and Mining Initiative show the trade goods, Total War and Book of Latvinia show what the component recorded. Left: Age of Exploration places a tile on the map, like Star Chart |
-| Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Via More controls | Not in MapTab. |
+| Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Native | Industrial and Mining Initiative show the trade goods, Total War and Book of Latvinia show what the component recorded (ComponentFollowUps.tsx). Age of Exploration adds a system next to two non-home systems (MapTiles.tsx). Check: parity-components-check.cjs |
+| Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Native | MapTiles.tsx: pick an unused tile, then an open spot next to at least 2 systems (named by its neighbours), see the map with it, confirm. Upstream drags the tile onto its map builder, which needs a mouse; the write is the same SWAP_MAP_TILES, with take back. Check: parity-components-check.cjs |
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
 | Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative and Ancient Burial Sites are on the agenda screen (AgendaCards.tsx); Engineer, Reverse and Thieve stay on the table screen. |
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Partial | Notes with component actions appear in the sheet; SftT and alliances show on PlayerSheet read-only; scoring Support for the Throne is in NowPoints only if status/any phase. |
@@ -270,7 +270,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Turn timer / faction timers | src/components/TurnTimer, TimerDisplay | Native | Active player's faction timer runs; totals on the Table tab; the turn clock is in the hero |
 | Map view | src/components/Map, main page | Native | MapTab (zoom, find a planet) |
 | Map interactions: system details, claim planet, attachments | src/components/Map, PlanetModal | Native | SystemSheet |
-| Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration is recorded from the tactical action (Frontier.tsx, a relic or Mirage). Systems can't be added to the map (Star Chart, Azdel's Key) |
+| Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Native | The Map tab draws upstream's GameMap, so the Wormhole Nexus and Mallice show as upstream shows them; upstream's map doesn't draw frontier tokens either. Frontier exploration is recorded from the tactical action (Frontier.tsx) and systems are added with MapTiles.tsx |
 | Combat tracking | n/a (fork-only) | Native | Combat.tsx |
 | Game password / lock | game/[gameId]/layout.tsx, Header | Native | /play's layout reads the password and session like upstream's; unlocking lasts for the session (two weeks), across reloads. Setting a password at setup is in Game setup |
 | Share link and QR code | src/components/QRCode | Native | GameInfo.tsx "This game" on the Table tab: share (the phone's share sheet, or copy) and a QR code, both for the /play link (NEXT_PUBLIC_BASE_URL wins, as seam S3). Check: parity-global-check.cjs |
@@ -306,8 +306,7 @@ Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS 
 
 What's left, by the rows above that aren't Native or Not needed:
 
-1. Map tile placement: Star Chart, Azdel's Key and Age of Exploration add a system to the map; /play has no way to place a tile, so they go through "More controls".
-2. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
-3. Strategy cards shown as text only: Diplomacy (readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
-4. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
-5. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
+1. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
+2. Strategy cards shown as text only: Diplomacy (readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
+3. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
+4. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
