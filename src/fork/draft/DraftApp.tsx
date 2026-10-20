@@ -106,7 +106,7 @@ function Live({ draft: d }: { draft: Draft }) {
     await api.act({ action: "reroll", seen: 0, slices, factions, order: d.order, seed }, d.customSlices ? "New factions" : "New slices and factions");
   }
   // Nothing to draw again when the slices are by hand and the factions are exactly the host's choice.
-  const canReroll = !(d.customSlices && d.factionPool && d.factionPool.length <= d.factions.length);
+  const canReroll = !(d.customSlices && d.factionPool?.length === d.factions.length);
 
   const mine = me !== undefined ? holdings(d.picks, me) : undefined;
   const need = acting !== undefined ? (["slice", "faction", "position"] as PickKind[]).filter((k) => holdings(d.picks, acting)[k] === undefined) : [];
