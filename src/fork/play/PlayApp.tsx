@@ -27,6 +27,7 @@ import { LawSheet, LawsCard } from "./Laws";
 import { PlayerEditSheet } from "./PlayerEdit";
 import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
 import { ResultsSheet } from "./Results";
+import { GameCard, GameSettingsSheet } from "./GameInfo";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
@@ -289,6 +290,7 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <GameCard ctx={ctx} />
     <section className={kit.card} aria-label="The game so far">
       <Rows flush>
         <RowLink onClick={() => open({ kind: "results" })} title="How the game went" detail="Points and technology by round, the map by round, time per player" />
@@ -460,6 +462,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     }
     case "pass":
       return <PassSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "gameSettings":
+      return <GameSettingsSheet close={close} ctx={ctx} />;
     case "results":
       return <ResultsSheet close={close} ctx={ctx} />;
     case "skip":

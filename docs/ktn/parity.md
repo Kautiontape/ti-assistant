@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 147 | Works in `/play`. |
+| Native | 151 | Works in `/play`. |
 | Partial | 29 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 8 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 15 | No way to do it from `/play`. |
+| Missing | 11 | No way to do it from `/play`. |
 | Not needed | 14 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -272,9 +272,9 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration not handled |
 | Combat tracking | n/a (fork-only) | Native | Combat.tsx |
 | Game password / lock | game/[gameId]/layout.tsx, Header | Native | /play's layout reads the password and session like upstream's; unlocking lasts for the session (two weeks), across reloads. Setting a password at setup is section 1 |
-| Share link and QR code | src/components/QRCode | Missing | Start page has a join by code only; no share/QR |
-| Game code display | game/[gameId]/game-code.tsx | Missing | Code only in the URL |
-| Settings modal (victory points, factions, options) | src/components/SettingsModal | Missing | No in-game settings; VP target is read-only |
+| Share link and QR code | src/components/QRCode | Native | GameInfo.tsx "This game" on the Table tab: share (the phone's share sheet, or copy) and a QR code, both for the /play link (NEXT_PUBLIC_BASE_URL wins, as seam S3). Check: parity-global-check.cjs |
+| Game code display | game/[gameId]/game-code.tsx | Native | Same card shows the code. Check: parity-global-check.cjs |
+| Settings modal (victory points, factions, options) | src/components/SettingsModal | Native | "Game settings" from the same card: points to win, each player's name and colour (confirmed), with upstream's changeOption and updateFaction. Upstream's display settings are for its own layout. Check: parity-global-check.cjs |
 | Theme toggle (dark/light) | app/[locale]/ThemeToggle.tsx | Native | DeviceSheet theme choice |
 | Text size, shared-screen mode, dock | n/a (fork-only) | Native | DeviceSheet |
 | Languages (i18n, LangSelectHoverMenu) | src/components/LangSelectHoverMenu | Not needed | /play stays English, with no language picker (Shawn, 2026-10-20). Its strings are fork code, so upstream's message files stay untouched |
@@ -283,7 +283,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Stats | app/[locale]/stats | Not needed | Dropped by Shawn |
 | Supporters, support links | app/[locale]/supporters, SupportSection.tsx | Not needed | Dropped by Shawn |
 | Demo game | game/[gameId]/demo | Not needed | Group has its own games |
-| FAQ | app/[locale]/FAQ | Missing | Not linked from the start page; low value |
+| FAQ | app/[locale]/FAQ | Native | The start page links upstream's FAQ page. Check: parity-global-check.cjs |
 | Map builder | app/[locale]/map-builder | Table screen | Start page external link |
 | New game setup | app/[locale]/setup | Table screen | Start page external link; Milty draft is native (src/fork/draft) |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
@@ -309,7 +309,7 @@ From setup to the action phase:
 2. Faction-specific and card-specific component actions (about 35 cases: PurgePlanet, Overrule, Strategize, Z'eu, Transpose, Plagiarize beyond tech, AddSystemToMap, etc.): /play only records the component, then needs "More controls".
 3. Tactical extras: frontier exploration (+ Mirage), action-phase objective scoring, Become a Martyr, Nekro Technological Singularity, Adjudicator Ba'al, Prove Endurance, Faunus: none native; only reachable through the faction page.
 4. Turn-flow controls: mark-primary "Done" is not sent (by design; it only collapses upstream's panel).
-5. Twilight's Fall (splices, TF strategy cards, Lux/Civitas/Amicus) and trade-goods/commodity/command-token tracking have no /play counterpart; the Strategy-phase end abilities (Naalu, Hacan, Imperial Arbiter) and start-of-phase reminders are only a hint plus link.
+5. Twilight's Fall (splices, TF strategy cards, Lux/Civitas/Amicus) has no /play counterpart yet; that's the Twilight's Fall branch's.
 
 From the status phase to the whole game:
 
@@ -317,4 +317,4 @@ From the status phase to the whole game:
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
 3. (Timers and the results timer view are native now.)
 4. Results extras: done (stage 4).
-5. Sharing and settings: no share link or QR, no game code display, no in-game settings.
+5. Sharing and settings: done (stage 5).
