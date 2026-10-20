@@ -66,7 +66,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       if (ev.action === "Component") return "took a component action";
       return `played ${ev.action}`;
     case "UNSELECT_ACTION": return `changed their mind about ${ev.action === "Tactical" || ev.action === "Component" ? `a ${String(ev.action).toLowerCase()} action` : ev.action}`;
-    case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ""}`;
+    // The first to take Mecatol Rex gets the Custodians token's point (upstream's TacticalAction).
+    case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ev.planet === "Mecatol Rex" ? " and the Custodians token (+1 point)" : ""}`;
     case "UNCLAIM_PLANET": return `lost ${ev.planet}`;
     case "ADD_ATTACHMENT": return `attached ${ev.attachment} to ${ev.planet}`;
     case "REMOVE_ATTACHMENT": return `removed ${ev.attachment} from ${ev.planet}`;

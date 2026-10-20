@@ -4,12 +4,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 180 | Works in `/play`. |
-| Partial | 21 | Works in `/play`, with the gap named in Notes. |
+| Native | 186 | Works in `/play`. |
+| Partial | 14 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
-| Not needed | 16 | Left out on purpose; the reason is in Notes. |
+| Not needed | 17 | Left out on purpose; the reason is in Notes. |
 | Twilight's Fall branch | 5 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 have the status "Twilight's Fall branch", and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -91,7 +91,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Take control of planets (system-limited, ocean/Avernus rules) | src/components/ClaimPlanetsSection, TacticalAction l.114 | Native | "claim" sheet with claimablePlanets (logic.ts copies the rule). |
 | Remove a claimed planet (unclaim) | ClaimPlanetsSection l.170 | Native | PlayerEdit.tsx "Planets": Lose (UNCLAIM_PLANET). Check: parity-player-check.cjs |
 | Planet attachments on newly taken planets | ClaimPlanetsSection l.141; PlanetRow l.502 | Native | AttachButton in NowAction and Attachments in MapTab SystemSheet. |
-| Mecatol Rex / Custodians token +1 VP | TacticalAction l.119 | Partial | Claiming Mecatol records the point (data layer); /play shows no "+1 VP for Custodians" text (counted in PlayerSheet points). |
+| Mecatol Rex / Custodians token +1 VP | TacticalAction l.119 | Native | Claiming Mecatol records the point (upstream's data layer), and the turn's record says "took control of Mecatol Rex and the Custodians token (+1 point)" when nobody held it. Check: parity-rare-check.cjs |
 | Space / ground combat (fork-only feature) | src/fork/actions/combat.ts | Native | Combat.tsx (start, banner clock, end). Not in upstream. |
 | Score action-phase objectives (up to 4) | TacticalAction l.125-190 | Native | Every action-phase objective is a secret: "Scored a secret?" in the tactical action's rows opens the action-phase secrets (and "Points changed?" in any turn). Check: parity-player-check.cjs |
 | Become a Martyr (score on losing home) | TacticalAction l.395 | Native | An action-phase secret: "Points changed?" → scored a secret (upstream also keeps it out of the tactical list) |
@@ -111,28 +111,28 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Take back the played component | ComponentAction | Native | "Take it back" (`UNPLAY_COMPONENT`). |
 | Component description | ComponentDetails l.545 | Native | Shown under component name. |
 | Research a tech (Plagiarize, Focused Research, Enigmatic Device, Flayesh) | ComponentAction l.28-41, 185 | Native | "Record the technology" -> ResearchSheet. |
-| Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Partial | Gain Relic/Black Market/Hesh and Prit native (RelicSheet); Create, Fabrication, Forge Legend not in RELIC set. |
+| Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Native | Gain Relic, Black Market Forgery, Hesh and Prit and Fabrication offer "Record the relic" (RelicSheet). Create and Forge Legend are Twilight's Fall cards, left for that branch. Check: parity-components-check.cjs |
 | Exploration Probe / Circlet of the Void (frontier) | ComponentAction l.58 | Native | The component's card offers the frontier sheet |
 | Share Knowledge, Divert Funding, Dynamis Core, Visionaria Select | ComponentActions/*.tsx | Native | ComponentFollowUps.tsx: Share Knowledge (a Deepwrought technology), Divert Funding (return, then research, with take back), Visionaria Select (a technology for each player who takes it), Dynamis Core (trade goods shown). Check: parity-components-check.cjs |
 | Stellar Converter, Conventions of War Abandoned (purge planet) | ComponentActions/PurgePlanet.tsx | Native | Purge a planet (upstream's targets), with take back. Check: parity-components-check.cjs |
 | Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Native | Attach to one of the player's planets (upstream's targets), with take back |
-| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Partial | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's (that branch's) |
+| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Native | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's, left for that branch. Check: parity-components-check.cjs |
 | Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Partial | Native: Overrule and Mathis Mathinus (pick a card, run its primary with /play's card controls), Strategize (its secondary), Vaults of the Heir (purge a technology, gain a relic), Ta Zern (purge for everyone, replacements), The Silver Flame (point or purge the home system). Left: Planetary Rigs (Discordant Stars), Executive Order (a whole agenda inside the action), Sins of the Father (Twilight's Fall). Check: parity-components-check.cjs |
 | Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Native | Industrial and Mining Initiative show the trade goods, Total War and Book of Latvinia show what the component recorded (ComponentFollowUps.tsx). Age of Exploration adds a system next to two non-home systems (MapTiles.tsx). Check: parity-components-check.cjs |
 | Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Native | MapTiles.tsx: pick an unused tile, then an open spot next to at least 2 systems (named by its neighbours), see the map with it, confirm. Upstream drags the tile onto its map builder, which needs a mouse; the write is the same SWAP_MAP_TILES, with take back. Check: parity-components-check.cjs |
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
 | Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative and Ancient Burial Sites are on the agenda screen (AgendaCards.tsx); Engineer, Reverse and Thieve stay on the table screen. |
-| Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Partial | Notes with component actions appear in the sheet; SftT and alliances show on PlayerSheet read-only; scoring Support for the Throne is in NowPoints only if status/any phase. |
-| Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Partial | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play |
+| Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Native | Notes with component actions appear in the component sheet; Support for the Throne moves in any phase from "Points changed?" on Now; alliances change in PlayerEdit.tsx and show on the player sheet. Checks: points-check.cjs, parity-player-check.cjs |
+| Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Native | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play. Check: parity-player-check.cjs |
 | Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Native | PlayerEdit.tsx: lock and unlock, as upstream's faction panel |
 | Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Twilight's Fall branch | TF not supported in /play (expedition hidden when TF on). |
-| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Partial | Relic purge in PlayerEdit.tsx and repeal in Laws.tsx; Unravel itself is only recorded as the component |
+| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Native | Repeal in Laws.tsx, relic purge in PlayerEdit.tsx. Unravel is a Twilight's Fall card, left for that branch. Check: parity-laws-check.cjs |
 
 ### 3d. Strategic actions
 
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
-| Play strategy card primary (select, mark primary "Done") | AP l.383-1385 (MarkPrimaryEvent toggle) | Partial | Select native; "Done" toggle not in /play (SecondariesCard does not wait for primary). |
+| Play strategy card primary (select, mark primary "Done") | AP l.383-1385 (MarkPrimaryEvent toggle) | Not needed | Selecting is native. The "Done" toggle isn't sent, a decision from the first /play design: upstream uses it to collapse its panel and start the secondary timers, and /play's secondaries card doesn't wait for it |
 | Secondary check for other players (Follow/Skip/Change) | AP SecondaryCheck l.141 | Native | SecondariesCard + per-player prompt (MarkSecondaryEvent). |
 | Technology primary (1st free, 2nd for 6 resources) | StrategicActions/Technology.tsx | Native | TechnologyPrimary + ResearchSheet. |
 | Technology secondary (follow + research; Jol-Nar 2 techs; Nekro excluded) | AP l.383 | Native | ResearchSheet follow mode, "2nd tech". Nekro: text says gains command tokens, no token UI. |
