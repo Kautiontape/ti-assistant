@@ -7,6 +7,7 @@ import { pointsBySource } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Button, kit, Sheet as KitSheet } from "../ui/kit";
 import type { useWrite } from "./useWrite";
+import type { AgendaCardKind } from "./AgendaCards";
 
 export { Chip, cx, pcolor, Swatch } from "../ui/kit";
 // Older name for the kit's Sheet.
@@ -18,6 +19,7 @@ export type Sheet =
   | { kind: "seat" }
   | { kind: "unlock" }
   | { kind: "setupChoice"; faction: FactionId }
+  | { kind: "agendaCard"; card: AgendaCardKind }
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }

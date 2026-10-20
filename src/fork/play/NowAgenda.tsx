@@ -3,94 +3,24 @@
 // resolve, twice, then the next round. Vote counts, outcomes and the tally come
 // from upstream's VoteBlock and AgendaPhase; laws' effects stay on the board.
 import { useState } from "react";
-import { useIntl } from "react-intl";
 import { computeVotes } from "../../../app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase";
-import { canFactionVote, computeRemainingVotes, getTargets, translateOutcome } from "../../components/VoteBlock/VoteBlock";
-import { useActionLog, useAgendas, useAttachments, useCurrentTurn, useLeaders, useOptions, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
-import { useNumFactions } from "../../context/factionDataHooks";
-import { useObjectives } from "../../context/objectiveDataHooks";
-import { useGameState, useSpeaker } from "../../context/stateDataHooks";
-import { getActiveAgenda, getAllVotes, getPlayedRelic, getSelectedEligibleOutcomes, getSelectedSubAgenda } from "../../util/actionLog";
-import { getCurrentPhaseLogEntries, getCurrentPhasePreviousLogEntries } from "../../util/api/actionLog";
+import { getTargets } from "../../components/VoteBlock/VoteBlock";
+import { getActionCardTargets } from "../../util/actionLog";
 import { hasTech } from "../../util/api/techs";
 import { Events } from "../../util/api/events";
 import { outcomeString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
-import { bonusOffered, bonusPlayed, VOTE_BONUSES, votingOrder } from "./logic";
+import { bonusOffered, VOTE_BONUSES, votingOrder } from "./logic";
+import { BeforeVotingRows, StartOfAgendaRows } from "./AgendaCards";
+import { available, canVote, outcomeLabel, playedBonuses, useAgendaData, voteTotal, type AgendaData } from "./agendaData";
 import styles from "./play.module.scss";
 import type { Ctx, Sheet } from "./ui";
 import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Stepper, Switch, Tag } from "../ui/kit";
 
 const AGENDA_NAMES = ["first", "second"];
 
-// Everything the agenda screen needs from upstream, in one place.
-function useAgendaData() {
-  const intl = useIntl();
-  const state = useGameState();
-  const agendas = useAgendas();
-  const currentTurn = useCurrentTurn();
-  const actionLog = useActionLog();
-  const planets = usePlanets();
-  const strategyCards = useStrategyCards();
-  const objectives = useObjectives();
-  const options = useOptions();
-  const attachments = useAttachments();
-  const leaders = useLeaders();
-  const techs = useTechs();
-  const relics = useRelics();
-  const numFactions = useNumFactions();
-  const speaker = useSpeaker();
-  const activeId = getActiveAgenda(currentTurn);
-  const agenda = activeId ? agendas[activeId] : undefined;
-  const repGov = !!agendas["Representative Government"]?.passed;
-  const votes = new Map(getAllVotes(currentTurn).filter((v) => v.target).map((v) => [v.faction, v]));
-  // Covert Legislation: players vote on the outcomes of a hidden agenda, which
-  // the speaker reads out. Votes and labels use those outcomes (upstream's
-  // CastVotesSection swaps `elect` the same way).
-  const covert = agenda?.id === "Covert Legislation";
-  const eligible = covert ? getSelectedEligibleOutcomes(currentTurn) : undefined;
-  const outcomes: Optional<OutcomeType> = eligible && eligible !== "None" ? eligible : undefined;
-  const ballot = agenda && outcomes ? { ...agenda, elect: outcomes } : agenda;
-  const subAgenda = covert ? getSelectedSubAgenda(currentTurn) : undefined;
-  return { intl, state, agendas, currentTurn, actionLog, planets, strategyCards, objectives, options, attachments, leaders, techs, numFactions, speaker, agenda, repGov, votes, covert, outcomes, ballot, subAgenda, relics };
-}
-type AgendaData = ReturnType<typeof useAgendaData>;
-
-function outcomeLabel(d: AgendaData, ctx: Ctx, target: Optional<string>) {
-  if (!target) return "";
-  if (ctx.isFaction(target)) return ctx.short(target);
-  if (target === "Abstain") return "Abstain";
-  const factions = ctx.factions;
-  return translateOutcome(target, d.ballot?.elect, d.planets, factions, d.objectives, d.agendas, d.strategyCards, d.intl) ?? target;
-}
-
-function available(d: AgendaData, ctx: Ctx, id: FactionId) {
-  const { influence } = computeRemainingVotes(id, ctx.factions, d.planets, d.attachments, d.agendas, d.options, d.state,
-    getCurrentPhasePreviousLogEntries(d.actionLog), d.leaders, d.techs);
-  // Under Representative Government each player has one vote, sent as votes: 1
-  // (upstream's tally skips entries with zero votes).
-  if (d.repGov) return 1;
-  // Maw of Worlds exhausts its owner's planets for the phase (VoteBlock's VotingSection).
-  if (d.relics["Maw of Worlds"]?.owner === id && getPlayedRelic(getCurrentPhaseLogEntries(d.actionLog), "Maw of Worlds")) return 0;
-  return influence;
-}
-
-// What a vote counts for in upstream's tally: planet votes, extra votes, bonus
-// cards played this agenda, and the Argent Flight's Zeal (computeVotes).
-function voteTotal(d: AgendaData, faction: FactionId, votes: number, extra: number, bonuses: string[]) {
-  if (votes < 1) return 0;
-  const zeal = faction === "Argent Flight" && !d.repGov ? d.numFactions : 0;
-  return votes + extra + zeal + VOTE_BONUSES.filter((b) => bonuses.includes(b.id)).reduce((n, b) => n + b.votes, 0);
-}
-const playedBonuses = (d: AgendaData, faction: FactionId) => VOTE_BONUSES.filter((b) => bonusPlayed(d.currentTurn, b, faction)).map((b) => b.id);
-
-function canVote(d: AgendaData, ctx: Ctx, id: FactionId) {
-  const f = ctx.factions[id];
-  return !!f && canFactionVote(f, d.agendas, d.state, d.currentTurn, d.leaders);
-}
-
 export default function NowAgenda(ctx: Ctx) {
-  const { seat, helping, w, open, gameId, factions, short } = ctx;
+  const { seat, helping, w, open, factions, short } = ctx;
   const d = useAgendaData();
   const { agenda, speaker, state } = d;
   const agendaNum = state.agendaNum ?? 1;
@@ -118,26 +48,26 @@ export default function NowAgenda(ctx: Ctx) {
         <Button kind="primary" size="tall" block forOther={help} disabled={w.pending}
           onClick={() => open({ kind: "agenda", as: speaker })}>{help ? `Reveal for ${short(speaker)}` : "Reveal the agenda"}</Button>
         {agendaNum === 1 ? (
-          <>
-            <p className={kit.sub}>Maw of Worlds and Ancient Burial Sites are on the table screen.</p>
-            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
-          </>
+          <div className={kit.section}>
+            <p className={kit.label}>At the start of the phase</p>
+            <StartOfAgendaRows ctx={ctx} />
+          </div>
         ) : null}
       </section>
     );
   }
 
-  const order = votingOrder(factions, speaker);
+  const order = votingOrder(factions, speaker, getActionCardTargets(d.currentTurn, "Hack Election").length > 0);
   const who = helping ?? seat;
   return (
     <>
-      <AgendaCard d={d} agendaNum={agendaNum} />
+      <AgendaCard d={d} agendaNum={agendaNum} ctx={ctx} />
       {!state.votingStarted ? (
         <>
           {d.covert ? <CovertOutcomes d={d} ctx={ctx} /> : null}
           <section className={kit.card} aria-label="Before voting">
-            <p className={kit.sub}>Cards played when an agenda is revealed (Veto, riders, Hack Election, Political Secret) are on the table screen.</p>
-            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+            <p className={kit.eyebrow}><span>Before voting</span></p>
+            <BeforeVotingRows ctx={ctx} />
             {d.covert && !d.outcomes ? <p className={kit.sub}>Voting starts once the speaker has read out the hidden agenda's outcomes.</p> : null}
             <Button kind="primary" size="tall" block disabled={w.pending || (d.covert && !d.outcomes)}
               onClick={() => w.write([Events.StartVotingEvent()], "Voting started")}>Start voting</Button>
@@ -162,12 +92,15 @@ function electText(elect: OutcomeType) {
   return elect === "For/Against" ? "For or against" : `Elect a ${elect.toLowerCase()}`;
 }
 
-function AgendaCard({ d, agendaNum }: { d: AgendaData; agendaNum: number }) {
+function AgendaCard({ d, agendaNum, ctx }: { d: AgendaData; agendaNum: number; ctx: Ctx }) {
   const a = d.agenda!;
   const elect = !d.covert ? electText(a.elect) : d.outcomes ? `Hidden agenda: ${electText(d.outcomes).toLowerCase()}` : "The speaker reads out the hidden agenda's outcomes";
   return (
     <section className={kit.card} aria-label="Agenda">
-      <p className={kit.eyebrow}><span>Agenda {agendaNum} of 2 · {a.type === "LAW" ? "Law" : "Directive"}</span></p>
+      <p className={kit.eyebrow}><span>Agenda {agendaNum} of 2 · {a.type === "LAW" ? "Law" : "Directive"}</span>
+        {/* Before voting, a wrong reveal can be taken back (upstream's HIDE_AGENDA without a veto). */}
+        {!d.state.votingStarted ? <Button kind="quiet" disabled={ctx.w.pending} onClick={() => ctx.w.write([Events.HideAgendaEvent(a.id)], `Took back ${a.name}`, d.speaker)}>Take it back</Button> : null}
+      </p>
       <h2 className={kit.title}>{a.name}</h2>
       <p className={kit.sub}><b>{elect}.</b> {a.description}</p>
     </section>

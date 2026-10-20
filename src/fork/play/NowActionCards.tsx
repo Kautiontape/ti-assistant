@@ -12,7 +12,9 @@ import { Chip, Choices, kit, RowAction, RowLink, Rows, Sheet as KitSheet } from 
 
 // Upstream reads the target of these as the player who played them (vote tallies).
 const TARGET_IS_PLAYER = new Set(["Distinguished Councilor", "Council Preserve", "Predictive Intelligence"]);
-// These need another player or a choice as the target; they stay on the table screen.
+// These need another player or a choice as the target. Assassinate Representative
+// and Ancient Burial Sites are recorded on the agenda screen (AgendaCards.tsx); the
+// rest stay on the table screen.
 const NEEDS_TARGET = new Set(["Assassinate Representative", "Ancient Burial Sites", "Engineer", "Reverse", "Thieve"]);
 
 const TIMING_GROUPS: [string, string[]][] = [
@@ -77,7 +79,7 @@ export function ActionCardSheet({ faction, close, ctx }: { faction?: FactionId; 
         );
       })}
       <p className={kit.sub}>
-        Cards that are an ACTION are recorded as a component action. Assassinate Representative and Ancient Burial Sites name another player, so they stay on the table screen.
+        Cards that are an ACTION are recorded as a component action. Assassinate Representative and Ancient Burial Sites name another player: record them on the agenda screen.
       </p>
     </KitSheet>
   );

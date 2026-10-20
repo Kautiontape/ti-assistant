@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 87 | Works in `/play`. |
+| Native | 93 | Works in `/play`. |
 | Partial | 43 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 20 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Table screen | 16 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 45 | No way to do it from `/play`. |
+| Missing | 43 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -120,7 +120,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Via More controls | Recorded only. |
 | Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Via More controls | Not in MapTab. |
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
-| Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative, Ancient Burial Sites, Engineer, Reverse, Thieve stay on table screen. |
+| Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative and Ancient Burial Sites are on the agenda screen (AgendaCards.tsx); Engineer, Reverse and Thieve stay on the table screen. |
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Partial | Notes with component actions appear in the sheet; SftT and alliances show on PlayerSheet read-only; scoring Support for the Throne is in NowPoints only if status/any phase. |
 | Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Missing | Component action sets state in data layer; /play never edits leader/tech/relic state by hand. |
 | Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Missing | PlayerSheet shows state only. |
@@ -197,11 +197,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
 | Reveal agenda 1 and 2 | main/phase/agenda/components/AgendaSelect.tsx | Native | NowAgenda RevealAgendaSheet |
-| Un-reveal agenda (HideAgendaEvent) | AgendaSelect.tsx | Missing | No path; Undo from log only |
-| Veto / Quash / Political Favor (reveal-hide with veto) | WhenAnAgendaIsRevealed.tsx VetoButton | Table screen | Link-out in "Before voting" |
-| Political Secret (promissory note) | WhenAnAgendaIsRevealed.tsx | Table screen | Link-out |
-| Hack Election, Assassinate Representative | AfterAnAgendaIsRevealed.tsx | Table screen | Link-out |
-| Riders (Keleres Rider, Xxcha/other riders, Galactic Threat etc.) | src/components/VoteBlock/VoteBlock.tsx | Missing | No rider entry in /play; upstream VoteBlock has per-faction rider and Nekro/Keleres special-cases. Link-out text mentions riders only |
+| Un-reveal agenda (HideAgendaEvent) | AgendaSelect.tsx | Native | "Take it back" on the agenda card until voting starts. Check: parity-agendacards-check.cjs |
+| Veto / Quash / Political Favor (reveal-hide with veto) | WhenAnAgendaIsRevealed.tsx VetoButton | Native | AgendaCards.tsx: "Before voting" row, confirm sheet, `HIDE_AGENDA` with veto; the speaker then reveals another |
+| Political Secret (promissory note) | WhenAnAgendaIsRevealed.tsx | Native | AgendaCards.tsx: record or take back per player; they can't vote or play riders |
+| Hack Election, Assassinate Representative | AfterAnAgendaIsRevealed.tsx | Native | AgendaCards.tsx. Hack Election reverses the voting order (logic.ts votingOrder) |
+| Riders (Keleres Rider, Xxcha/other riders, Galactic Threat etc.) | src/components/VoteBlock/VoteBlock.tsx | Native | AgendaCards.tsx RidersSheet: who, which rider (logic.ts ridersFor copies upstream's rules), predicted outcome; take back. Undo of the resolve takes back a rider's effect (fork action `UNRESOLVE_AGENDA`; upstream's own Undo leaves it) |
 | Start voting | components/StartVoting.tsx | Native | StartVotingEvent |
 | Cast votes: outcome + amount, capped at available | CastVotesSection / VoteBlock | Native | VoteForm with Stepper; uses upstream computeRemainingVotes |
 | Votes available per faction (planet influence, spent on agenda 1, Council Preserve, Xxcha, etc.) | VoteBlock.tsx | Native | available() reuses computeRemainingVotes; none after its owner uses Maw of Worlds, as upstream |
@@ -214,11 +214,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Vote tally and leading outcome | AgendaPhase.tsx computeVotes | Native | VotesCard / ResolveCard |
 | Change someone's vote | VoteBlock.tsx | Native | Tap the player's row; replaces vote |
 | Speaker tie-break | VotingColumn.tsx SpeakerTieBreak | Native | ResolveSheet sends SpeakerTieBreakEvent when tied |
-| Covert Legislation (reveal eligible outcomes, sub-agenda) | components/CovertLegislation.tsx | Native | NowAgenda.tsx: the speaker reads out the hidden agenda's outcomes before voting (voting waits for it), votes and labels use them, and resolving names the hidden agenda, which passes with the vote. Undo also repeals the hidden agenda (fork action `UNREVEAL_SUB_AGENDA`; upstream's own Undo leaves it passed). Check: parity-covert-check.cjs |
+| Covert Legislation (reveal eligible outcomes, sub-agenda) | components/CovertLegislation.tsx | Native | NowAgenda.tsx: the speaker reads out the hidden agenda's outcomes before voting (voting waits for it), votes and labels use them, and resolving names the hidden agenda, which passes with the vote. Undo also repeals the hidden agenda (fork actions `UNRESOLVE_AGENDA` and `UNREVEAL_SUB_AGENDA`; upstream's own Undo leaves it passed). Check: parity-covert-check.cjs |
 | Resolve agenda with outcome | CastVotesSection.tsx completeAgenda | Native | ResolveSheet |
 | Post-resolve effects: Incentive Program, Colonial Redistribution, Minister of Antiquities (relic), planet elections (give planet), Drive the Debate | components/AgendaDetails.tsx | Missing | ResolveAgendaEvent only; no follow-up prompts to reveal objectives, give planets or gain relics (use Player/Map sheets by hand) |
 | Dictate Policy, Mutiny points etc. | AgendaPhase.tsx DictatePolicy | Missing | No Dictate Policy UI; Points sheet can add manual VPs |
-| Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Table screen | Link-out on first agenda |
+| Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Native | AgendaCards.tsx before the first agenda. Ancient Burial Sites also lowers that player's available votes, which upstream's tally never does (it reads a state field nothing sets) |
 | Agenda timers per agenda | src/components/AgendaTimer | Missing | No timers in /play |
 | Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Partial | PlayerSheet shows "Laws that name them" only; no all-laws list, no repeal |
 | Laws' effects on gameplay (e.g. Representative Government, Checks and Balances, Minister of Policy) | various | Partial | Applied where built (RepGov, Checks and Balances at pick); others not surfaced |
@@ -313,7 +313,7 @@ From setup to the action phase:
 
 From the status phase to the whole game:
 
-1. Agenda special cases: riders, Veto/Hack Election, and post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
+1. Agenda special cases: post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
 3. Timers (game, turn, agenda, faction) are not shown anywhere, and so the results timer view is missing.
 4. Results extras: VP graph, tech graph, map lapse, annotated log, and export/download.

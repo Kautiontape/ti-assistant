@@ -1,6 +1,6 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
-import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPromissoryTargets } from "../../util/actionLog";
+import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPlayedRiders, getPromissoryTargets } from "../../util/actionLog";
 import { canResearchTech, getFactionPreReqs } from "../../util/techs";
 import { ActionLog, Optional } from "../../util/types/types";
 
@@ -95,6 +95,9 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     }
     case "RESOLVE_AGENDA": return `${ev.agenda}: ${who(ev.target)}`;
     case "START_VOTING": return "Voting started";
+    case "HIDE_AGENDA": return ev.veto ? `Agenda vetoed: ${ev.agenda}` : null;
+    case "PLAY_RIDER": return ev.outcome ? `played ${ev.rider}, predicting ${who(ev.outcome)}` : `played ${ev.rider}`;
+    case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}` : `used ${ev.relic}`;
     case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;
     case "SELECT_SUB_AGENDA": return ev.subAgenda && ev.subAgenda !== "None" ? `Covert Legislation was ${ev.subAgenda}` : null;
     case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;
@@ -279,10 +282,34 @@ export function throneHolder(objectives: Objectives, giver: FactionId): Optional
 // ---------- agenda phase: upstream's rules (agenda/components/VotingColumn.tsx) ----------
 
 // Argent Flight first, then from the player after the speaker round to the speaker.
-export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speaker: FactionId): FactionId[] {
+// Hack Election reverses the order, still with the Argent Flight first and the
+// speaker last (AgendaPhase.tsx sorts `electionHacked ? b.order - a.order : ...`).
+export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speaker: FactionId, hacked = false): FactionId[] {
   const speakerOrder = factions[speaker]?.order ?? 1;
   const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
-  return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+  const order = Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+  if (!hacked) return order;
+  const first = order.filter((id) => id === "Argent Flight" && id !== speaker);
+  const middle = order.filter((id) => id !== "Argent Flight" && id !== speaker).reverse();
+  return [...first, ...middle, ...order.filter((id) => id === speaker)];
+}
+
+// ---------- agenda phase: riders (copied from VoteBlock.tsx's PredictionSection) ----------
+export const RIDERS = ["Galactic Threat", "Leadership Rider", "Diplomacy Rider", "Politics Rider", "Construction Rider", "Trade Rider",
+  "Warfare Rider", "Technology Rider", "Imperial Rider", "Sanction", "Keleres Rider"];
+
+// The riders `faction` may still play this agenda: each rider once, Keleres Rider
+// only with the Keleres in the game (and not by them), Galactic Threat only by the
+// Nekro Virus, Sanction with Codex I.
+export function ridersFor(faction: FactionId, currentTurn: ActionLog, factions: Partial<Record<FactionId, Faction>>, options: Options) {
+  const played = getPlayedRiders(currentTurn);
+  const secrets = getPromissoryTargets(currentTurn, "Political Secret");
+  return RIDERS.filter((rider) => {
+    if (rider === "Keleres Rider" && (faction === "Council Keleres" || !factions["Council Keleres"])) return false;
+    if (rider === "Galactic Threat" && (faction !== "Nekro Virus" || secrets.includes("Nekro Virus"))) return false;
+    if (rider === "Sanction" && !options.expansions.includes("CODEX ONE")) return false;
+    return !played.some((p) => p.rider === rider);
+  });
 }
 
 // ---------- setup: starting technology choices ----------

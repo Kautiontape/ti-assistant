@@ -55,10 +55,11 @@ constructors and data hooks:
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
 - `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork
-  action `UNREVEAL_SUB_AGENDA` (`src/fork/actions/covert.ts`) runs on Covert
-  Legislation's hidden agenda when /play undoes its resolve. Upstream's own undo
-  misses it because `RESOLVE_AGENDA` is a turn boundary; if upstream fixes that,
-  drop the fork action.
+  actions `UNRESOLVE_AGENDA` and `UNREVEAL_SUB_AGENDA`
+  (`src/fork/actions/agendaUndo.ts`) run when /play undoes a resolve that had
+  riders or Covert Legislation's hidden agenda. Upstream's own undo misses both
+  because `RESOLVE_AGENDA` is a turn boundary; if upstream fixes that, drop the
+  fork actions.
 - The Map tab draws upstream's `GameMap` (`src/components/Map/`) with the same
   inputs as the footer's map (`getMapString`, `getWormholeNexusSystemNumber`,
   `fracturePlanetsOwned`). It reads taps from the tile images' alt text
@@ -72,8 +73,8 @@ constructors and data hooks:
 - Some upstream rules are copied rather than imported, because upstream keeps
   them inline in components: the claim rule (`ActionPhase.tsx`), status-phase
   scoring and reveal (`StatusPhase.tsx`), Checks and Balances
-  (`StrategyPhase.tsx`), the voting order (`VotingColumn.tsx`) and which bonus
-  votes a player is offered (`VoteBlock.tsx`). Each copy in
+  (`StrategyPhase.tsx`), the voting order (`VotingColumn.tsx`) which bonus
+  votes a player is offered and which riders a player may play (`VoteBlock.tsx`). Each copy in
   `src/fork/play/logic.ts` names its source.
 
 ## Upstream internals `/draft` uses

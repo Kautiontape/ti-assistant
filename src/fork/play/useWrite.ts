@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import DBConnection from "../../data/DBConnection";
 import { useActionLog, useGameId, useViewOnly } from "../../context/dataHooks";
 import { useDataUpdate } from "../../util/api/dataUpdate";
+import { TURN_BOUNDARIES } from "../../util/api/actionLog";
 import { useUndo } from "../../util/api/undo";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Actor, groupKey, newestGroup } from "./logic";
@@ -19,9 +20,25 @@ function withActor(e: GameUpdateData, actor: Actor) {
   return (EVENT_ONLY.has(d.action) ? { ...d, actor, event: { ...d.event, actor } } : { ...d, actor }) as unknown as GameUpdateData;
 }
 
-// Where /play undoes an entry with something other than upstream's UNDO: the
-// hidden agenda of a resolved Covert Legislation (src/fork/actions/covert.ts).
-function undoInstead(e: ActionLogEntry<GameUpdateData>, group: ActionLog): Optional<GameUpdateData> {
+// Where /play undoes an entry with something other than upstream's UNDO
+// (src/fork/actions/agendaUndo.ts): a resolve that had riders or a hidden agenda,
+// and the hidden agenda of a resolved Covert Legislation.
+function undoInstead(e: ActionLogEntry<GameUpdateData>, group: ActionLog, log: ActionLog): Optional<GameUpdateData> {
+  if (e.data.action === "RESOLVE_AGENDA" && e.data.event.phase !== "ACTION") {
+    // The turn before the resolve: entries back to the previous turn boundary.
+    // This phone's copy of its own entry can carry the phone's timestamp, so match the agenda.
+    const agendaId = e.data.event.agenda;
+    const at = log.findIndex((x) => x.data.action === "RESOLVE_AGENDA" && x.data.event.agenda === agendaId);
+    const before: ActionLog = [];
+    for (const x of at < 0 ? [] : log.slice(at + 1)) {
+      if (TURN_BOUNDARIES.includes(x.data.action)) break;
+      before.push(x);
+    }
+    const turn = before.filter((x) => x.data.action === "PLAY_RIDER" || x.data.action === "SELECT_SUB_AGENDA").map((x) => ({ action: x.data.action, event: (x.data as { event?: unknown }).event }));
+    if (!turn.length) return undefined;
+    const { agenda, target, prevSpeaker } = e.data.event;
+    return { action: "UNRESOLVE_AGENDA", event: { agenda, target, prevSpeaker, turn } } as unknown as GameUpdateData;
+  }
   if (e.data.action !== "SELECT_SUB_AGENDA" || e.data.event.subAgenda === "None") return undefined;
   const resolve = group.find((x) => x.data.action === "RESOLVE_AGENDA" && x.data.event.agenda === "Covert Legislation");
   if (!resolve || resolve.data.action !== "RESOLVE_AGENDA") return undefined;
@@ -109,7 +126,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
         return "someone-else" as const;
       }
       for (const e of group) {
-        const instead = undoInstead(e, group);
+        const instead = undoInstead(e, group, log);
         if (instead) await dataUpdate(instead);
         else await undo(gameId);
       }

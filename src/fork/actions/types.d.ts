@@ -19,11 +19,20 @@ interface UnstartCombatData { action: "UNSTART_COMBAT"; event: StartCombatEvent 
 interface EndCombatData { action: "END_COMBAT"; event: EndCombatEvent }
 interface UnendCombatData { action: "UNEND_COMBAT"; event: EndCombatEvent }
 
-// Sent by /play's undo only, never logged (src/fork/actions/covert.ts).
+// Sent by /play's undo only, never logged (src/fork/actions/agendaUndo.ts).
+interface UnresolveAgendaEvent {
+  agenda: AgendaId;
+  target: string;
+  prevSpeaker?: FactionId;
+  // The turn's riders and hidden agenda, newest first.
+  turn: GameUpdateData[];
+}
+interface UnresolveAgendaData { action: "UNRESOLVE_AGENDA"; event: UnresolveAgendaEvent }
+
 interface UnrevealSubAgendaEvent {
   subAgenda: AgendaId;
   target: string; // the outcome Covert Legislation resolved with
 }
 interface UnrevealSubAgendaData { action: "UNREVEAL_SUB_AGENDA"; event: UnrevealSubAgendaEvent }
 
-type ForkUpdateData = StartCombatData | UnstartCombatData | EndCombatData | UnendCombatData | UnrevealSubAgendaData;
+type ForkUpdateData = StartCombatData | UnstartCombatData | EndCombatData | UnendCombatData | UnrevealSubAgendaData | UnresolveAgendaData;
