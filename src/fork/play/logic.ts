@@ -1,6 +1,7 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
 import { getClaimedPlanets } from "../../util/actionLog";
+import { tfSentence } from "../tfplay/tf";
 import { ActionLog, Optional } from "../../util/types/types";
 
 export type NameOf = (id: Optional<string>) => string;
@@ -102,7 +103,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       return ev.winner === "None" ? `ended the combat with ${name(ev.defender)} with no winner`
         : ev.winner === ev.faction ? `won the combat against ${name(ev.defender)}` : `lost the combat to ${name(ev.defender)}`;
     case "CONTINUE_GAME": return "The game continued";
-    default: return null;
+    default: return tfSentence(e.data, who); // Twilight's Fall (src/fork/tfplay/tf.ts)
   }
 }
 

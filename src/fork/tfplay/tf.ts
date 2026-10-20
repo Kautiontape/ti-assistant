@@ -18,13 +18,15 @@ export const TYPE_NAMES: Record<TfType, { one: string; many: string }> = {
 // The strategy cards that start a splice, and its type.
 export const SPLICE_CARDS: Partial<Record<string, SpliceType>> = { Noctis: "GENOME", Calamitas: "UNIT_UPGRADE", Magus: "ABILITY" };
 
-// Following Noctis, Calamitas or Magus joins the splice; reopening the
-// secondary leaves it (upstream's AllSecondaries in StrategicActions/Noctis.tsx).
+// Following Noctis or Magus joins the splice; reopening the secondary leaves it
+// (upstream's AllSecondaries in StrategicActions/Noctis.tsx). Calamitas'
+// follower may use home-system PRODUCTION instead, so they join by hand.
+const JOIN_ON_FOLLOW = new Set(["Noctis", "Magus"]);
 export function followEvents(card: string, faction: FactionId): GameUpdateData[] {
-  return [...(SPLICE_CARDS[card] ? [Events.JoinSpliceEvent(faction)] : []), Events.MarkSecondaryEvent(faction, "DONE")];
+  return [...(JOIN_ON_FOLLOW.has(card) ? [Events.JoinSpliceEvent(faction)] : []), Events.MarkSecondaryEvent(faction, "DONE")];
 }
 export function reopenEvents(card: string, faction: FactionId, joined: boolean): GameUpdateData[] {
-  return [...(SPLICE_CARDS[card] && joined ? [Events.LeaveSpliceEvent(faction)] : []), Events.MarkSecondaryEvent(faction, "PENDING")];
+  return [...(JOIN_ON_FOLLOW.has(card) && joined ? [Events.LeaveSpliceEvent(faction)] : []), Events.MarkSecondaryEvent(faction, "PENDING")];
 }
 
 export type CardEvent = AbilityEvent | GenomeEvent | ParadigmEvent | UpgradeEvent;
@@ -93,3 +95,22 @@ export function gainedIn(log: ActionLog, faction: FactionId) {
 }
 
 export const ownerOf = (cards: Partial<Record<string, { owner?: FactionId }>>, id: string): Optional<FactionId> => cards[id]?.owner;
+
+// Log sentences for Twilight's Fall actions, after the player's name (/play's
+// sentence() in src/fork/play/logic.ts falls back to this). Card ids are names.
+export function tfSentence(data: GameUpdateData, name: (id: string) => string): string | null {
+  const ev = ((data as { event?: Record<string, unknown> }).event ?? {}) as Record<string, any>;
+  switch (data.action) {
+    case "GAIN_TF_CARD": return ev.prevFaction ? `took ${cardId(ev as CardEvent)} from ${name(ev.prevFaction)}` : `gained ${cardId(ev as CardEvent)}`;
+    case "LOSE_TF_CARD": return `discarded ${cardId(ev as CardEvent)}`;
+    case "REVEAL_TF_CARD": return `${cardId(ev as CardEvent)} turned up for a splice`;
+    case "HIDE_TF_CARD": return `${cardId(ev as CardEvent)} went back from the splice`;
+    case "JOIN_SPLICE": return `${name(ev.factionId)} joined the splice`;
+    case "LEAVE_SPLICE": return `${name(ev.factionId)} left the splice`;
+    case "CHOOSE_EDICT": return `resolved the edict ${ev.edictId}`;
+    case "HIDE_EDICT": return `took back the edict ${ev.edictId}`;
+    case "SET_TYRANT": return ev.newTyrant ? `${name(ev.newTyrant)} is the tyrant` : "Nobody is the tyrant";
+    case "CHOOSE_TF_FACTION": return ev.subFaction ? `${name(ev.factionId)} uses ${ev.type === "Planet" ? `the ${ev.subFaction} home system` : `the ${ev.subFaction} starting units`}` : null;
+    default: return null;
+  }
+}

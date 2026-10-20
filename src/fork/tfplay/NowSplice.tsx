@@ -4,10 +4,11 @@
 // face up at the table; this records which, then who takes each in pick order.
 // Upstream's version is src/components/Splice/SpliceModal.tsx.
 import { useState } from "react";
-import { useCurrentTurn, useTechs } from "../../context/dataHooks";
+import { useActionLog, useCurrentTurn, useTechs } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { Events } from "../../util/api/events";
 import { getAntimatterForFaction, getWavelengthForFaction } from "../../util/techs";
+import { groupKey, newestGroup } from "../play/logic";
 import type { Ctx } from "../play/ui";
 import { Button, Chip, Cite, kit, RowAction, Rows, Section, Sheet, Switch, Tag } from "../ui/kit";
 import { cardEvent, SPLICE_CARDS, spliceState, TYPE_NAMES, type SpliceType } from "./tf";
@@ -30,6 +31,11 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
     .sort((a, b) => a.name.localeCompare(b.name));
   const current = s.current;
   const kingTechs = current ? [getAntimatterForFaction(current), getWavelengthForFaction(current)].filter((id) => !factions[current]?.techs?.[id]) : [];
+  // The toast sits behind this sheet, so the newest change in the splice can be undone here.
+  const log = useActionLog();
+  const newest = newestGroup(log);
+  const newestAction = newest[0]?.data.action;
+  const canUndo = !!newestAction && ["GAIN_TF_CARD", "REVEAL_TF_CARD", "ADD_TECH"].includes(newestAction) && s.revealed.length > 0;
 
   return (
     <Sheet title={`${cap(one)} splice`} close={close}>
@@ -72,10 +78,15 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
       ) : null}
 
       <Section title="Face up" count={`${s.revealed.length} of ${s.total}`}>
+        {Object.keys(s.takenBy).length ? (
+          <ul className={kit.rows} style={{ listStyle: "none", margin: 0, padding: "0 12px" }} aria-label="Taken">
+            {s.revealed.filter((id) => s.takenBy[id]).map((id) => (
+              <li key={id} className={kit.line} style={{ minHeight: 44, gap: 8 }}><span className={kit.grow}>{byType[type][id]?.name ?? id}</span><Tag>{short(s.takenBy[id])}</Tag></li>
+            ))}
+          </ul>
+        ) : null}
         <Rows>
-          {s.revealed.map((id) => {
-            const taker = s.takenBy[id];
-            if (taker) return <RowAction key={id} verb={short(taker)} disabled onClick={() => {}} title={byType[type][id]?.name ?? id} detail="Taken" />;
+          {s.revealed.filter((id) => !s.takenBy[id]).map((id) => {
             return current ? (
               <RowAction key={id} verb={`${short(current)} takes it`} disabled={w.pending || s.revealed.length < s.total}
                 onClick={() => w.write([Events.GainTFCardEvent(current, cardEvent(type, id))], `${short(current)} took ${name(type, id)} in the splice`, current)}
@@ -113,6 +124,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
         </Section>
       ) : null}
 
+      {canUndo ? <Button kind="quiet" disabled={w.pending} onClick={() => w.undoNewest(groupKey(newest))}>Undo: {ctx.describe(newest)}</Button> : null}
       {!current ? <p className={kit.confirm}>Everyone has picked. Cards nobody took go back.</p> : current !== seat && !controls(current) ? <p className={kit.sub}>{short(current)} usually takes their own card; anyone can record it.</p> : null}
       <Button block onClick={close}>Close</Button>
     </Sheet>
@@ -147,9 +159,14 @@ export function SpliceStatus({ card, active, ctx }: { card: string; active: Fact
   if (!type || ctx.controls(active)) return null;
   const s = spliceState(currentTurn, type, active, order, false);
   const mine = !!s.current && ctx.controls(s.current);
+  const me = ctx.seat;
   return (
     <section className={kit.card} aria-label="Splice">
       <p className={kit.eyebrow}><span>{cap(TYPE_NAMES[type].one)} splice</span><span className={kit.num}>{s.pickers.length} taking part</span></p>
+      {me && me !== active && !s.revealed.length ? (
+        <Switch label="Join the splice" detail={card === "Calamitas" ? "Calamitas' secondary: join, or use PRODUCTION in your home system" : "Following the secondary joins it"} checked={s.participants.includes(me)}
+          onChange={(on) => ctx.w.write([on ? Events.JoinSpliceEvent(me) : Events.LeaveSpliceEvent(me)], on ? `${ctx.short(me)} joined the splice` : `${ctx.short(me)} left the splice`, me)} />
+      ) : null}
       <p className={kit.sub}>{!s.revealed.length ? `${ctx.short(active)} turns ${s.total} cards face up.` : s.current ? `${ctx.short(s.current)} picks now.` : "Everyone has picked."}</p>
       {s.current || !s.revealed.length ? (
         <Button kind={mine ? "primary" : "secondary"} forOther={!mine} block onClick={() => setOpen(true)}>{mine ? `Pick your ${TYPE_NAMES[type].one}` : "Open the splice"}</Button>

@@ -54,6 +54,8 @@ export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, titl
   const currentTurn = useCurrentTurn();
   const [type, setType] = useState<TfType>(types[0]!);
   const [q, setQ] = useState("");
+  // Taking a card someone else holds is a transfer: it asks first.
+  const [taking, setTaking] = useState<Optional<{ id: string; owner: FactionId }>>();
   const gained = gainedIn(currentTurn, faction);
   const mine = ownedBy(byType, faction);
   const pool = Object.values(byType[type]).filter((c): c is NonNullable<typeof c> => !!c && c.owner !== faction && (!q || c.name.toLowerCase().includes(q.toLowerCase())))
@@ -79,6 +81,15 @@ export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, titl
         </Section>
       ) : null}
       <Section title="Gain a card">
+        {taking ? (
+          <div style={{ display: "grid", gap: 8 }}>
+            <p className={kit.confirm}>{short(faction)} takes {name(type, taking.id)} from {short(taking.owner)}?</p>
+            <div className={kit.buttons}>
+              <Button kind="primary" disabled={w.pending} onClick={async () => { if (await gain(taking.id, taking.owner)) setTaking(undefined); }}>Take it</Button>
+              <Button onClick={() => setTaking(undefined)}>Cancel</Button>
+            </div>
+          </div>
+        ) : null}
         {types.length > 1 ? (
           <div className={kit.choices} role="radiogroup" aria-label="Card type">
             {types.map((t) => (
@@ -91,7 +102,7 @@ export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, titl
         <input className={kit.search} type="search" placeholder={`Find ${TYPE_NAMES[type].one === "ability" ? "an" : "a"} ${TYPE_NAMES[type].one}`} value={q} onChange={(e) => setQ(e.target.value)} aria-label={`Find a card`} />
         <Rows>
           {pool.slice(0, 40).map((c) => (
-            <RowAction key={c.id} verb={c.owner ? "Take" : "Gain"} disabled={w.pending} onClick={() => gain(c.id, c.owner)}
+            <RowAction key={c.id} verb={c.owner ? "Take" : "Gain"} disabled={w.pending} onClick={() => (c.owner ? setTaking({ id: c.id, owner: c.owner }) : gain(c.id, undefined))}
               title={c.name} detail={c.owner ? `Held by ${short(c.owner)}` : undefined} />
           ))}
         </Rows>
