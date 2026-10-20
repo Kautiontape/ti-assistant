@@ -13,6 +13,8 @@ import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGr
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
+import NowEdict from "../tfplay/NowEdict"; // Twilight's Fall (tfall)
+import { TfSetupCard, TyrantCard } from "../tfplay/TfTable";
 import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
@@ -28,8 +30,6 @@ import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
-import NowEdict from "../tfplay/NowEdict"; // Twilight's Fall (tfall)
-import { TfSetupCard, TyrantCard } from "../tfplay/TfTable";
 import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, TextSizeChoice, rootAttrs, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
@@ -121,8 +121,8 @@ export default function PlayApp() {
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
-            <CombatBanner ctx={ctx} />
             {phase === "SETUP" ? <TfSetupCard ctx={ctx} /> : null}
+            <CombatBanner ctx={ctx} />
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "EDICT" ? <NowEdict {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
@@ -286,8 +286,8 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
-    <TyrantCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
+    <TyrantCard ctx={ctx} />
     </>
   );
 }

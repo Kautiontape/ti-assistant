@@ -10,8 +10,8 @@ import { combats, pointsBySource, SFTT } from "./logic";
 import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
-import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
 import { TfOwnedCards } from "../tfplay/TfCards";
+import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
 const TECH_COLOURS: [string, string][] = [["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Other"]];
