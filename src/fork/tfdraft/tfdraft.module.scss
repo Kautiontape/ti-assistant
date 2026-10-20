@@ -1,0 +1,35 @@
+// The Twilight's Fall draft's own pieces: the run-through of steps, reference
+// cards with their priority number, and the players' table. Tokens come from
+// the kit (src/fork/ui/kit.module.scss); the frame from play.module.scss.
+
+.steps {
+  display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step;
+  li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 10px; align-items: start; }
+  li::before {
+    content: counter(step); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+    display: grid; place-items: center; font-family: var(--mono); font-size: calc(var(--fs) * 0.75); color: var(--muted);
+  }
+  b { font-weight: 700; }
+  span { color: var(--muted); font-size: calc(var(--fs) * 0.9); }
+}
+
+// A reference card: priority number, faction icon and name.
+.card { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.prio {
+  display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 7px;
+  border: 1px solid var(--line); font-family: var(--mono); font-weight: 600; font-size: calc(var(--fs) * 0.85); font-variant-numeric: tabular-nums;
+}
+.cardName { overflow-wrap: anywhere; }
+.homeTile { width: 44px; height: auto; flex: none; }
+
+.waiting { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.who {
+  display: grid; margin: 0; padding: 0; list-style: none;
+  > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  > li:first-child { border-top: 0; }
+}
+.holds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: calc(var(--fs) * 0.85); color: var(--muted); }
+.holds b { color: var(--ink); font-weight: 400; }
+
+.packs { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
