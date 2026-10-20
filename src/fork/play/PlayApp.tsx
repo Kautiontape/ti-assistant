@@ -28,6 +28,8 @@ import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
+import NowEdict from "../tfplay/NowEdict"; // Twilight's Fall (tfall)
+import { TfSetupCard, TyrantCard } from "../tfplay/TfTable";
 import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, TextSizeChoice, rootAttrs, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
@@ -120,7 +122,8 @@ export default function PlayApp() {
           <div className={styles.col}>
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
-            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "SETUP" ? <TfSetupCard ctx={ctx} /> : null}
+            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "EDICT" ? <NowEdict {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
                 <p className={kit.eyebrow}><span>Anything else?</span></p>
@@ -283,6 +286,7 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <TyrantCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
     </>
   );

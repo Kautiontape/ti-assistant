@@ -15,6 +15,7 @@ import { ExpeditionButton } from "./NowExpedition";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
+import { followEvents } from "../tfplay/tf";
 
 export default function NowAction(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open } = ctx;
@@ -122,7 +123,7 @@ export default function NowAction(ctx: Ctx) {
           <div className={kit.buttons}>
             <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology"
               ? open({ kind: "research", faction: seat!, follow: true })
-              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</Button>
+              : w.write(followEvents(selected, seat!), `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</Button>
             <Button disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</Button>
           </div>
         </section>

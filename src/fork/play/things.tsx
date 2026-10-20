@@ -6,6 +6,7 @@ import { useFactions } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Optional } from "../../util/types/types";
 import { kit, PopoutProvider, type Thing } from "../ui/kit";
+import { useTfThingRender } from "../tfplay/TfThings";
 
 const TECH_KIND: Record<string, string> = { GREEN: "Biotic technology", BLUE: "Propulsion technology", YELLOW: "Cybernetic technology", RED: "Warfare technology", UPGRADE: "Unit upgrade" };
 const PREREQ: Record<string, string> = { GREEN: "green", BLUE: "blue", YELLOW: "yellow", RED: "red" };
@@ -102,5 +103,6 @@ export function useThingRender() {
 
 export function PlayPopouts({ children }: { children: React.ReactNode }) {
   const render = useThingRender();
-  return <PopoutProvider render={render}>{children}</PopoutProvider>;
+  const tf = useTfThingRender(); // Twilight's Fall cards (src/fork/tfplay)
+  return <PopoutProvider render={(t) => render(t) ?? tf(t)}>{children}</PopoutProvider>;
 }

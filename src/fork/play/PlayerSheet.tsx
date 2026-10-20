@@ -11,6 +11,7 @@ import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
 import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
+import { TfOwnedCards } from "../tfplay/TfCards";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
 const TECH_COLOURS: [string, string][] = [["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Other"]];
@@ -104,6 +105,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         {!myTechs.length ? <p className={kit.sub}>None</p> : null}
         {f.breakthrough?.name ? <Items items={[{ thing: { kind: "breakthrough", id }, name: `${f.breakthrough.name} (breakthrough)`, state: f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked" }]} /> : null}
       </Section>
+
+      <TfOwnedCards faction={id} ctx={ctx} />
 
       {myRelics.length ? (
         <Section title="Relics" count={myRelics.length}>

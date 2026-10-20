@@ -18,6 +18,8 @@ import { scoredThisPhase } from "./logic";
 import styles from "./play.module.scss";
 import type { Ctx } from "./ui";
 import { Button, Chip, Choices, Cite, kit, RowAction, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
+import { TfCardControls, TF_CARDS_WITH_CONTROLS } from "../tfplay/TfControls";
+import { followEvents, reopenEvents } from "../tfplay/tf";
 
 const TECH_GROUPS: [TechType | "OTHER", string][] = [
   ["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Faction"],
@@ -43,12 +45,13 @@ function researchableTechs(currentTurn: ActionLog, techs: Partial<Record<TechId,
   return faction.id === "Nekro Virus" ? list : list.filter((t) => !replaces.includes(t.id));
 }
 
-export const CARDS_WITH_CONTROLS = new Set<string>(["Technology", "Politics", "Imperial"]);
+export const CARDS_WITH_CONTROLS = new Set<string>(["Technology", "Politics", "Imperial", ...TF_CARDS_WITH_CONTROLS]);
 
 export function CardControls({ card, active, ctx }: { card: StrategyCardId; active: FactionId; ctx: Ctx }) {
   if (card === "Technology") return <TechnologyPrimary active={active} ctx={ctx} />;
   if (card === "Politics") return <PoliticsPrimary active={active} ctx={ctx} />;
   if (card === "Imperial") return <ImperialPrimary active={active} ctx={ctx} />;
+  if (TF_CARDS_WITH_CONTROLS.has(card)) return <TfCardControls card={card} active={active} ctx={ctx} />;
   return null;
 }
 
@@ -132,7 +135,8 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
   const { factions, short, w, open, seat } = ctx;
   const currentTurn = useCurrentTurn();
   const order = useOrderedFactionIds("SPEAKER").filter((id) => id !== active);
-  const mark = (id: FactionId, state: "DONE" | "SKIPPED" | "PENDING") => w.write([Events.MarkSecondaryEvent(id, state)],
+  // Following a Twilight's Fall splice card also joins the splice (followEvents).
+  const mark = (id: FactionId, state: "DONE" | "SKIPPED" | "PENDING") => w.write(state === "DONE" ? followEvents(card.id, id) : state === "PENDING" ? reopenEvents(card.id, id, factions[id]?.secondary === "DONE") : [Events.MarkSecondaryEvent(id, state)],
     state === "PENDING" ? `${short(id)}'s secondary is open again` : `${short(id)} ${state === "DONE" ? "followed" : "skipped"} ${card.name}`, id);
   const done = order.filter((id) => (factions[id]?.secondary ?? "PENDING") !== "PENDING").length;
   return (
