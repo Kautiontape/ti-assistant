@@ -62,8 +62,12 @@ function Live({ d }: { d: TfDraft }) {
   const hand = acting === me ? myHand : theirHand;
   const kinds: View[] = ["slice", ...(d.style === "nucleus" ? ["seat" as const] : []), ...(d.packs.length ? ["pack" as const] : []), "king", "map"];
 
-  // Helping lasts one pick; it ends when the draft moves on.
-  useEffect(() => { setHelping(undefined); setPeek(undefined); }, [d.log.length]);
+  // Helping lasts one pick; it ends when the draft moves on. Picking in secret
+  // for someone else lasts until their pick is in: others picking at the same
+  // time mustn't switch this phone back to its own cards.
+  useEffect(() => setHelping(undefined), [d.log.length]);
+  const peekDone = peek !== undefined && s.ready.includes(peek);
+  useEffect(() => setPeek(undefined), [step?.id, peekDone]);
   useEffect(() => { if (meLoaded && me === undefined && step) setSheet((x) => x ?? { kind: "me" }); }, [meLoaded, me, step]);
   // Once everyone has picked, the finished map is what people want to see.
   const finished = !step;
@@ -97,7 +101,7 @@ function Live({ d }: { d: TfDraft }) {
   const preset = presetOf(d.rules);
 
   return (
-    <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)}>
+    <div className={cx(kit.root, styles.root)} {...rootAttrs(prefs)} data-log={d.log.length}>
       <header className={styles.top}>
         <div className={styles.phase}>
           <span className={styles.phaseName}>{stepName(step)}</span>
