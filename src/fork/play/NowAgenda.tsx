@@ -6,19 +6,20 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 import { computeVotes } from "../../../app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase";
 import { canFactionVote, computeRemainingVotes, getTargets, translateOutcome } from "../../components/VoteBlock/VoteBlock";
-import { useActionLog, useAgendas, useAttachments, useCurrentTurn, useLeaders, useOptions, usePlanets, useStrategyCards, useTechs } from "../../context/dataHooks";
+import { useActionLog, useAgendas, useAttachments, useCurrentTurn, useLeaders, useOptions, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
 import { useNumFactions } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useGameState, useSpeaker } from "../../context/stateDataHooks";
-import { getActiveAgenda, getAllVotes, getSelectedEligibleOutcomes, getSelectedSubAgenda } from "../../util/actionLog";
-import { getCurrentPhasePreviousLogEntries } from "../../util/api/actionLog";
+import { getActiveAgenda, getAllVotes, getPlayedRelic, getSelectedEligibleOutcomes, getSelectedSubAgenda } from "../../util/actionLog";
+import { getCurrentPhaseLogEntries, getCurrentPhasePreviousLogEntries } from "../../util/api/actionLog";
+import { hasTech } from "../../util/api/techs";
 import { Events } from "../../util/api/events";
 import { outcomeString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
-import { votingOrder } from "./logic";
+import { bonusOffered, bonusPlayed, VOTE_BONUSES, votingOrder } from "./logic";
 import styles from "./play.module.scss";
 import type { Ctx, Sheet } from "./ui";
-import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Stepper, Tag } from "../ui/kit";
+import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Stepper, Switch, Tag } from "../ui/kit";
 
 const AGENDA_NAMES = ["first", "second"];
 
@@ -36,6 +37,7 @@ function useAgendaData() {
   const attachments = useAttachments();
   const leaders = useLeaders();
   const techs = useTechs();
+  const relics = useRelics();
   const numFactions = useNumFactions();
   const speaker = useSpeaker();
   const activeId = getActiveAgenda(currentTurn);
@@ -50,7 +52,7 @@ function useAgendaData() {
   const outcomes: Optional<OutcomeType> = eligible && eligible !== "None" ? eligible : undefined;
   const ballot = agenda && outcomes ? { ...agenda, elect: outcomes } : agenda;
   const subAgenda = covert ? getSelectedSubAgenda(currentTurn) : undefined;
-  return { intl, state, agendas, currentTurn, actionLog, planets, strategyCards, objectives, options, attachments, leaders, techs, numFactions, speaker, agenda, repGov, votes, covert, outcomes, ballot, subAgenda };
+  return { intl, state, agendas, currentTurn, actionLog, planets, strategyCards, objectives, options, attachments, leaders, techs, numFactions, speaker, agenda, repGov, votes, covert, outcomes, ballot, subAgenda, relics };
 }
 type AgendaData = ReturnType<typeof useAgendaData>;
 
@@ -67,8 +69,20 @@ function available(d: AgendaData, ctx: Ctx, id: FactionId) {
     getCurrentPhasePreviousLogEntries(d.actionLog), d.leaders, d.techs);
   // Under Representative Government each player has one vote, sent as votes: 1
   // (upstream's tally skips entries with zero votes).
-  return d.repGov ? 1 : influence;
+  if (d.repGov) return 1;
+  // Maw of Worlds exhausts its owner's planets for the phase (VoteBlock's VotingSection).
+  if (d.relics["Maw of Worlds"]?.owner === id && getPlayedRelic(getCurrentPhaseLogEntries(d.actionLog), "Maw of Worlds")) return 0;
+  return influence;
 }
+
+// What a vote counts for in upstream's tally: planet votes, extra votes, bonus
+// cards played this agenda, and the Argent Flight's Zeal (computeVotes).
+function voteTotal(d: AgendaData, faction: FactionId, votes: number, extra: number, bonuses: string[]) {
+  if (votes < 1) return 0;
+  const zeal = faction === "Argent Flight" && !d.repGov ? d.numFactions : 0;
+  return votes + extra + zeal + VOTE_BONUSES.filter((b) => bonuses.includes(b.id)).reduce((n, b) => n + b.votes, 0);
+}
+const playedBonuses = (d: AgendaData, faction: FactionId) => VOTE_BONUSES.filter((b) => bonusPlayed(d.currentTurn, b, faction)).map((b) => b.id);
 
 function canVote(d: AgendaData, ctx: Ctx, id: FactionId) {
   const f = ctx.factions[id];
@@ -190,16 +204,37 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
   const { short, w, seat, factions } = ctx;
   const max = available(d, ctx, faction);
   const targets = getTargets(d.ballot, factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).filter((t) => t.id !== "Abstain");
-  const [target, setTarget] = useState<Optional<string>>();
-  const [n, setN] = useState(max);
+  // Changing a vote starts from the one cast.
+  const before = d.votes.get(faction);
+  const [target, setTarget] = useState<Optional<string>>(before?.votes && before.target !== "Abstain" ? before.target : undefined);
+  const [n, setN] = useState(before?.votes ? Math.min(before.votes, max) : max);
   const [q, setQ] = useState("");
+  // Extra votes: bonus cards (played with the vote) and any others by hand.
+  const played = playedBonuses(d, faction);
+  const [bonuses, setBonuses] = useState<string[]>(played);
+  const [extra, setExtra] = useState(before?.extraVotes ?? 0);
+  const [showExtra, setShowExtra] = useState(played.length > 0 || extra > 0);
+  const offered = VOTE_BONUSES.filter((b) => played.includes(b.id) || bonusOffered(b, faction, target, d.currentTurn, { predictive: hasTech(factions[faction], d.techs["Predictive Intelligence"]), planets: d.planets }));
+  const using = showExtra ? bonuses.filter((id) => offered.some((b) => b.id === id)) : [];
+  const extraVotes = showExtra ? extra : 0;
+  const total = voteTotal(d, faction, n, extraVotes, using);
   const many = targets.length > 8;
   const shown = many ? targets.filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase())) : targets;
   const label = (id: string) => outcomeLabel(d, ctx, id);
+  const s = (k: number) => (k === 1 ? "" : "s");
   const cast = async (votes: number) => {
     const t = votes ? target! : "Abstain";
-    const text = votes ? `${short(faction)} cast ${votes} vote${votes === 1 ? "" : "s"} for ${label(t)}` : `${short(faction)} abstained`;
-    if (await w.write([Events.CastVotesEvent(faction, votes, 0, t)], text, faction)) onDone?.();
+    const keep = votes ? using : [];
+    // Play the bonus cards newly used, take back the ones dropped (abstaining drops them all).
+    const plays = VOTE_BONUSES.flatMap((b): GameUpdateData[] => {
+      const was = played.includes(b.id), now = keep.includes(b.id);
+      if (was === now) return [];
+      if (b.promissory) return [now ? Events.PlayPromissoryNoteEvent(b.id, faction) : Events.UnplayPromissoryNoteEvent(b.id, faction)];
+      return [now ? Events.PlayActionCardEvent(b.id, faction) : Events.UnplayActionCardEvent(b.id, faction)];
+    });
+    const sum = voteTotal(d, faction, votes, votes ? extraVotes : 0, keep);
+    const text = votes ? `${short(faction)} cast ${sum} vote${s(sum)} for ${label(t)}` : `${short(faction)} abstained`;
+    if (await w.write([...plays, Events.CastVotesEvent(faction, votes, votes ? extraVotes : 0, t)], text, faction)) onDone?.();
   };
   return (
     <>
@@ -209,12 +244,25 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
         options={shown.map((t) => ({ value: t.id, label: ctx.isFaction(t.id) ? <Chip faction={t.id as FactionId} factions={factions} short={short} small player={false} /> : label(t.id) }))} />
       <p className={kit.label}>How many votes?</p>
       <Stepper value={n} min={0} max={max} less="One fewer vote" more="One more vote" onChange={setN} />
-      <Button kind="primary" size="tall" block disabled={w.pending || !target || n < 1} onClick={() => cast(n)}>
-        {!target ? "Choose an outcome" : `Cast ${n} vote${n === 1 ? "" : "s"} for ${label(target)}`}
+      <Switch label="Extra votes" detail="Distinguished Councilor, Predictive Intelligence, Bribery and the like" checked={showExtra} onChange={setShowExtra} />
+      {showExtra ? (
+        <div className={kit.section} role="group" aria-label="Extra votes">
+          {offered.map((b) => (
+            <Switch key={b.id} label={`${b.id}: +${b.votes}`} detail={b.note} checked={bonuses.includes(b.id)}
+              onChange={(on) => setBonuses(on ? [...bonuses, b.id] : bonuses.filter((x) => x !== b.id))} />
+          ))}
+          <p className={kit.label}>Other extra votes</p>
+          <Stepper value={extra} min={0} max={99} less="One fewer extra vote" more="One more extra vote" onChange={setExtra} />
+          <p className={kit.sub}>Votes that don't come from planets' influence, such as Xxcha's commander or trade goods spent with Bribery.</p>
+        </div>
+      ) : null}
+      <Button kind="primary" size="tall" block disabled={w.pending || !target || n < 1} onClick={() => cast(n)}
+        detail={target && total !== n ? `${n} from planets, ${total - n} extra${faction === "Argent Flight" && !d.repGov ? " (with Zeal)" : ""}` : undefined}>
+        {!target ? "Choose an outcome" : `Cast ${total} vote${s(total)} for ${label(target)}`}
       </Button>
       <Button block disabled={w.pending} onClick={() => cast(0)}>Abstain</Button>
       <p className={kit.sub}>
-        {d.repGov ? "Representative Government: one vote each." : "The influence of your planets, less votes spent on the first agenda."} Bonus votes (Argent Flight, and cards such as Distinguished Councilor once recorded) are added to the tally.
+        {d.repGov ? "Representative Government: one vote each." : "The influence of your planets, less votes spent on the first agenda."}
       </p>
     </>
   );
@@ -240,7 +288,7 @@ function VotesCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionI
           return (
             <RowLink key={id} disabled={!can} onClick={() => open({ kind: "vote", faction: id })} label={`${short(id)}: vote`}
               title={<Chip faction={id} factions={factions} short={short} small />}
-              end={v ? <Tag tone="done">{v.target === "Abstain" || !v.votes ? "Abstained" : `${v.votes} · ${outcomeLabel(d, ctx, v.target)}`}</Tag>
+              end={v ? <Tag tone="done">{v.target === "Abstain" || !v.votes ? "Abstained" : `${voteTotal(d, id, v.votes, v.extraVotes ?? 0, playedBonuses(d, id))} · ${outcomeLabel(d, ctx, v.target)}`}</Tag>
                 : !can ? "Can't vote" : id === next ? <Tag tone="now">Up next</Tag> : "Waiting"} />
           );
         })}

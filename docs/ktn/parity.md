@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 84 | Works in `/play`. |
-| Partial | 44 | Works in `/play`, with the gap named in Notes. |
+| Native | 85 | Works in `/play`. |
+| Partial | 43 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 22 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 45 | No way to do it from `/play`. |
@@ -204,8 +204,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Riders (Keleres Rider, Xxcha/other riders, Galactic Threat etc.) | src/components/VoteBlock/VoteBlock.tsx | Missing | No rider entry in /play; upstream VoteBlock has per-faction rider and Nekro/Keleres special-cases. Link-out text mentions riders only |
 | Start voting | components/StartVoting.tsx | Native | StartVotingEvent |
 | Cast votes: outcome + amount, capped at available | CastVotesSection / VoteBlock | Native | VoteForm with Stepper; uses upstream computeRemainingVotes |
-| Votes available per faction (planet influence, spent on agenda 1, Council Preserve, Xxcha, etc.) | VoteBlock.tsx | Native | available() reuses computeRemainingVotes |
-| Extra votes (separate "Extra" field, e.g. Predictive Intelligence, Distinguished Councilor, spent trade goods) | VoteBlock.tsx, VotingColumn.tsx | Partial | CastVotesEvent always sent with extra=0; no Extra input and no Predictive/Councilor entry. Argent bonus only via computeVotes |
+| Votes available per faction (planet influence, spent on agenda 1, Council Preserve, Xxcha, etc.) | VoteBlock.tsx | Native | available() reuses computeRemainingVotes; none after its owner uses Maw of Worlds, as upstream |
+| Extra votes (separate "Extra" field, e.g. Predictive Intelligence, Distinguished Councilor, spent trade goods) | VoteBlock.tsx, VotingColumn.tsx | Native | VoteForm's "Extra votes" switch: Distinguished Councilor, Predictive Intelligence, Council Preserve and Blood Pact are played with the vote (offered as upstream offers them; logic.ts VOTE_BONUSES), other extra votes go in extraVotes, and changing a vote takes back cards no longer used. The Cast button and the Votes card show the total, Zeal included. Check: parity-votes-check.cjs |
 | Manual vote entry (manualVotes mode) | VoteBlock.tsx | Missing | Cap at "available" in /play can block odd cases |
 | Abstain | VoteBlock.tsx | Native | Abstain button |
 | Representative Government (one vote each; no Argent bonus) | VoteBlock / AgendaPhase | Native | repGov flag |

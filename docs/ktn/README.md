@@ -68,7 +68,8 @@ constructors and data hooks:
 - Some upstream rules are copied rather than imported, because upstream keeps
   them inline in components: the claim rule (`ActionPhase.tsx`), status-phase
   scoring and reveal (`StatusPhase.tsx`), Checks and Balances
-  (`StrategyPhase.tsx`) and the voting order (`VotingColumn.tsx`). Each copy in
+  (`StrategyPhase.tsx`), the voting order (`VotingColumn.tsx`) and which bonus
+  votes a player is offered (`VoteBlock.tsx`). Each copy in
   `src/fork/play/logic.ts` names its source.
 
 ## Upstream internals `/draft` uses

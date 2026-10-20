@@ -1,6 +1,6 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
-import { getClaimedPlanets } from "../../util/actionLog";
+import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPromissoryTargets } from "../../util/actionLog";
 import { ActionLog, Optional } from "../../util/types/types";
 
 export type NameOf = (id: Optional<string>) => string;
@@ -280,6 +280,44 @@ export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speak
   const speakerOrder = factions[speaker]?.order ?? 1;
   const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
   return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+}
+
+// ---------- votes: bonus votes ----------
+// The cards that add votes when played this agenda. Upstream's tally
+// (computeVotes in AgendaPhase.tsx) adds them when they're in the log, so a vote
+// sends the plays and leaves them out of extraVotes. Which ones a player is
+// offered is copied from VoteBlock.tsx (VotingSection, canUseBloodPact and
+// hasCouncilPreserve, which aren't exported).
+export type VoteBonus = { id: string; votes: number; note: string; promissory?: boolean };
+export const VOTE_BONUSES: VoteBonus[] = [
+  { id: "Distinguished Councilor", votes: 5, note: "action card" },
+  { id: "Predictive Intelligence", votes: 3, note: "technology" },
+  { id: "Council Preserve", votes: 5, note: "planet attachment" },
+  { id: "Blood Pact", votes: 4, note: "Empyrean promissory note, voting with the Empyrean", promissory: true },
+];
+
+export function bonusPlayed(currentTurn: ActionLog, b: VoteBonus, faction: FactionId) {
+  return (b.promissory ? getPromissoryTargets(currentTurn, b.id) : getActionCardTargets(currentTurn, b.id)).includes(faction);
+}
+
+// Whether `faction`, voting for `target`, can use the bonus this agenda.
+export function bonusOffered(b: VoteBonus, faction: FactionId, target: Optional<string>, currentTurn: ActionLog, has: { predictive: boolean; planets: Partial<Record<PlanetId, Planet>> }) {
+  switch (b.id) {
+    case "Distinguished Councilor": {
+      const user = getActionCardTargets(currentTurn, b.id)[0];
+      return !user || user === faction;
+    }
+    case "Predictive Intelligence": return has.predictive;
+    case "Council Preserve": return Object.values(has.planets).some((p) => p?.owner === faction && p.attachments?.includes("Council Preserve"));
+    case "Blood Pact": {
+      if (faction === "Empyrean" || !target || target === "Abstain") return false;
+      const empyrean = getFactionVotes(currentTurn, "Empyrean");
+      if (!empyrean?.target || empyrean.target !== target) return false;
+      const user = getPromissoryTargets(currentTurn, b.id)[0];
+      return !user || user === faction;
+    }
+  }
+  return false;
 }
 
 // ---------- combat (fork actions, src/fork/actions) ----------
