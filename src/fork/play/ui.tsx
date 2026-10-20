@@ -28,6 +28,8 @@ export type Sheet =
   | { kind: "playerEdit"; faction: FactionId }
   | { kind: "techTree"; faction: FactionId }
   | { kind: "frontier"; faction: FactionId }
+  | { kind: "skip"; faction: FactionId }
+  | { kind: "puppets"; faction: FactionId }
   | ({ kind: "strategySwap" } & StrategySwap)
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }

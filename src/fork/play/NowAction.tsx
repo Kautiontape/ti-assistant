@@ -13,6 +13,7 @@ import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import { ExpeditionButton } from "./NowExpedition";
 import { FrontierRow } from "./Frontier";
+import { OtherEndings, UnpassButton, useEndTurnBlock } from "./TurnControls";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
@@ -28,6 +29,8 @@ export default function NowAction(ctx: Ctx) {
   const now = useNow();
   const combat = openCombat(log);
   const planets = usePlanets();
+  // Hooks stay above the early return below.
+  const endBlock = useEndTurnBlock(getSelectedActionFromLog(currentTurn));
   if (!active) {
     return (
       <section className={kit.card} aria-label="Everyone has passed">
@@ -36,6 +39,7 @@ export default function NowAction(ctx: Ctx) {
         <p className={kit.sub}>The status phase is next: scoring, then cleanup.</p>
         <Button kind="primary" size="tall" block disabled={w.pending}
           onClick={() => (combat ? open({ kind: "endCombat", before: "the status phase starts" }) : w.write([Events.AdvancePhaseEvent()], "The status phase started"))}>Start the status phase</Button>
+        <UnpassButton ctx={ctx} />
       </section>
     );
   }
@@ -79,6 +83,7 @@ export default function NowAction(ctx: Ctx) {
                 ))}
                 <Button disabled={!canPass || w.pending} detail={canPass ? "Done for the round" : "Play your card first"} onClick={() => open({ kind: "pass", faction: active })}>Pass</Button>
               </div>
+              <Button kind="quiet" disabled={w.pending} onClick={() => open({ kind: "skip", faction: active })}>Skip this turn</Button>
             </>
           ) : (
             <>
@@ -95,11 +100,13 @@ export default function NowAction(ctx: Ctx) {
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
               </Rows>
-              <Button kind="primary" size="tall" block disabled={w.pending}
+              {endBlock ? <p className={kit.sub}>{endBlock}</p> : null}
+              <Button kind="primary" size="tall" block disabled={w.pending || !!endBlock}
                 onClick={async () => {
                   if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
                   await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
                 }}>End turn</Button>
+              <OtherEndings active={active} selected={selected} ctx={ctx} />
             </>
           )}
         </section>

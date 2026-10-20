@@ -25,6 +25,7 @@ import { StatusAbilitySheet } from "./StatusAbilities";
 import { GiftSheet, SwapSheet } from "./StrategyAbilities";
 import { LawSheet, LawsCard } from "./Laws";
 import { PlayerEditSheet } from "./PlayerEdit";
+import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
@@ -441,14 +442,11 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       );
     }
     case "pass":
-      return (
-        <KitSheet title="Pass for the round?" close={close}>
-          <p className={kit.confirm}>{short(sheet.faction)} passes and takes no more turns this round.</p>
-          <Button kind="primary" size="tall" block disabled={w.pending} onClick={async () => {
-            if (await w.write([Events.SelectActionEvent("Pass"), Events.EndTurnEvent({})], `${short(sheet.faction)} passed`, sheet.faction)) close();
-          }}>Pass</Button>
-        </KitSheet>
-      );
+      return <PassSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "skip":
+      return <SkipTurnSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "puppets":
+      return <PuppetsSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "card": {
       const c = strategyCards[sheet.card];
       const picker = sheet.pickFor;

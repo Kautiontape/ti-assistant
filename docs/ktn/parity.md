@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 129 | Works in `/play`. |
+| Native | 137 | Works in `/play`. |
 | Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 15 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 25 | No way to do it from `/play`. |
+| Via More controls | 10 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Missing | 22 | No way to do it from `/play`. |
 | Not needed | 13 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -68,15 +68,15 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 |---|---|---|---|
 | Active player / on-deck display | AP ActivePlayerColumn l.1672 | Native | NowAction hero + "Next" chip. |
 | Choose action: Tactical / Component / each held strategy card / Pass | AP FactionActionButtons l.179 | Native | NowAction buttons; Pass only after playing own cards (canPass). |
-| Un-select action (change mind) | AP l.24 UnselectActionEvent | Missing | No unselect in /play; only Undo. |
+| Un-select action (change mind) | AP l.24 UnselectActionEvent | Native | TurnControls.tsx "Change the action" (UNSELECT_ACTION). Check: parity-turn-check.cjs |
 | Pass confirmation | AP | Native | "pass" sheet: SelectAction(Pass) + EndTurn. |
 | End turn | AP NextPlayerButtons l.1546 | Native | End turn (blocks on open combat). |
-| Skip turn (no action chosen) | AP l.1569 | Via More controls | EndTurnEvent skipTurn not in /play. |
-| "Take Another Action" (samePlayer) | AP l.1615 | Via More controls | Not in fork. |
-| Puppets on a String (jump to passed player) | AP l.1626 | Via More controls | Not in fork. |
-| Ral Nel hero: unpass | AP UnpassSection l.1938 | Missing | Not in fork or faction page (table screen only). |
-| Faunus (Pass-turn faction ability) | AP/Actions/Faunus.tsx | Via More controls | Not in fork. |
-| Prove Endurance (score on pass) | AP l.1435 | Via More controls | Not in fork (check `score` sheet is status/anyPhase only). |
+| Skip turn (no action chosen) | AP l.1569 | Native | "Skip this turn" under the action buttons, confirmed (END_TURN skipTurn). Check: parity-turn-check.cjs |
+| "Take Another Action" (samePlayer) | AP l.1615 | Native | "Take another action" row under End turn (END_TURN samePlayer). Check: parity-turn-check.cjs |
+| Puppets on a String (jump to passed player) | AP l.1626 | Native | Row under End turn when someone has passed: pick who takes the next turn (END_TURN jumpToPlayer). Check: parity-turn-check.cjs |
+| Ral Nel hero: unpass | AP UnpassSection l.1938 | Native | "Ral Nel unpasses" on the everyone-has-passed card while Director Nel is readied (UNPASS). Not exercised: no Ral Nel snapshot |
+| Faunus (Pass-turn faction ability) | AP/Actions/Faunus.tsx | Native | Pass sheet: take a non-home, non-legendary planet with no attachments, sent with the pass (Faunus.tsx rule). Not exercised: no Faunus owner in the snapshots |
+| Prove Endurance (score on pass) | AP l.1435 | Native | Pass sheet switch for the last player to pass, sent with the pass. Check: parity-turn-check.cjs |
 | Turn timer (per-turn clock) | AP FactionTimer, src/components/TurnTimer | Native | Hero clock for the turn, plus upstream's faction timer for the active player (totals on the Table tab). Secondary timers stay off: upstream starts them on MARK_PRIMARY, which /play doesn't send. Check: parity-player-check.cjs |
 | Game timer pause/unpause, phase timer | src/components/GameTimer, TurnTimer | Native | Clock.tsx: /play runs upstream's game timer (it was frozen when everyone used /play, so log entries carried game time 0); Pause/Resume on the Table tab, a banner on Now while paused. Check: parity-player-check.cjs |
 | Selected-action card board (who holds/played which cards) | StrategyCardColumn l.1825 | Native | CardBoard in PlayApp. |
@@ -136,7 +136,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Technology primary (1st free, 2nd for 6 resources) | StrategicActions/Technology.tsx | Native | TechnologyPrimary + ResearchSheet. |
 | Technology secondary (follow + research; Jol-Nar 2 techs; Nekro excluded) | AP l.383 | Native | ResearchSheet follow mode, "2nd tech". Nekro: text says gains command tokens, no token UI. |
 | Politics primary (new speaker, swap/undo) | StrategicActions/Politics.tsx | Native | PoliticsPrimary. Draw action cards: board. |
-| Politics: End Turn blocked until speaker chosen | NextPlayerButtons l.1566 | Missing | /play allows ending without a speaker. |
+| Politics: End Turn blocked until speaker chosen | NextPlayerButtons l.1566 | Native | End turn waits for the new speaker, with a hint. Check: parity-turn-check.cjs |
 | Imperial primary (score public obj or secret / Mecatol +1) | StrategicActions/Imperial.tsx | Native | ImperialPrimary + `score` sheet. |
 | Imperial secondary (draw secret obj), Imperial points for Mecatol | AP l.1313 | Partial | Text only. |
 | Diplomacy primary (Xxcha Peace Accords planet claim) | StrategicActions/Diplomacy.tsx | Missing | Not in fork. Via More controls. |
@@ -308,7 +308,7 @@ From setup to the action phase:
 1. Setup: only the Milty draft creates games natively (6 players, fixed options). Player count, variants/alliances, events, Discordant Stars, map type/string, tracking toggles, command tokens, password and colour changes all live on upstream's /setup.
 2. Faction-specific and card-specific component actions (about 35 cases: PurgePlanet, Overrule, Strategize, Z'eu, Transpose, Plagiarize beyond tech, AddSystemToMap, etc.): /play only records the component, then needs "More controls".
 3. Tactical extras: frontier exploration (+ Mirage), action-phase objective scoring, Become a Martyr, Nekro Technological Singularity, Adjudicator Ba'al, Prove Endurance, Faunus: none native; only reachable through the faction page.
-4. Turn-flow controls: skip turn, "take another action", Puppets on a String, Ral Nel unpass, un-select action, mark-primary "Done", Politics end-turn guard: absent in /play.
+4. Turn-flow controls: mark-primary "Done" is not sent (by design; it only collapses upstream's panel).
 5. Twilight's Fall (splices, TF strategy cards, Lux/Civitas/Amicus) and trade-goods/commodity/command-token tracking have no /play counterpart; the Strategy-phase end abilities (Naalu, Hacan, Imperial Arbiter) and start-of-phase reminders are only a hint plus link.
 
 From the status phase to the whole game:
