@@ -67,7 +67,7 @@ function TyrannusPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
         options={order.map((id) => ({ value: id as string, disabled: notTyrant.has(id) && id !== tyrantChange?.newTyrant, note: id === speaker ? "speaker" : id === tyrantBefore ? "tyrant" : undefined, label: chip(id) }))} />
       {newTyrant && newTyrant !== tyrantChange?.newTyrant ? (
         <>
-          <p className={kit.confirm}>{short(active)} gives {short(newTyrant)} the benediction token, making them the tyrant?</p>
+          <p className={kit.confirm}>{newTyrant === active ? `${short(active)} keeps the benediction token, becoming the tyrant?` : `${short(active)} gives ${short(newTyrant)} the benediction token, making them the tyrant?`}</p>
           <Button kind="primary" block disabled={w.pending} onClick={() => w.write([Events.SetTyrantEvent(newTyrant)], `${short(newTyrant)} is the tyrant`, active)}>Make {short(newTyrant)} the tyrant</Button>
         </>
       ) : null}

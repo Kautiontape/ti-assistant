@@ -16,6 +16,7 @@ import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
 import { followEvents } from "../tfplay/tf";
+import { SpliceStatus } from "../tfplay/NowSplice";
 
 export default function NowAction(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open } = ctx;
@@ -128,6 +129,7 @@ export default function NowAction(ctx: Ctx) {
           </div>
         </section>
       ) : null}
+      {isCard ? <SpliceStatus card={selected} active={active} ctx={ctx} /> : null}
       {isCard ? <SecondariesCard card={isCard as StrategyCard} active={active} ctx={ctx} /> : null}
     </>
   );

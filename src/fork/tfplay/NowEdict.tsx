@@ -3,7 +3,7 @@
 // tyrant draws 3 edicts and resolves 1; Radiant Aur may resolve 1 more; then
 // the next round starts. Upstream's screen is main/phase/edict/EdictPhase.tsx.
 import { useState } from "react";
-import { useCurrentTurn, useEdicts } from "../../context/dataHooks";
+import { useCurrentPhase, useCurrentTurn, useEdicts } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useTyrant } from "../../context/stateDataHooks";
 import { getLogEntries } from "../../util/actionLog";
@@ -20,10 +20,12 @@ const AUR = "Radiant Aur" as FactionId;
 
 export default function NowEdict(ctx: Ctx) {
   const { factions, short, w, controls, setHelping, helping } = ctx;
-  const currentTurn = useCurrentTurn();
+  // CHOOSE_EDICT ends a "turn" upstream, so the choices are read from the phase
+  // and each edict's own records (a splice, cards gained) from the turn after it.
+  const currentPhase = useCurrentPhase();
   const edicts = useEdicts();
   const tyrant = useTyrant();
-  const chosen = getLogEntries<ChooseEdictData>(currentTurn, "CHOOSE_EDICT");
+  const chosen = getLogEntries<ChooseEdictData>(currentPhase, "CHOOSE_EDICT");
   const tyrantEdict = chosen.find((e) => e.data.event.tyrant)?.data.event.edictId;
   const aurEdict = chosen.find((e) => !e.data.event.tyrant)?.data.event.edictId;
   const aur = factions[AUR];
@@ -39,8 +41,12 @@ export default function NowEdict(ctx: Ctx) {
           {tyrantEdict ? (
             <>
               <h2 className={kit.title}><Cite thing={{ kind: "tfEdict", id: tyrantEdict }}>{edicts[tyrantEdict]?.name ?? tyrantEdict}</Cite></h2>
-              <EdictControls edict={tyrantEdict} resolver={tyrant} ctx={ctx} />
-              <Button kind="quiet" disabled={w.pending} onClick={() => w.write([Events.HideEdictEvent(tyrantEdict, true)], `${short(tyrant)} took back ${edicts[tyrantEdict]?.name ?? tyrantEdict}`, tyrant)}>Choose a different edict</Button>
+              {aurEdict ? <p className={kit.sub}>Resolved.</p> : (
+                <>
+                  <EdictControls edict={tyrantEdict} resolver={tyrant} ctx={ctx} />
+                  <Button kind="quiet" disabled={w.pending} onClick={() => w.write([Events.HideEdictEvent(tyrantEdict, true)], `${short(tyrant)} took back ${edicts[tyrantEdict]?.name ?? tyrantEdict}`, tyrant)}>Choose a different edict</Button>
+                </>
+              )}
             </>
           ) : (
             <>

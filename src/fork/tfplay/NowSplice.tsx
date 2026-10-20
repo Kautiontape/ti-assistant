@@ -10,7 +10,7 @@ import { Events } from "../../util/api/events";
 import { getAntimatterForFaction, getWavelengthForFaction } from "../../util/techs";
 import type { Ctx } from "../play/ui";
 import { Button, Chip, Cite, kit, RowAction, Rows, Section, Sheet, Switch, Tag } from "../ui/kit";
-import { cardEvent, spliceState, TYPE_NAMES, type SpliceType } from "./tf";
+import { cardEvent, SPLICE_CARDS, spliceState, TYPE_NAMES, type SpliceType } from "./tf";
 import { THING_KIND, useTfCards } from "./TfThings";
 
 export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type: SpliceType; initiator: FactionId; allPlayers?: boolean; close: () => void; ctx: Ctx }) {
@@ -133,5 +133,28 @@ export function SpliceButton({ type, initiator, allPlayers, ctx, primary }: { ty
       <Button kind={primary && s.current ? "primary" : "secondary"} block onClick={() => setOpen(true)} detail={`${s.pickers.length} taking part`}>{label}</Button>
       {open ? <SpliceSheet type={type} initiator={initiator} allPlayers={allPlayers} ctx={ctx} close={() => setOpen(false)} /> : null}
     </>
+  );
+}
+
+// For everyone else's phone while Noctis, Calamitas or Magus is played: where
+// the splice stands, and their own pick when it's their turn. The active
+// player's controls (TfCardControls) have the same button.
+export function SpliceStatus({ card, active, ctx }: { card: string; active: FactionId; ctx: Ctx }) {
+  const type = SPLICE_CARDS[card];
+  const currentTurn = useCurrentTurn();
+  const order = useOrderedFactionIds("SPEAKER", undefined, active);
+  const [open, setOpen] = useState(false);
+  if (!type || ctx.controls(active)) return null;
+  const s = spliceState(currentTurn, type, active, order, false);
+  const mine = !!s.current && ctx.controls(s.current);
+  return (
+    <section className={kit.card} aria-label="Splice">
+      <p className={kit.eyebrow}><span>{cap(TYPE_NAMES[type].one)} splice</span><span className={kit.num}>{s.pickers.length} taking part</span></p>
+      <p className={kit.sub}>{!s.revealed.length ? `${ctx.short(active)} turns ${s.total} cards face up.` : s.current ? `${ctx.short(s.current)} picks now.` : "Everyone has picked."}</p>
+      {s.current || !s.revealed.length ? (
+        <Button kind={mine ? "primary" : "secondary"} forOther={!mine} block onClick={() => setOpen(true)}>{mine ? `Pick your ${TYPE_NAMES[type].one}` : "Open the splice"}</Button>
+      ) : null}
+      {open ? <SpliceSheet type={type} initiator={active} ctx={ctx} close={() => setOpen(false)} /> : null}
+    </section>
   );
 }

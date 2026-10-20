@@ -294,12 +294,29 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 ## 8. Twilight's Fall in /play
 
-From reading the code; no live Twilight's Fall game was run. Upstream supports the mode broadly (it needs Thunder's Edge): 8 Kings, 8 replacement strategy cards, splicing of abilities, genomes and unit upgrades, paradigms, and an edict phase in place of the agenda phase.
-
-Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS / AGENDA are native; **every other phase (SETUP, EDICT) falls into `NotNativeYet`** (line 165-182), which tells the user "This phase isn't on the new screen yet" and gives links to upstream's `/game/<id>/<faction>` and `/game/<id>/main`. Only `NowStatus.tsx:139` and `NowExpedition.tsx:25` mention TF explicitly. Nothing in `src/fork/play` contains "EDICT" or tyrant handling.
+Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones against a scripted 6-King game (`tf-play-check.cjs`, from the `tfall-snap-tf-*` snapshots). The code is in `src/fork/tfplay/`, hooked into `/play` with one or two lines in `PlayApp.tsx`, `ui.tsx`, `NowCards.tsx`, `NowAction.tsx`, `NowStatus.tsx`, `PlayerSheet.tsx` and `things.tsx`. This section supersedes the Twilight's Fall rows in sections 1 to 7 (strategy cards, splice and genome cards, genomes and paradigms on the faction panel, the tyrant and edict phase, the footer's tyrant); their statuses there are left for the merge, since the totals above count them.
 
 | Feature | Upstream | /play status | Notes |
-|
+|---|---|---|---|
+| Creating a Twilight's Fall game | SETUP page | Native | The Twilight's Fall draft (`/draft/tf`, `src/fork/tfdraft/`) creates it with the Kings seated, the map built, and each King's home system and starting units set. |
+| Planet and unit factions (home system, starting units) | `StartingComponents.tsx` (TFFactionSelect) | Native | Set by the draft. Changing them afterwards is on the table screen. |
+| Inaugural splice | `SetupPhase.tsx`, `SetupSteps.tsx` | Native | Setup card with each player's 3 abilities, 2 unit upgrades and 2 genomes (`TfTable.tsx`). Parity's `NowSetup.tsx` still says this is on the table screen; that line goes at merge. |
+| Strategy picks with the 8 cards | SP | Native | Lux to Aeterna in their colours (checked: Magus purple, Aeterna magenta). |
+| Noctis, Calamitas, Magus: the splice | `StrategicActions/{Noctis,Calamitas,Magus}.tsx`, `src/components/Splice/SpliceModal.tsx` | Native | Splice sheet (`NowSplice.tsx`): who joins, Magus' extra card, Engineer and Reverse, the cards turned face up, picks in order, a King technology instead. Pick order copied from SpliceModal. |
+| Joining a splice from the secondary | `AllSecondaries` in the same files | Native | Follow on Noctis, Calamitas or Magus also joins the splice. Players pick on their own phones from a splice card on the Now tab. |
+| Thieve and Research Genome in a splice | `SpliceModal.tsx` | Partial | Counted when played on the table screen; no buttons in /play. |
+| Tyrannus | `StrategicActions/Tyrannus.tsx` | Native | New speaker and new tyrant, each with a confirm sentence. |
+| Aeterna | `StrategicActions/Aeterna.tsx` | Native | Score a public objective, or draw a paradigm. Upstream adds the point for holding Mecatol Rex when Aeterna is chosen. |
+| Lux, Civitas, Amicus | None | Not needed | Their effects happen on the board. |
+| Abilities, genomes, unit upgrades and paradigms owned | `TFTechSummary` (`FactionSummary.tsx`) | Native | On the player sheet, each name opens its text; "Change cards" records gains and discards. |
+| Status phase into the edict phase | `StatusPhase.tsx` | Native | With a tyrant, "Start the edict phase"; without one, the next round starts. |
+| Edict phase: the tyrant's edict | `phase/edict/EdictPhase.tsx` | Native | `NowEdict.tsx`. The next round stays locked until the tyrant has chosen. |
+| Radiant Aur's extra edict | `EdictPhase.tsx` | Native | |
+| Splice, Arbitrate, Convene, Artifice, Legacy of Ixth | `phase/edict/*.tsx` | Native | Splice opens the splice sheet for every player; the others record cards gained (and discarded, for Arbitrate); Artifice also records a relic. |
+| Arise, Bless, Censure, Execute, Foretell | None | Not needed | Text only, as upstream. |
+| The tyrant | `Footer.tsx` | Native | A card on the Table tab. |
+| Thunder's Edge expeditions | Disabled in Twilight's Fall | Native | Hidden, as upstream. |
+| Using a genome, and component actions from cards | `GenomeRow`, components | Partial | Component-action cards appear with other components; genome use isn't recorded in /play. Not run on a phone. |
 
 ## Biggest gaps
 
