@@ -6,8 +6,10 @@
 import { useState } from "react";
 import { canFactionPredict, getTargets } from "../../components/VoteBlock/VoteBlock";
 import { useFactionTechs } from "../../context/factionDataHooks";
-import { getActionCardTargets, getPlayedRelic, getPlayedRiders, getPromissoryTargets } from "../../util/actionLog";
+import { getActionCardTargets, getGainedRelic, getNewOwner, getObjectiveScorers, getPlayedRelic, getPlayedRiders, getPromissoryTargets, getRevealedObjectives, getScoredObjectives } from "../../util/actionLog";
+import { getCurrentTurnLogEntries } from "../../util/api/actionLog";
 import { getCurrentPhaseLogEntries } from "../../util/api/actionLog";
+import { computeVPs } from "../../util/factions";
 import { Events } from "../../util/api/events";
 import { riderString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
@@ -201,5 +203,130 @@ function RidersSheet({ d, close, ctx }: { d: AgendaData; close: () => void; ctx:
       ) : null}
       <Button block onClick={close}>Done</Button>
     </KitSheet>
+  );
+}
+
+// ---------- after the vote: what the outcome does ----------
+// From upstream's AgendaDetails.tsx, recorded before the resolve like there:
+// Drive the Debate for the elected player (or the elected planet's owner),
+// Incentive Program's objective, Colonial Redistribution's planet and Minister of
+// Antiquities' relic.
+export function ResolveFollowUps({ d, agendaId, outcome, ctx }: { d: AgendaData; agendaId: Optional<AgendaId>; outcome: string; ctx: Ctx }) {
+  const { w, short, factions } = ctx;
+  const [q, setQ] = useState("");
+  const agenda = agendaId ? d.agendas[agendaId] : undefined;
+  if (!agenda) return null;
+  const parts: React.ReactNode[] = [];
+  const hide = (s: string) => !!d.options.hide?.includes(s as never);
+
+  // Drive the Debate (a secret objective): scored by whoever the vote elects.
+  const driver = agenda.elect === "Player" ? (outcome as FactionId)
+    : ["Cultural Planet", "Hazardous Planet", "Planet", "Industrial Planet", "Non-Home Planet Other Than Mecatol Rex"].includes(agenda.elect) ? d.planets[outcome as PlanetId]?.owner as Optional<FactionId> : undefined;
+  const drive = d.objectives["Drive the Debate"];
+  if (driver && factions[driver] && drive && !hide("OBJECTIVES")) {
+    const scored = getScoredObjectives(d.currentTurn, driver).includes("Drive the Debate");
+    const can = scored || ((drive.type !== "SECRET" || !(drive.scorers ?? []).length) && !(drive.scorers ?? []).includes(driver));
+    if (can) parts.push(<Rows key="drive">
+      <RowAction verb={scored ? "Take back" : "Score"} disabled={w.pending} title={`Drive the Debate (${short(driver)})`} detail="Secret objective: elected by an agenda"
+        onClick={() => w.write([scored ? Events.UnscoreObjectiveEvent(driver, "Drive the Debate") : Events.ScoreObjectiveEvent(driver, "Drive the Debate")],
+          scored ? `${short(driver)} took back Drive the Debate` : `${short(driver)} scored Drive the Debate`, driver)} />
+    </Rows>);
+  }
+
+  if (agenda.id === "Incentive Program" && !hide("OBJECTIVES")) {
+    const type = outcome === "For" ? "STAGE ONE" : "STAGE TWO";
+    const stage = type === "STAGE ONE" ? "stage I" : "stage II";
+    const revealed = getRevealedObjectives(d.currentTurn)[0];
+    if (revealed) {
+      parts.push(<Rows key="incentive"><RowAction verb="Take back" disabled={w.pending} title={`Revealed: ${d.objectives[revealed]?.name ?? revealed}`} detail={`Incentive Program: a ${stage} objective`}
+        onClick={() => w.write([Events.HideObjectiveEvent(revealed)], `Took back ${d.objectives[revealed]?.name ?? revealed}`, d.speaker)} /></Rows>);
+    } else {
+      const list = Object.values(d.objectives).filter((o): o is Objective => !!o && o.type === type && !o.selected && (!q || o.name.toLowerCase().includes(q.toLowerCase())))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      parts.push(
+        <div key="incentive" style={{ display: "grid", gap: 8 }}>
+          <p className={kit.sub}>Incentive Program: reveal a {stage} objective.</p>
+          <input className={kit.search} type="search" placeholder="Find the objective you flipped" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the objective you flipped" />
+          <Rows label="Objectives to reveal">
+            {list.slice(0, 40).map((o) => (
+              <RowAction key={o.id} verb="Reveal" disabled={w.pending} title={o.name} detail={o.description}
+                onClick={() => w.write([Events.RevealObjectiveEvent(o.id)], `Objective revealed: ${o.name} (Incentive Program)`, d.speaker)} />
+            ))}
+          </Rows>
+        </div>,
+      );
+    }
+  }
+
+  if (agenda.id === "Colonial Redistribution" && !hide("PLANETS") && d.planets[outcome as PlanetId]) {
+    const planet = d.planets[outcome as PlanetId]!;
+    const all = Object.values(factions).filter((f): f is Faction => !!f);
+    const min = Math.min(...all.map((f) => computeVPs(factions, f.id, d.objectives)));
+    const fewest = all.filter((f) => computeVPs(factions, f.id, d.objectives) === min).map((f) => f.id);
+    const given = getNewOwner(d.currentTurn, outcome) as Optional<FactionId>;
+    parts.push(
+      <Rows key="colonial" label="Colonial Redistribution">
+        {fewest.map((id) => (
+          <RowAction key={id} verb={given === id ? "Take back" : "Give"} disabled={w.pending || (!!given && given !== id)}
+            title={<Chip faction={id} factions={factions} short={short} small />} detail={given === id ? `Gained ${planet.name}` : `Fewest points: gains ${planet.name}`} label={`${given === id ? "Take back" : "Give"} ${planet.name}: ${short(id)}`}
+            onClick={() => w.write([given === id ? Events.UnclaimPlanetEvent(id, planet.id) : Events.ClaimPlanetEvent(id, planet.id)],
+              given === id ? `${short(id)} gave back ${planet.name}` : `${short(id)} took control of ${planet.name} (Colonial Redistribution)`, id)} />
+        ))}
+      </Rows>,
+    );
+  }
+
+  if (agenda.id === "Minister of Antiquities" && !hide("RELICS") && factions[outcome as FactionId]) {
+    const who = outcome as FactionId;
+    const gained = getGainedRelic(d.currentTurn) as Optional<RelicId>;
+    const relics = Object.values(d.relics).filter((r): r is Relic => !!r && (!r.owner || r.id === gained)).sort((a, b) => a.name.localeCompare(b.name));
+    parts.push(
+      <Rows key="antiquities" label="Minister of Antiquities">
+        {relics.filter((r) => !gained || r.id === gained).map((r) => (
+          <RowAction key={r.id} verb={r.id === gained ? "Take back" : "Gain"} disabled={w.pending} title={r.name} detail={r.id === gained ? `${short(who)} gained it` : `${short(who)} gains a relic`}
+            onClick={() => w.write([r.id === gained ? Events.LoseRelicEvent(who, r.id) : Events.GainRelicEvent(who, r.id)], r.id === gained ? `${short(who)} gave back ${r.name}` : `${short(who)} gained ${r.name}`, who)} />
+        ))}
+      </Rows>,
+    );
+  }
+
+  if (!parts.length) return null;
+  return (
+    <div className={kit.section} aria-label="What the outcome does">
+      <p className={kit.label}>Record what it does</p>
+      {parts}
+    </div>
+  );
+}
+
+// Dictate Policy: scored by a player when 3 or more laws are in play (upstream's
+// AgendaPhase.tsx DictatePolicy: anyone who hasn't scored it yet, or only one
+// player when it's a secret).
+export function DictatePolicyRows({ ctx }: { ctx: Ctx }) {
+  const d = useAgendaData();
+  const { w, short, factions } = ctx;
+  const dictate = d.objectives["Dictate Policy"];
+  const laws = Object.values(d.agendas).filter((a) => a?.passed && a.type === "LAW").length;
+  const turn = getCurrentTurnLogEntries(d.actionLog);
+  const current = getObjectiveScorers(turn, "Dictate Policy") as FactionId[];
+  if (!dictate || laws < 3 || !(current.length || !(dictate.scorers ?? []).length || dictate.type === "STAGE ONE")) return null;
+  const scorers = dictate.scorers ?? [];
+  const can = Object.values(factions).filter((f): f is Faction => !!f).map((f) => f.id).filter((id) => current.includes(id) || !scorers.includes(id));
+  const secret = dictate.type === "SECRET";
+  return (
+    <section className={kit.card} aria-label="Dictate Policy">
+      <p className={kit.eyebrow}><span>Dictate Policy</span><span className={kit.num}>{laws} laws in play</span></p>
+      <Rows>
+        {can.map((id) => {
+          const has = scorers.includes(id);
+          return (
+            <RowAction key={id} verb={has ? "Take back" : "Score"} disabled={w.pending || (secret && !has && current.length > 0)}
+              title={<Chip faction={id} factions={factions} short={short} small />} label={`Dictate Policy: ${has ? "take back" : "score"} for ${short(id)}`}
+              onClick={() => w.write([has ? Events.UnscoreObjectiveEvent(id, "Dictate Policy") : Events.ScoreObjectiveEvent(id, "Dictate Policy")],
+                has ? `${short(id)} took back Dictate Policy` : `${short(id)} scored Dictate Policy`, id)} />
+          );
+        })}
+      </Rows>
+    </section>
   );
 }

@@ -11,7 +11,7 @@ import { Events } from "../../util/api/events";
 import { outcomeString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
 import { bonusOffered, VOTE_BONUSES, votingOrder } from "./logic";
-import { BeforeVotingRows, StartOfAgendaRows } from "./AgendaCards";
+import { BeforeVotingRows, DictatePolicyRows, ResolveFollowUps, StartOfAgendaRows } from "./AgendaCards";
 import { available, canVote, outcomeLabel, playedBonuses, useAgendaData, voteTotal, type AgendaData } from "./agendaData";
 import styles from "./play.module.scss";
 import type { Ctx, Sheet } from "./ui";
@@ -28,14 +28,20 @@ export default function NowAgenda(ctx: Ctx) {
   const help = speaker !== seat;
 
   if (agendaNum > 2) {
+    // Checks and Balances voted down: only 3 planets ready this round (AgendaPhase.tsx).
+    const checks = d.agendas["Checks and Balances"];
+    const three = !!checks?.resolved && !checks.passed && checks.activeRound === state.round;
     return (
-      <section className={kit.card} aria-label="Agendas done">
-        <p className={kit.eyebrow}><span>Agenda phase</span></p>
-        <h2 className={kit.title}>Both agendas are resolved</h2>
-        <p className={kit.sub}>Ready your planets on the board, then start the next round.</p>
-        <Button kind="primary" size="tall" block disabled={w.pending}
-          onClick={() => w.write([Events.AdvancePhaseEvent()], `Round ${(state.round ?? 0) + 1} started`)}>Start round {(state.round ?? 0) + 1}</Button>
-      </section>
+      <>
+        <section className={kit.card} aria-label="Agendas done">
+          <p className={kit.eyebrow}><span>Agenda phase</span></p>
+          <h2 className={kit.title}>Both agendas are resolved</h2>
+          <p className={kit.sub}>{three ? "Checks and Balances was voted down, so each player readies only 3 planets. Then start the next round." : "Ready your planets on the board, then start the next round."}</p>
+          <Button kind="primary" size="tall" block disabled={w.pending}
+            onClick={() => w.write([Events.AdvancePhaseEvent()], `Round ${(state.round ?? 0) + 1} started`)}>Start round {(state.round ?? 0) + 1}</Button>
+        </section>
+        <DictatePolicyRows ctx={ctx} />
+      </>
     );
   }
 
@@ -82,6 +88,7 @@ export default function NowAgenda(ctx: Ctx) {
           ) : null}
           <VotesCard d={d} ctx={ctx} order={order} />
           <ResolveCard d={d} ctx={ctx} order={order} />
+          <DictatePolicyRows ctx={ctx} />
         </>
       )}
     </>
@@ -333,6 +340,7 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
             options={hiddenList.filter((a) => !q || a.name.toLowerCase().includes(q.toLowerCase()) || a.id === hidden).map((a) => ({ value: a.id as string, label: a.name, note: a.resolved ? "already resolved" : a.type === "LAW" ? "Law" : "Directive" }))} />
         </div>
       ) : null}
+      {pick && ready ? <ResolveFollowUps d={d} ctx={ctx} agendaId={d.covert ? hidden : agenda.id} outcome={pick} /> : null}
       {pick && ready ? (
         <>
           <p className={kit.confirm}>{passes(d.covert ? hiddenName ?? agenda.name : agenda.name)}</p>

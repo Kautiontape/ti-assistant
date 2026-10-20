@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 104 | Works in `/play`. |
+| Native | 106 | Works in `/play`. |
 | Partial | 41 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 41 | No way to do it from `/play`. |
+| Missing | 39 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -216,8 +216,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Speaker tie-break | VotingColumn.tsx SpeakerTieBreak | Native | ResolveSheet sends SpeakerTieBreakEvent when tied |
 | Covert Legislation (reveal eligible outcomes, sub-agenda) | components/CovertLegislation.tsx | Native | NowAgenda.tsx: the speaker reads out the hidden agenda's outcomes before voting (voting waits for it), votes and labels use them, and resolving names the hidden agenda, which passes with the vote. Undo also repeals the hidden agenda (fork actions `UNRESOLVE_AGENDA` and `UNREVEAL_SUB_AGENDA`; upstream's own Undo leaves it passed). Check: parity-covert-check.cjs |
 | Resolve agenda with outcome | CastVotesSection.tsx completeAgenda | Native | ResolveSheet |
-| Post-resolve effects: Incentive Program, Colonial Redistribution, Minister of Antiquities (relic), planet elections (give planet), Drive the Debate | components/AgendaDetails.tsx | Missing | ResolveAgendaEvent only; no follow-up prompts to reveal objectives, give planets or gain relics (use Player/Map sheets by hand) |
-| Dictate Policy, Mutiny points etc. | AgendaPhase.tsx DictatePolicy | Missing | No Dictate Policy UI; Points sheet can add manual VPs |
+| Post-resolve effects: Incentive Program, Colonial Redistribution, Minister of Antiquities (relic), planet elections (give planet), Drive the Debate | components/AgendaDetails.tsx | Native | AgendaCards.tsx ResolveFollowUps, in the resolve sheet before Confirm (as upstream records them before the resolve): Drive the Debate for the elected player or planet owner, Incentive Program's objective, Colonial Redistribution's planet, Minister of Antiquities' relic, each with take back. Check: parity-agendafollow-check.cjs |
+| Dictate Policy, Mutiny points etc. | AgendaPhase.tsx DictatePolicy | Native | DictatePolicyRows on the agenda screen once 3 laws are in play (upstream's rule; one scorer when it's a secret). Mutiny and other agenda points are applied by upstream's resolve |
 | Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Native | AgendaCards.tsx before the first agenda. Ancient Burial Sites also lowers that player's available votes, which upstream's tally never does (it reads a state field nothing sets) |
 | Agenda timers per agenda | src/components/AgendaTimer | Missing | No timers in /play |
 | Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Partial | PlayerSheet shows "Laws that name them" only; no all-laws list, no repeal |
