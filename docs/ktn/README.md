@@ -107,10 +107,13 @@ breaks it, look at:
   (Planet, then Unit) for each King. The Planet choice gives the King that
   faction's home planets, and `getFactionSystemNumber` draws its home tile in
   the King's P# spot.
-- The 6-player standard map (index 19 is P1 at the top, then clockwise), the
-  hex spiral and the Milty helpers in `src/fork/draft/milty.ts`.
+- `getDefaultMapString` for each player count (standard at 3 and 6, warp at
+  4, 5, 7 and 8), through the Milty draft's `miltyLayout` in
+  `src/fork/draft/milty.ts`, which throws if upstream's template stops matching
+  Milty's map. The game gets the same map style.
 - Not from upstream: the reference-card priority numbers (`cards.ts`, from the
-  rulebook's list) and the Nucleus and Milty EQ layouts (`layouts.ts`).
+  rulebook's list) and the Nucleus and Milty EQ layouts (`layouts.ts`, which
+  drop places from Milty's slices and deal them before the draft).
 
 ## Things that need no seam
 
