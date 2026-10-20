@@ -4,12 +4,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 128 | Works in `/play`. |
+| Native | 129 | Works in `/play`. |
 | Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 15 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 29 | No way to do it from `/play`. |
-| Not needed | 10 | Left out on purpose; the reason is in Notes. |
+| Missing | 25 | No way to do it from `/play`. |
+| Not needed | 13 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
@@ -34,7 +34,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Randomize factions + Reset | SETUP l.2045-2078, 2441 | Missing | Draft has its own random faction pool. |
 | "Select all factions and colors" gate | SETUP l.2381 | Not needed | Draft guarantees it. |
 | Track toggles: Cards, Techs, Planets, Objectives, Relics | SETUP l.2148-2211 | Missing | Draft uses `BASE_OPTIONS`; no choice. |
-| Advanced tracking: Command Tokens (+ disclaimer) | SETUP l.2221-2272 | Missing | Same. |
+| Advanced tracking: Command Tokens (+ disclaimer) | SETUP l.2221-2272 | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all |
 | Password (optional) | SETUP l.2307 | Missing | Draft creates games without one. |
 | Start Game button | SETUP l.2343 | Native (draft) | Draft's "Create the game" calls create-game (server.ts l.154). |
 | Language selector, theme | setup header | Not needed | Device settings sheet in /play covers theme/text size. |
@@ -88,7 +88,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
 | Take control of planets (system-limited, ocean/Avernus rules) | src/components/ClaimPlanetsSection, TacticalAction l.114 | Native | "claim" sheet with claimablePlanets (logic.ts copies the rule). |
-| Remove a claimed planet (unclaim) | ClaimPlanetsSection l.170 | Missing | No unclaim; only Undo. |
+| Remove a claimed planet (unclaim) | ClaimPlanetsSection l.170 | Native | PlayerEdit.tsx "Planets": Lose (UNCLAIM_PLANET). Check: parity-player-check.cjs |
 | Planet attachments on newly taken planets | ClaimPlanetsSection l.141; PlanetRow l.502 | Native | AttachButton in NowAction and Attachments in MapTab SystemSheet. |
 | Mecatol Rex / Custodians token +1 VP | TacticalAction l.119 | Partial | Claiming Mecatol records the point (data layer); /play shows no "+1 VP for Custodians" text (counted in PlayerSheet points). |
 | Space / ground combat (fork-only feature) | src/fork/actions/combat.ts | Native | Combat.tsx (start, banner clock, end). Not in upstream. |
@@ -141,7 +141,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Imperial secondary (draw secret obj), Imperial points for Mecatol | AP l.1313 | Partial | Text only. |
 | Diplomacy primary (Xxcha Peace Accords planet claim) | StrategicActions/Diplomacy.tsx | Missing | Not in fork. Via More controls. |
 | Diplomacy primary/secondary (ready planets, refresh) | AP l.647 | Partial | Text only. |
-| Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Missing | No command-token UI in /play. |
+| Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all. The Leadership card itself is native (select, text, secondaries) |
 | Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Partial | Select + text + secondaries; no trade-goods or commodity counters anywhere in fork. |
 | Warfare primary objective scoring | StrategicActions/Warfare.tsx | Via More controls | Not in fork. |
 | Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Missing | TF has no /play support. |
@@ -159,7 +159,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Claim/unclaim planet manually | PlanetTab l.51, 80; PlanetPanel | Native | Take from the claim sheet or map; lose in PlayerEdit.tsx "Planets". Check: parity-player-check.cjs |
 | Objectives tab (reveal/score/unscore) | ObjectiveTab.tsx | Native | `score` sheet / NowPoints / NowStatus. |
 | Relics owned, gain/purge | FactionPanel; GainRelic, PurgeRelic | Native | Gain in RelicSheet; purge, unpurge and lose in PlayerEdit.tsx "Relics". Check: parity-player-check.cjs |
-| Commodities / trade goods / command tokens | Command-token tracking (option), Sidebars | Missing | No counters in /play. Only expedition's trade-goods slot and card trade goods. |
+| Commodities / trade goods / command tokens | Command-token tracking (option), Sidebars | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all |
 | Support for the Throne, alliances, fleet pool | PromissoryMenu l.99-280 | Native | Support for the Throne in Points/Status; alliances and Mahact's fleet pool tokens in PlayerEdit.tsx, confirmed. Check: parity-player-check.cjs |
 
 ## 4. Status phase
