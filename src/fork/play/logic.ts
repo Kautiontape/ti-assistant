@@ -115,6 +115,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "PLAY_PROMISSORY_NOTE": return `played ${ev.card}`;
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;
     case "MANUAL_VP_UPDATE": return `${ev.vps > 0 ? "gained" : "lost"} ${Math.abs(ev.vps)} point${Math.abs(ev.vps) === 1 ? "" : "s"} by hand`;
+    case "MANUAL_VOTE_UPDATE": return `${ev.votes > 0 ? "has" : "lost"} ${Math.abs(ev.votes)} ${ev.votes > 0 ? "more " : ""}vote${Math.abs(ev.votes) === 1 ? "" : "s"} available, set by hand`;
     case "END_GAME": return "The game ended";
     case "START_COMBAT": return `started a ${ev.kind} combat with ${name(ev.defender)}${ev.planet ? ` on ${ev.planet}` : ""}`;
     case "END_COMBAT":

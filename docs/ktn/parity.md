@@ -4,14 +4,15 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 173 | Works in `/play`. |
+| Native | 175 | Works in `/play`. |
 | Partial | 23 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 3 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Table screen | 2 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 7 | No way to do it from `/play`. |
-| Not needed | 13 | Left out on purpose; the reason is in Notes. |
+| Missing | 0 | No way to do it from `/play`. |
+| Not needed | 15 | Left out on purpose; the reason is in Notes. |
+| Twilight's Fall branch | 4 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
 
-`/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
+`/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 have the status "Twilight's Fall branch", and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
 ## 1. Game setup
 
@@ -124,7 +125,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Partial | Notes with component actions appear in the sheet; SftT and alliances show on PlayerSheet read-only; scoring Support for the Throne is in NowPoints only if status/any phase. |
 | Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Partial | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play |
 | Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Native | PlayerEdit.tsx: lock and unlock, as upstream's faction panel |
-| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Missing | TF not supported in /play (expedition hidden when TF on). |
+| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Twilight's Fall branch | TF not supported in /play (expedition hidden when TF on). |
 | Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Partial | Relic purge in PlayerEdit.tsx and repeal in Laws.tsx; Unravel itself is only recorded as the component |
 
 ### 3d. Strategic actions
@@ -139,12 +140,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Politics: End Turn blocked until speaker chosen | NextPlayerButtons l.1566 | Native | End turn waits for the new speaker, with a hint. Check: parity-turn-check.cjs |
 | Imperial primary (score public obj or secret / Mecatol +1) | StrategicActions/Imperial.tsx | Native | ImperialPrimary + `score` sheet. |
 | Imperial secondary (draw secret obj), Imperial points for Mecatol | AP l.1313 | Partial | Text only. |
-| Diplomacy primary (Xxcha Peace Accords planet claim) | StrategicActions/Diplomacy.tsx | Missing | Not in fork. Via More controls. |
+| Diplomacy primary (Xxcha Peace Accords planet claim) | StrategicActions/Diplomacy.tsx | Native | A Peace Accords row on Diplomacy's primary when Xxcha plays it, and on the secondaries card when another player does; it opens the claim sheet without Mecatol Rex (Diplomacy.tsx's filter). Hidden when the game doesn't track planets. Check: parity-rare-check.cjs |
 | Diplomacy primary/secondary (ready planets, refresh) | AP l.647 | Partial | Text only. |
 | Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all. The Leadership card itself is native (select, text, secondaries) |
 | Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Partial | Select + text + secondaries; no trade-goods or commodity counters anywhere in fork. |
 | Warfare primary objective scoring | StrategicActions/Warfare.tsx | Native | With Thunder's Edge, Warfare's primary gets the tactical rows: take a planet, frontier, scored a secret |
-| Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Missing | TF has no /play support. |
+| Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Twilight's Fall branch | TF has no /play support. |
 | Cards on table (who picked, played/ready) | AP StrategyCardColumn | Native | CardBoard. |
 
 ### 3e. Faction panels and sidebars
@@ -189,7 +190,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Step checklist with numbered steps | StatusPhase.tsx | Partial | /play has a three-card layout without upstream's numbered steps |
 | Lock the phase until an objective is revealed | StatusPhase.tsx (LockedButtons, statusPhaseComplete) | Native | The next-phase buttons wait for the reveal; "Go on without one" opens the lock, as upstream's lock does on a tap |
 | End phase: go to agenda or skip to next round when Mecatol is unclaimed | StatusPhase.tsx nextPhaseButtons | Native | AdvancePhaseEvent(skip) in NowStatus |
-| Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Table screen | Finish-phase link-out; Edict phase itself (Arbitrate, Convene, Splice, Legacy of Ixth) is NotNativeYet |
+| Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Twilight's Fall branch | Finish-phase link-out; Edict phase itself (Arbitrate, Convene, Splice, Legacy of Ixth) is NotNativeYet |
 | Hide objectives option (OBJECTIVES section hidden) | Conditional appSection | Native | NowStatus respects options.hide |
 
 ## 5. Agenda phase
@@ -206,7 +207,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Cast votes: outcome + amount, capped at available | CastVotesSection / VoteBlock | Native | VoteForm with Stepper; uses upstream computeRemainingVotes |
 | Votes available per faction (planet influence, spent on agenda 1, Council Preserve, Xxcha, etc.) | VoteBlock.tsx | Native | available() reuses computeRemainingVotes; none after its owner uses Maw of Worlds, as upstream |
 | Extra votes (separate "Extra" field, e.g. Predictive Intelligence, Distinguished Councilor, spent trade goods) | VoteBlock.tsx, VotingColumn.tsx | Native | VoteForm's "Extra votes" switch: Distinguished Councilor, Predictive Intelligence, Council Preserve and Blood Pact are played with the vote (offered as upstream offers them; logic.ts VOTE_BONUSES), other extra votes go in extraVotes, and changing a vote takes back cards no longer used. The Cast button and the Votes card show the total, Zeal included. Check: parity-votes-check.cjs |
-| Manual vote entry (manualVotes mode) | VoteBlock.tsx | Missing | Cap at "available" in /play can block odd cases |
+| Manual vote entry (manualVotes mode) | VoteBlock.tsx | Native | In a game that doesn't track planets, the vote form asks how many votes the player has and saves it with upstream's MANUAL_VOTE_UPDATE (VoteBlock's ManualVoteCount); the vote is capped at that. Executive Order's own vote column is part of the Executive Order row. Check: parity-hidden-check.cjs |
 | Abstain | VoteBlock.tsx | Native | Abstain button |
 | Representative Government (one vote each; no Argent bonus) | VoteBlock / AgendaPhase | Native | repGov flag |
 | Who can vote (Nekro without secret, Elder Qanoj etc.) | VoteBlock canFactionVote | Native | canVote() uses canFactionVote |
@@ -247,7 +248,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 |---|---|---|---|
 | Game log with per-entry list | src/components/GameLog/GameLog.tsx | Native | LogTab (filter by player, newest first, 300 entries) |
 | Undo (latest action or grouped actions) | src/components/UndoButton | Native | Toast Undo and LogTab Undo (undoNewest) |
-| Revert/edit arbitrary older log entries | GameLog.tsx | Missing | Only the newest group can be undone |
+| Revert/edit arbitrary older log entries | GameLog.tsx | Not needed | Upstream can't either: its game log (GameLog.tsx) has no edit or undo controls, and its Undo takes back only the newest entry, as /play's does |
 | Objectives page (all objectives, reveal/hide/score by anyone) | objectives/objective-page.tsx, ObjectiveModal | Partial | Score/reveal for the current step only; no full objectives browser, no scorers list per objective |
 | Per-faction page: Phase section (what this faction does now) | (faction)/[factionId]/elements/PhaseSection.tsx | Native | Now tab is seat-based |
 | Faction page: Techs tab (add/remove, tech tree) | elements/TechTab.tsx, src/components/TechTree | Native | TechTreeSheet.tsx: each colour by prerequisites, owned / can research / missing; add and remove via PlayerEdit. Check: parity-player-check.cjs |
@@ -258,7 +259,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Summary column (speaker order, scores, faction summaries) | main/summary-column/SummaryColumn.tsx | Native | Race card, Table tab |
 | Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Partial | Speaker tag in Table tab; no separate initiative/voting order views |
 | Change speaker | Footer.tsx | Native | NowCards (Politics) SetSpeaker; no free-form change otherwise |
-| Tyrant (Twilight's Fall) | Footer.tsx | Missing | |
+| Tyrant (Twilight's Fall) | Footer.tsx | Twilight's Fall branch | |
 | Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Partial | Planet claim, research, relic, expedition in sheets; no free-edit modal for objectives or planets |
 | Thunder's Edge expedition | OtherPanel.tsx | Native | NowExpedition.tsx |
 | Relics (gain/purge, Crown) | OtherPanel.tsx | Native | Gain, purge and lose by hand (PlayerEdit.tsx); the Crown in the status phase |
@@ -287,7 +288,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Map builder | app/[locale]/map-builder | Table screen | Start page external link |
 | New game setup | app/[locale]/setup | Native | /start/new (NewGame.tsx); see Game setup |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
-| PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Missing | Applies if HideOnPlay doesn't skip it; no offline or install prompt in /play (not verified at runtime) |
+| PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Not needed | Upstream doesn't run one: `ServiceWorkerWrapper` is never mounted and there's no web manifest, so upstream has no offline mode or install prompt either |
 | Setup phase (starting techs, map string) | main/phase/setup | Native | See the game-phase setup row in Game setup |
 | Fallback link to upstream faction page | (faction)/[factionId] | Table screen | NotNativeYet links to /game/<id>/<faction> |
 | Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Native | Ctx.tracks() in PlayApp. With a section off, /play leaves out what upstream's Conditional hides: research (Technology card, secondaries, components, player edit), planet claims (tactical, map, Faunus, follow-ups), objective scoring (Imperial, tactical secrets, Prove Endurance, points sheet), relic rows, the player sheet's sections and the results' Technology view. Status, setup and agenda screens already checked it. Check: parity-hidden-check.cjs |
@@ -307,8 +308,6 @@ What's left, by the rows above that aren't Native or Not needed:
 
 1. Map tile placement: Star Chart, Azdel's Key and Age of Exploration add a system to the map; /play has no way to place a tile, so they go through "More controls".
 2. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel, Nekro's Technological Singularity and Adjudicator Ba'al.
-3. Strategy cards shown as text only: Diplomacy (Xxcha's Peace Accords claim, readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
+3. Strategy cards shown as text only: Diplomacy (readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
 4. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
-5. History: only the newest group can be undone; upstream can't edit older entries either, but its table screen shows more of them at once.
-6. PWA: no offline mode or install prompt (not checked at runtime).
-7. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
+5. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.

@@ -2,7 +2,7 @@
 // Now, agenda phase: reveal, start voting, vote (capped at what's available),
 // resolve, twice, then the next round. Vote counts, outcomes and the tally come
 // from upstream's VoteBlock and AgendaPhase; laws' effects stay on the board.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { computeVotes } from "../../../app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase";
 import { getTargets } from "../../components/VoteBlock/VoteBlock";
 import { getActionCardTargets } from "../../util/actionLog";
@@ -153,6 +153,11 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
   const before = d.votes.get(faction);
   const [target, setTarget] = useState<Optional<string>>(before?.votes && before.target !== "Abstain" ? before.target : undefined);
   const [n, setN] = useState(before?.votes ? Math.min(before.votes, max) : max);
+  // Without planets tracked, players set the votes they have (upstream's ManualVoteCount).
+  const manual = !ctx.tracks("PLANETS") && !d.repGov;
+  const [have, setHave] = useState(max);
+  // Once a new count is saved, the vote starts from all of it.
+  useEffect(() => { if (manual) { setHave(max); setN(max); } }, [manual, max]);
   const [q, setQ] = useState("");
   // Extra votes: bonus cards (played with the vote) and any others by hand.
   const played = playedBonuses(d, faction);
@@ -184,6 +189,17 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
   return (
     <>
       <p className={kit.eyebrow}><span>{faction === seat ? "Your vote" : `${short(faction)}'s vote`}</span><span className={kit.num}>{max} available</span></p>
+      {manual ? (
+        <div className={kit.section} role="group" aria-label="Votes available">
+          <p className={kit.label}>Votes {faction === seat ? "you have" : `${short(faction)} has`}</p>
+          <Stepper value={have} min={0} max={99} less="One fewer vote available" more="One more vote available" onChange={setHave} />
+          {have !== max ? (
+            <Button block disabled={w.pending} onClick={async () => {
+              await w.write([Events.ManualVoteUpdateEvent(faction, have - max)], `${short(faction)} has ${have} vote${s(have)} available`, faction);
+            }}>Save: {have} available</Button>
+          ) : null}
+        </div>
+      ) : null}
       {many ? <input className={kit.search} type="search" placeholder="Find an outcome" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an outcome" /> : null}
       <Choices label="For which outcome?" value={target} onChange={setTarget}
         options={shown.map((t) => ({ value: t.id, label: ctx.isFaction(t.id) ? <Chip faction={t.id as FactionId} factions={factions} short={short} small player={false} /> : label(t.id) }))} />
@@ -207,7 +223,7 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
       </Button>
       <Button block disabled={w.pending} onClick={() => cast(0)}>Abstain</Button>
       <p className={kit.sub}>
-        {d.repGov ? "Representative Government: one vote each." : "The influence of your planets, less votes spent on the first agenda."}
+        {d.repGov ? "Representative Government: one vote each." : manual ? "This game doesn't track planets, so each player sets the votes they have." : "The influence of your planets, less votes spent on the first agenda."}
       </p>
     </>
   );

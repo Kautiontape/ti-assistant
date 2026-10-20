@@ -17,7 +17,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import { scoredThisPhase } from "./logic";
 import styles from "./play.module.scss";
 import type { Ctx } from "./ui";
-import { Button, Chip, Choices, Cite, kit, RowAction, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
+import { Button, Chip, Choices, Cite, kit, RowAction, RowLink, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
 
 const TECH_GROUPS: [TechType | "OTHER", string][] = [
   ["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Faction"],
@@ -49,7 +49,15 @@ export function CardControls({ card, active, ctx }: { card: StrategyCardId; acti
   if (card === "Technology") return <TechnologyPrimary active={active} ctx={ctx} />;
   if (card === "Politics") return <PoliticsPrimary active={active} ctx={ctx} />;
   if (card === "Imperial") return <ImperialPrimary active={active} ctx={ctx} />;
+  if (card === "Diplomacy") return <PeaceAccords xxcha={active} ctx={ctx} />;
   return null;
+}
+
+// Xxcha's Peace Accords: after resolving Diplomacy's primary or secondary, take
+// control of 1 planet next to one they control (upstream's Diplomacy.tsx).
+function PeaceAccords({ xxcha, ctx }: { xxcha: FactionId; ctx: Ctx }) {
+  if (xxcha !== "Xxcha Kingdom" || !ctx.factions[xxcha] || !ctx.tracks("PLANETS")) return null;
+  return <Rows><RowLink onClick={() => ctx.open({ kind: "claim", faction: xxcha, peace: true })} title={`${ctx.short(xxcha)}: Peace Accords`} detail="Take control of a planet next to one they control" /></Rows>;
 }
 
 function TechnologyPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
@@ -168,6 +176,7 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
           );
         })}
       </ul>
+      {card.id === "Diplomacy" && active !== "Xxcha Kingdom" ? <PeaceAccords xxcha="Xxcha Kingdom" ctx={ctx} /> : null}
       <p className={kit.sub}>Each player usually marks their own. Change opens one again.</p>
     </section>
   );

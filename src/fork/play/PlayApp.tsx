@@ -445,10 +445,12 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {
       const list = claimablePlanets(planets, sheet.faction, currentTurn)
+        .filter((p) => !sheet.peace || p.id !== "Mecatol Rex")
         .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(!!a.owner) - Number(!!b.owner) || a.name.localeCompare(b.name));
       return (
-        <KitSheet title={`${short(sheet.faction)} takes control of…`} close={close}>
+        <KitSheet title={sheet.peace ? `${short(sheet.faction)}: Peace Accords` : `${short(sheet.faction)} takes control of…`} close={close}>
+          {sheet.peace ? <p className={kit.sub}>A planet next to one Xxcha controls, other than Mecatol Rex.</p> : null}
           <input className={kit.search} id="play-planet-search" type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
           <Rows>
             {list.slice(0, 80).map((p) => (
