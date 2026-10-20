@@ -26,6 +26,7 @@ import NowEnd, { GameEndBanner } from "./NowEnd";
 import { PlayerSheet } from "./PlayerSheet";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
+import NowSetup, { SetupChoiceSheet } from "./NowSetup";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
 import { LockedBanner, UnlockSheet } from "./NowLocked";
@@ -122,7 +123,7 @@ export default function PlayApp() {
             <LockedBanner open={setSheet} />
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
-            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
                 <p className={kit.eyebrow}><span>Anything else?</span></p>
@@ -168,17 +169,8 @@ function NotNativeYet({ phase, gameId, seat }: { phase: string; gameId: string; 
   return (
     <section className={kit.card}>
       <p className={kit.eyebrow}><span>{PHASES[phase] ?? phase} phase</span></p>
-      {phase === "SETUP" ? (
-        <>
-          <h2 className={kit.title}>Setup is on the table screen</h2>
-          <p className={kit.sub}>Choose starting technologies and the like there, then start the game. This screen takes over from the first strategy phase.</p>
-        </>
-      ) : (
-        <>
-          <h2 className={kit.title}>This phase isn't on the new screen yet</h2>
-          <p className={kit.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
-        </>
-      )}
+      <h2 className={kit.title}>This phase isn't on the new screen yet</h2>
+      <p className={kit.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
       <Rows>
         {seat ? <RowLink href={`/game/${gameId}/${encodeURIComponent(seat)}`} external title="Your faction's full screen" detail="Upstream's page for your faction" /> : null}
         <RowLink href={`/game/${gameId}/main`} external title="The table screen" detail="Upstream's page for the whole table" />
@@ -395,6 +387,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "vote":
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "setupChoice":
+      return <SetupChoiceSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "unlock":
       return <UnlockSheet close={close} ctx={ctx} />;
     case "seat":

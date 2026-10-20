@@ -1,6 +1,7 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
 import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPromissoryTargets } from "../../util/actionLog";
+import { canResearchTech, getFactionPreReqs } from "../../util/techs";
 import { ActionLog, Optional } from "../../util/types/types";
 
 export type NameOf = (id: Optional<string>) => string;
@@ -76,6 +77,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "UNSCORE_OBJECTIVE":
       return ev.objective === "Support for the Throne" && ev.key ? `lost ${name(ev.key)}'s Support for the Throne` : `took back ${ev.objective}`;
     case "REVEAL_OBJECTIVE": return `Objective revealed: ${ev.objective}`;
+    case "CHOOSE_STARTING_TECH": return `chose ${ev.tech} as a starting technology`;
+    case "CHOOSE_SUB_FACTION": return `took the ${ev.subFaction} home system`;
     case "ASSIGN_STRATEGY_CARD":
       return ev.pickedBy && ev.pickedBy !== ev.assignedTo ? `gave ${ev.id} to ${name(ev.assignedTo)}` : `picked ${ev.id}`;
     case "ADVANCE_PHASE": return ev.state?.phase ? `The ${String(ev.state.phase).toLowerCase()} phase ended` : "The game moved to the next phase";
@@ -280,6 +283,31 @@ export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speak
   const speakerOrder = factions[speaker]?.order ?? 1;
   const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
   return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+}
+
+// ---------- setup: starting technology choices ----------
+// Copied from StartingComponents.tsx (inline there): which technologies a faction
+// may still choose at setup, and how many. Deepwrought Scholarate chooses from
+// everything it could research; Edyn Mandate takes one of each colour.
+const TECH_ORDER: TechType[] = ["GREEN", "BLUE", "YELLOW", "RED", "UPGRADE"];
+const byTechOrder = (a: Tech, b: Tech) => TECH_ORDER.indexOf(a.type) - TECH_ORDER.indexOf(b.type) || a.prereqs.length - b.prereqs.length || a.name.localeCompare(b.name);
+
+export function startingTechChoices(faction: Faction, techs: Partial<Record<TechId, Tech>>, options: Options) {
+  const startswith = faction.startswith ?? { units: {} };
+  const chosen = (startswith.techs ?? []).map((id) => techs[id]).filter((t): t is Tech => !!t).sort(byTechOrder);
+  if (!startswith.choice) return { chosen, choices: [] as Tech[], left: 0 };
+  let ids = startswith.choice.options ?? [];
+  if (faction.id === "Deepwrought Scholarate") {
+    const prereqs = getFactionPreReqs(faction, techs, options, [], {});
+    ids = Object.values(techs).filter((t): t is Tech => !!t && canResearchTech(t, options, prereqs, faction, false, techs) && (!t.faction || t.faction === faction.id)).map((t) => t.id);
+  }
+  const takenTypes = chosen.map((t) => t.type);
+  const choices = ids.filter((id) => !(startswith.techs ?? []).includes(id)).map((id) => techs[id]).filter((t): t is Tech => !!t)
+    .filter((t) => faction.id !== "Edyn Mandate" || !takenTypes.includes(t.type))
+    .filter((t) => !t.faction || t.faction === faction.id)
+    .sort(byTechOrder);
+  const required = faction.id === "Deepwrought Scholarate" ? 2 : startswith.choice.select;
+  return { chosen, choices, left: Math.min(Math.max(0, required - chosen.length), choices.length) };
 }
 
 // ---------- votes: bonus votes ----------

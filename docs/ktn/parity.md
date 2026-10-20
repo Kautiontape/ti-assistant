@@ -4,9 +4,9 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 85 | Works in `/play`. |
+| Native | 87 | Works in `/play`. |
 | Partial | 43 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 22 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Table screen | 20 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 45 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
@@ -38,7 +38,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Password (optional) | SETUP l.2307 | Missing | Draft creates games without one. |
 | Start Game button | SETUP l.2343 | Native (draft) | Draft's "Create the game" calls create-game (server.ts l.154). |
 | Language selector, theme | setup header | Not needed | Device settings sheet in /play covers theme/text size. |
-| Game-phase SETUP (starting techs, speaker actions, reveal 2 stage I) | main/phase/setup | Table screen | PlayApp NotNativeYet("SETUP"). Outside area 1 but gates /play. |
+| Game-phase SETUP (starting techs, speaker actions, reveal 2 stage I) | main/phase/setup | Native | NowSetup.tsx: starting technology choices (Winnu, Argent, Keleres, Deepwrought and the rest), Keleres' home system, the speaker's two stage I objectives (with take back), the map string, then Start the game once upstream's setupPhaseComplete allows. Twilight's Fall choices link to the table screen. Check: parity-setup-check.cjs |
 
 ## 2. Strategy phase
 
@@ -288,7 +288,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | New game setup | app/[locale]/setup | Table screen | Start page external link; Milty draft is native (src/fork/draft) |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Missing | Applies if HideOnPlay doesn't skip it; no offline or install prompt in /play (not verified at runtime) |
-| Setup phase (starting techs, map string) | main/phase/setup | Table screen | NotNativeYet in PlayApp.tsx |
+| Setup phase (starting techs, map string) | main/phase/setup | Native | See section 1's game-phase SETUP row |
 | Fallback link to upstream faction page | (faction)/[factionId] | Table screen | NotNativeYet links to /game/<id>/<faction> |
 | Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Partial | Honoured in Status; other tabs do not consistently check |
 

@@ -48,6 +48,10 @@ constructors and data hooks:
   `getClaimedPlanets`, `getActiveAgenda` and `getAllVotes`
   (`src/util/actionLog.ts`); `getCurrentPhasePreviousLogEntries`
   (`src/util/api/actionLog.ts`); `sortStrategyCards`; `getStrategyCardsForFaction`.
+- `setupPhaseComplete` from the page file
+  `app/[locale]/game/[gameId]/main/phase/setup/SetupPhase.tsx`, for when the
+  game can start; the starting-technology choices are copied from
+  `StartingComponents.tsx` (`startingTechChoices` in `logic.ts`).
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
 - `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork

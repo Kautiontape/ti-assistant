@@ -17,6 +17,7 @@ export const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strat
 export type Sheet =
   | { kind: "seat" }
   | { kind: "unlock" }
+  | { kind: "setupChoice"; faction: FactionId }
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }
