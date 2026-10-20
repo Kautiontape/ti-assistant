@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 81 | Works in `/play`. |
+| Native | 83 | Works in `/play`. |
 | Partial | 44 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 22 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 48 | No way to do it from `/play`. |
+| Missing | 46 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -263,7 +263,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Thunder's Edge expedition | OtherPanel.tsx | Native | NowExpedition.tsx |
 | Relics (gain/purge, Crown) | OtherPanel.tsx | Partial | RelicSheet gains; no purge/unowned lists |
 | Promissory notes and alliances (Fleet pool, Alliances) | OtherPanel.tsx | Missing | No alliance/commander-ownership UI beyond NowComponent promissory |
-| ControlButtons: password entry when view-only | game/[gameId]/ControlButtons.tsx, Header.tsx | Missing | /play has no password input; writes in a locked game would fail with no prompt |
+| ControlButtons: password entry when view-only | game/[gameId]/ControlButtons.tsx, Header.tsx | Native | NowLocked.tsx: a banner on Now while the game is view-only, and any write or Undo opens the password sheet (upstream's useEnterPassword). Check: parity-lock-check.cjs |
 | Pause / end game / continue | Header.tsx | Partial | End/Continue native; there is no pause |
 | Game timer | src/components/GameTimer | Missing | |
 | Turn timer / faction timers | src/components/TurnTimer, TimerDisplay | Missing | |
@@ -271,7 +271,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Map interactions: system details, claim planet, attachments | src/components/Map, PlanetModal | Native | SystemSheet |
 | Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration not handled |
 | Combat tracking | n/a (fork-only) | Native | Combat.tsx |
-| Game password / lock | game/[gameId]/layout.tsx, Header | Missing | See ControlButtons row |
+| Game password / lock | game/[gameId]/layout.tsx, Header | Native | /play's layout reads the password and session like upstream's; unlocking lasts for the session (two weeks), across reloads. Setting a password at setup is section 1 |
 | Share link and QR code | src/components/QRCode | Missing | Start page has a join by code only; no share/QR |
 | Game code display | game/[gameId]/game-code.tsx | Missing | Code only in the URL |
 | Settings modal (victory points, factions, options) | src/components/SettingsModal | Missing | No in-game settings; VP target is read-only |

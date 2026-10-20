@@ -21,7 +21,9 @@ function withActor(e: GameUpdateData, actor: Actor) {
 
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
-export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false) {
+// `locked` runs instead of a write while the game is view-only (it has a password
+// this device hasn't entered); /play opens its password sheet.
+export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false, locked?: () => void) {
   const dataUpdate = useDataUpdate();
   const undo = useUndo();
   const gameId = useGameId();
@@ -33,10 +35,11 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
   const lastId = useRef<Optional<string>>(undefined);
 
   const show = (t: Omit<Toast, "id">) => setToast({ ...t, id: Date.now() });
+  const refuse = () => (locked ? locked() : show({ text: "This game has a password. Enter it to make changes.", tone: "error" }));
 
   async function write(events: GameUpdateData[], label: string, as?: FactionId) {
     if (viewOnly) {
-      show({ text: "This game has a password. Enter it on the game's page to make changes.", tone: "error" });
+      refuse();
       return false;
     }
     if (busy.current) return false;
@@ -79,6 +82,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
   // action; otherwise say what the newest action is and leave it.
   async function undoNewest(shown?: string) {
     const target = shown ?? lastId.current;
+    if (viewOnly) { refuse(); return; }
     if (!target || busy.current) return;
     busy.current = true;
     setPending(true);
