@@ -291,7 +291,9 @@
     bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px)); width: var(--dock-w); overflow: auto; overscroll-behavior: contain;
     background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow);
     padding: 10px var(--gutter) 18px;
-    display: grid; gap: 12px; align-content: start;
+    // The dock has a fixed height, so without max-content rows a child with
+    // overflow: hidden (Rows) could shrink to nothing and its rows fall out of reach.
+    display: grid; gap: 12px; align-content: start; grid-auto-rows: max-content;
     &:focus { outline: none; }
     > header { display: flex; align-items: center; gap: 10px; position: sticky; top: -10px; z-index: 1; margin: -10px calc(-1 * var(--gutter)) 0; padding: 10px var(--gutter) 6px; background: var(--panel); }
     h2 { flex: 1; margin: 0; font-size: calc(var(--fs) * 1.08); }
