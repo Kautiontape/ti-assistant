@@ -23,7 +23,7 @@ export function ResultsSheet({ close, ctx }: { close: () => void; ctx: Ctx }) {
   return (
     <KitSheet title="How the game went" close={close}>
       <Choices label="Show" hideLabel value={view} onChange={setView}
-        options={[{ value: "points", label: "Points" }, { value: "techs", label: "Technology" }, { value: "map", label: "Map" }, { value: "time", label: "Time" }]} />
+        options={[{ value: "points", label: "Points" }, ...(ctx.tracks("TECHS") ? [{ value: "techs" as View, label: "Technology" }] : []), { value: "map", label: "Map" }, { value: "time", label: "Time" }]} />
       {view === "time" ? <TimeView replay={replay} ctx={ctx} />
         : failed ? <p className={kit.sub}>The replay couldn't run in this browser, so the rounds can't be shown.</p>
         : !replay ? <p className={kit.sub} role="status" aria-live="polite">Replaying the game…</p>

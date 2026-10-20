@@ -94,9 +94,9 @@ export function PassSheet({ faction: id, close, ctx }: { faction: FactionId; clo
   // Prove Endurance: the last player to pass (upstream's canProveEndurance).
   const pe = objectives["Prove Endurance"];
   const last = all.length - 1 === passed.filter((p) => p !== id).length;
-  const canProve = !!pe && last && !(pe.scorers ?? []).includes(id) && !(pe.type === "SECRET" && (pe.scorers ?? []).length > 0);
+  const canProve = ctx.tracks("OBJECTIVES") && !!pe && last && !(pe.scorers ?? []).includes(id) && !(pe.type === "SECRET" && (pe.scorers ?? []).length > 0);
   // Faunus: when passing, take a non-home, non-legendary planet with no attachments (Faunus.tsx).
-  const hasFaunus = planets["Faunus"]?.owner === id;
+  const hasFaunus = ctx.tracks("PLANETS") && planets["Faunus"]?.owner === id;
   const faunusTargets = hasFaunus ? Object.values(planets).filter((p): p is Planet => !!p && !p.home && !p.attributes.includes("legendary") && !(p.attachments ?? []).length && p.owner !== id)
     .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)) : [];
   const pass = async () => {

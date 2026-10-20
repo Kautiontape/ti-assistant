@@ -15,6 +15,8 @@ export function FrontierRow({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   const currentTurn = useCurrentTurn();
   const relic = getGainedRelic(currentTurn);
   const mirage = getClaimedPlanets(currentTurn, active).some((c) => c.planet === "Mirage");
+  // Nothing to record when the game tracks neither relics nor planets.
+  if (!ctx.tracks("RELICS") && !ctx.tracks("PLANETS")) return null;
   return <RowLink onClick={() => ctx.open({ kind: "frontier", faction: active })} title="Explored a frontier?"
     detail={mirage ? "Found Mirage" : relic ? `Gained ${relic}` : "A relic, or Mirage"} />;
 }
@@ -32,7 +34,7 @@ export function FrontierSheet({ faction: id, close, ctx }: { faction: FactionId;
     <KitSheet title={`${short(id)} explores a frontier`} close={close}>
       <p className={kit.sub}>Draw a frontier exploration card. Most are resolved on the board; these two are recorded.</p>
       <Rows>
-        <RowLink onClick={() => open({ kind: "relic", faction: id })} title={relic ? `Gained ${relic}` : "Gain a relic"} detail="From relic fragments, or the card says so" />
+        {ctx.tracks("RELICS") ? <RowLink onClick={() => open({ kind: "relic", faction: id })} title={relic ? `Gained ${relic}` : "Gain a relic"} detail="From relic fragments, or the card says so" /> : null}
         {!planetsHidden && (mirageTaken || !mirageFound) ? (
           <RowAction verb={mirageTaken ? "Take back" : "Take"} disabled={w.pending} title="Mirage" detail={mirageTaken ? `${short(id)} found it this turn` : "Found Mirage: place it, take control of it"}
             onClick={() => w.write([mirageTaken ? Events.UnclaimPlanetEvent(id, "Mirage") : Events.ClaimPlanetEvent(id, "Mirage")], mirageTaken ? `${short(id)} gave back Mirage` : `${short(id)} found Mirage`, id)} />

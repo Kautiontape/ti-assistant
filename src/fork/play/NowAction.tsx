@@ -96,11 +96,11 @@ export default function NowAction(ctx: Ctx) {
               {isCard ? <CardControls card={selected as StrategyCardId} active={active} ctx={ctx} /> : null}
               {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
               <Rows label="Record">
-                {tactical ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
+                {tactical && ctx.tracks("PLANETS") ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
                 {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
                 {tactical ? <FrontierRow active={active} ctx={ctx} /> : null}
-                {tactical ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" detail="Action-phase secrets, up to 4 a turn" /> : null}
+                {tactical && ctx.tracks("OBJECTIVES") ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" detail="Action-phase secrets, up to 4 a turn" /> : null}
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
               </Rows>
@@ -133,9 +133,9 @@ export default function NowAction(ctx: Ctx) {
           <h2 className={kit.title}>Follow the secondary?</h2>
           <p className={kit.sub}>{(isCard as StrategyCard).secondary}</p>
           <div className={kit.buttons}>
-            <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology"
+            <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology" && ctx.tracks("TECHS")
               ? open({ kind: "research", faction: seat!, follow: true })
-              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</Button>
+              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" && ctx.tracks("TECHS") ? "Follow and research" : "Follow"}</Button>
             <Button disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</Button>
           </div>
         </section>

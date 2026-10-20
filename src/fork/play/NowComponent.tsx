@@ -91,8 +91,8 @@ export function ComponentControls({ active, ctx }: { active: FactionId; ctx: Ctx
           onClick={() => w.write([{ action: "UNPLAY_COMPONENT", event: { name: played, factionId: active } } as unknown as GameUpdateData], `${short(active)} took back ${info?.name ?? played}`, active)}>Take it back</Button>
       </div>
       {info?.description ? <p className={kit.sub} style={{ whiteSpace: "pre-line", margin: 0 }}>{info.description}</p> : null}
-      {RESEARCH.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "research", faction: active })}>Record the technology</Button> : null}
-      {RELIC.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "relic", faction: active })}>Record the relic</Button> : null}
+      {RESEARCH.has(played) && ctx.tracks("TECHS") ? <Button block disabled={w.pending} onClick={() => open({ kind: "research", faction: active })}>Record the technology</Button> : null}
+      {RELIC.has(played) && ctx.tracks("RELICS") ? <Button block disabled={w.pending} onClick={() => open({ kind: "relic", faction: active })}>Record the relic</Button> : null}
       {FRONTIER_COMPONENTS.has(played) ? <Rows><FrontierRow active={active} ctx={ctx} /></Rows> : null}
       {FOLLOW_UPS.has(played) ? <ComponentFollowUp played={played} active={active} ctx={ctx} /> : null}
     </div>

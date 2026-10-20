@@ -23,7 +23,17 @@ export const FOLLOW_UPS = new Set([
   "Overrule", "Mathis Mathinus", "Strategize", "The Silver Flame",
 ]);
 
+// Follow-ups upstream hides when the game doesn't track their section
+// (ComponentAction.tsx's Conditional).
+const NEEDS: Record<string, AppSection> = {
+  "Industrial Initiative": "PLANETS", "Mining Initiative": "PLANETS",
+  "Share Knowledge": "TECHS", "Divert Funding": "TECHS", "Visionaria Select": "TECHS", "Vaults of the Heir": "TECHS", "Ta Zern": "TECHS",
+  "Stellar Converter": "PLANETS", "Conventions of War Abandoned": "PLANETS", "Nano-Forge": "PLANETS", "Terraform": "PLANETS",
+};
+
 export function ComponentFollowUp({ played, active, ctx }: { played: string; active: FactionId; ctx: Ctx }) {
+  const needs = NEEDS[played];
+  if (needs && !ctx.tracks(needs)) return null;
   switch (played) {
     case "Dynamis Core": case "Industrial Initiative": case "Mining Initiative": case "Total War": case "Book of Latvinia":
       return <Gains played={played} active={active} ctx={ctx} />;
@@ -199,8 +209,8 @@ function Zeu({ active, ctx }: { active: FactionId; ctx: Ctx }) {
       {pick && pick !== who ? <Button block disabled={w.pending} onClick={() => w.write([Events.SelectFactionEvent(pick)], `${short(pick)} takes the tactical action (Z'eu)`, active)}>Confirm: {short(pick)}</Button> : null}
       {who ? (
         <Rows>
-          <RowLink onClick={() => open({ kind: "claim", faction: who })} title={`${short(who)} takes a planet`} />
-          <RowLink onClick={() => open({ kind: "score", faction: who, which: "secret", phase: "ACTION" })} title={`${short(who)} scored a secret?`} />
+          {ctx.tracks("PLANETS") ? <RowLink onClick={() => open({ kind: "claim", faction: who })} title={`${short(who)} takes a planet`} /> : null}
+          {ctx.tracks("OBJECTIVES") ? <RowLink onClick={() => open({ kind: "score", faction: who, which: "secret", phase: "ACTION" })} title={`${short(who)} scored a secret?`} /> : null}
         </Rows>
       ) : null}
     </div>
@@ -233,9 +243,12 @@ function CardFollowUp({ played, active, ctx }: { played: string; active: Faction
       <Rows><RowAction verb="Change" disabled={w.pending} title={c ? <CardTag card={c} still /> : card} label={`Change from ${card}`} detail={secondary ? c?.secondary : c?.primary}
         onClick={() => w.write([Events.SelectSubComponentEvent("None")], `${short(active)} changed the card (${played})`, active)} /></Rows>
       {!secondary ? <CardControls card={card} active={active} ctx={ctx} />
-        : card === "Technology" ? <Rows><RowLink onClick={() => open({ kind: "research", faction: active })} title="Research a technology" /></Rows> : null}
+        : card === "Technology" && ctx.tracks("TECHS") ? <Rows><RowLink onClick={() => open({ kind: "research", faction: active })} title="Research a technology" /></Rows> : null}
       {!secondary && card === "Warfare" && options.expansions.includes("THUNDERS EDGE") ? (
-        <Rows><RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" /><RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" /></Rows>
+        <Rows>
+          {ctx.tracks("PLANETS") ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" /> : null}
+          {ctx.tracks("OBJECTIVES") ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" /> : null}
+        </Rows>
       ) : null}
     </div>
   );

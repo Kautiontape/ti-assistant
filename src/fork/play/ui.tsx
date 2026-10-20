@@ -69,6 +69,9 @@ export type Ctx = {
   w: ReturnType<typeof useWrite>;
   open: (s: Sheet) => void;
   gameId: string;
+  // Whether the game tracks a section; setup can turn off technologies,
+  // planets, objectives and relics (options.hide), and upstream then hides them.
+  tracks: (s: AppSection) => boolean;
 };
 
 // Clocks and times render only in the browser: the server's clock and time zone differ.

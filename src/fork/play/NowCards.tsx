@@ -58,6 +58,7 @@ function TechnologyPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   const techs = useTechs();
   const researched = getResearchedTechs(currentTurn, active);
   if (active === "Nekro Virus") return <p className={kit.sub}>Nekro gains command tokens instead of researching.</p>;
+  if (!ctx.tracks("TECHS")) return <p className={kit.sub}>This game doesn't track technologies.</p>;
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {researched.map((id) => (
@@ -111,10 +112,12 @@ function ImperialPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   const mecatol = planets["Mecatol Rex"]?.owner === active;
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <Button kind={scored.length ? "secondary" : "primary"} block disabled={w.pending} onClick={() => open({ kind: "score", faction: active, which: "public", anyPhase: true })}
-        detail={scored.length ? "Change it" : "If they meet its requirements"}>
-        {scored.length ? `Scored ${scored.map((id) => objectives[id]?.name ?? id).join(", ")}` : "Score a public objective"}
-      </Button>
+      {ctx.tracks("OBJECTIVES") ? (
+        <Button kind={scored.length ? "secondary" : "primary"} block disabled={w.pending} onClick={() => open({ kind: "score", faction: active, which: "public", anyPhase: true })}
+          detail={scored.length ? "Change it" : "If they meet its requirements"}>
+          {scored.length ? `Scored ${scored.map((id) => objectives[id]?.name ?? id).join(", ")}` : "Score a public objective"}
+        </Button>
+      ) : null}
       <p className={kit.sub}>
         {mecatol ? `${short(active)} controls Mecatol Rex, so the Imperial point was added when Imperial was chosen.` : `${short(active)} doesn't control Mecatol Rex, so they draw a secret objective instead of the Imperial point.`}
       </p>
@@ -148,13 +151,13 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
               {state === "PENDING" ? (
                 <>
                   <Button size="small" forOther={id !== seat} disabled={w.pending}
-                    onClick={() => (card.id === "Technology" && id !== "Nekro Virus" ? open({ kind: "research", faction: id, follow: true }) : mark(id, "DONE"))}>Follow</Button>
+                    onClick={() => (card.id === "Technology" && id !== "Nekro Virus" && ctx.tracks("TECHS") ? open({ kind: "research", faction: id, follow: true }) : mark(id, "DONE"))}>Follow</Button>
                   <Button size="small" disabled={w.pending} onClick={() => mark(id, "SKIPPED")}>Skip</Button>
                 </>
               ) : (
                 <>
                   {/* Jol-Nar's Brilliant: following Technology may resolve the primary, so a second technology. */}
-                  {card.id === "Technology" && id === BRILLIANT && state === "DONE" && getResearchedTechs(currentTurn, id).length === 1 ? (
+                  {card.id === "Technology" && id === BRILLIANT && state === "DONE" && ctx.tracks("TECHS") && getResearchedTechs(currentTurn, id).length === 1 ? (
                     <Button size="small" forOther={id !== seat} disabled={w.pending} onClick={() => open({ kind: "research", faction: id })}>2nd tech</Button>
                   ) : null}
                   <Tag tone="done">{state === "DONE" ? "Followed" : "Skipped"}</Tag>

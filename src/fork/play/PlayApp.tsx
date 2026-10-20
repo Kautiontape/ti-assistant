@@ -106,7 +106,9 @@ export default function PlayApp() {
     if ((phase === "ACTION" || phase === "STRATEGY") && helping && helping !== active) setHelping(undefined);
   }, [phase, active, helping]);
   const controls = (id: Optional<FactionId>) => !!id && (id === seat || id === helping || table);
-  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, table, controls, w, open: setSheet, gameId };
+  const hide = useOptions().hide;
+  const tracks = (s: AppSection) => !hide?.includes(s);
+  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, table, controls, w, open: setSheet, gameId, tracks };
   const docked = !!sheet && dockInfo && INFO_SHEETS.has(sheet.kind);
 
   return (

@@ -61,7 +61,9 @@ export function PlayerEditSheet({ faction: id, close, ctx }: { faction: FactionI
       <Choices label={`What changed for ${s}?`} value={part} onChange={setPart}
         options={[
           ...(myLeaders.length ? [{ value: "leaders" as Part, label: "Leaders" }] : []),
-          { value: "techs", label: "Technology" }, { value: "planets", label: "Planets" }, { value: "relics", label: "Relics" },
+          ...(ctx.tracks("TECHS") ? [{ value: "techs" as Part, label: "Technology" }] : []),
+          ...(ctx.tracks("PLANETS") ? [{ value: "planets" as Part, label: "Planets" }] : []),
+          ...(ctx.tracks("RELICS") ? [{ value: "relics" as Part, label: "Relics" }] : []),
           { value: "alliance", label: mahact ? "Fleet pool tokens" : "Alliance" },
         ]} />
 

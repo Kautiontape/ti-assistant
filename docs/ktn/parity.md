@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 172 | Works in `/play`. |
-| Partial | 24 | Works in `/play`, with the gap named in Notes. |
+| Native | 173 | Works in `/play`. |
+| Partial | 23 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 3 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 7 | No way to do it from `/play`. |
@@ -290,7 +290,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Missing | Applies if HideOnPlay doesn't skip it; no offline or install prompt in /play (not verified at runtime) |
 | Setup phase (starting techs, map string) | main/phase/setup | Native | See section 1's game-phase SETUP row |
 | Fallback link to upstream faction page | (faction)/[factionId] | Table screen | NotNativeYet links to /game/<id>/<faction> |
-| Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Partial | Honoured in Status; other tabs do not consistently check |
+| Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Native | Ctx.tracks() in PlayApp. With a section off, /play leaves out what upstream's Conditional hides: research (Technology card, secondaries, components, player edit), planet claims (tactical, map, Faunus, follow-ups), objective scoring (Imperial, tactical secrets, Prove Endurance, points sheet), relic rows, the player sheet's sections and the results' Technology view. Status, setup and agenda screens already checked it. Check: parity-hidden-check.cjs |
 
 ## 8. Twilight's Fall in /play
 
