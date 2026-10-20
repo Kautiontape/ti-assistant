@@ -101,6 +101,12 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}`
       : ev.relic === "The Crown of Emphidia" ? "purged The Crown of Emphidia for 1 point" : `used ${ev.relic}`;
     case "PLAY_LEADER": return `used ${ev.leader}`;
+    case "SELECT_SUB_COMPONENT": return ev.subComponent && ev.subComponent !== "None" ? `chose ${ev.subComponent}` : null;
+    case "SELECT_FACTION": return ev.faction && ev.faction !== "None" ? `chose ${name(ev.faction)}` : null;
+    case "PURGE_TECH": return `purged ${ev.techId}`;
+    case "UNPURGE_TECH": return null;
+    case "PURGE_SYSTEM": return `purged system ${ev.systemId}`;
+    case "UPDATE_PLANET_STATE": return ev.state === "PURGED" ? `purged ${ev.planet}` : null;
     case "GIFT_OF_PRESCIENCE": return ev.faction === "Naalu Collective" ? "Naalu kept the 0 token" : `Naalu gave the 0 token to ${name(ev.faction)}`;
     case "SWAP_STRATEGY_CARDS": return `${ev.cardOne} and ${ev.cardTwo} were swapped${ev.imperialArbiter ? " (Imperial Arbiter)" : ""}`;
     case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;

@@ -9,6 +9,7 @@ import { Events } from "../../util/api/events";
 import { hasTech } from "../../util/api/techs";
 import type { Ctx } from "./ui";
 import { FRONTIER_COMPONENTS, FrontierRow } from "./Frontier";
+import { ComponentFollowUp, FOLLOW_UPS } from "./ComponentFollowUps";
 import { Button, kit, RowAction, Rows, Sheet as KitSheet } from "../ui/kit";
 
 // Upstream normalises names before sending them (ComponentAction.tsx, selectComponent).
@@ -93,6 +94,7 @@ export function ComponentControls({ active, ctx }: { active: FactionId; ctx: Ctx
       {RESEARCH.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "research", faction: active })}>Record the technology</Button> : null}
       {RELIC.has(played) ? <Button block disabled={w.pending} onClick={() => open({ kind: "relic", faction: active })}>Record the relic</Button> : null}
       {FRONTIER_COMPONENTS.has(played) ? <Rows><FrontierRow active={active} ctx={ctx} /></Rows> : null}
+      {FOLLOW_UPS.has(played) ? <ComponentFollowUp played={played} active={active} ctx={ctx} /> : null}
     </div>
   );
 }

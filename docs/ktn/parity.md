@@ -4,10 +4,10 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 151 | Works in `/play`. |
-| Partial | 29 | Works in `/play`, with the gap named in Notes. |
+| Native | 154 | Works in `/play`. |
+| Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 8 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 11 | No way to do it from `/play`. |
 | Not needed | 14 | Left out on purpose; the reason is in Notes. |
 
@@ -112,12 +112,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Research a tech (Plagiarize, Focused Research, Enigmatic Device, Flayesh) | ComponentAction l.28-41, 185 | Native | "Record the technology" -> ResearchSheet. |
 | Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Partial | Gain Relic/Black Market/Hesh and Prit native (RelicSheet); Create, Fabrication, Forge Legend not in RELIC set. |
 | Exploration Probe / Circlet of the Void (frontier) | ComponentAction l.58 | Native | The component's card offers the frontier sheet |
-| Share Knowledge, Divert Funding, Dynamis Core, Visionaria Select | ComponentActions/*.tsx | Via More controls | Component recorded only. |
-| Stellar Converter, Conventions of War Abandoned (purge planet) | ComponentActions/PurgePlanet.tsx | Via More controls | Recorded only. |
-| Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Partial | Attach via map system sheet by hand; no guided flow. |
-| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Via More controls | Recorded only. |
-| Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Via More controls | Recorded only. |
-| Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Via More controls | Recorded only. |
+| Share Knowledge, Divert Funding, Dynamis Core, Visionaria Select | ComponentActions/*.tsx | Native | ComponentFollowUps.tsx: Share Knowledge (a Deepwrought technology), Divert Funding (return, then research, with take back), Visionaria Select (a technology for each player who takes it), Dynamis Core (trade goods shown). Check: parity-components-check.cjs |
+| Stellar Converter, Conventions of War Abandoned (purge planet) | ComponentActions/PurgePlanet.tsx | Native | Purge a planet (upstream's targets), with take back. Check: parity-components-check.cjs |
+| Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Native | Attach to one of the player's planets (upstream's targets), with take back |
+| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Partial | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's (that branch's) |
+| Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Partial | Native: Overrule and Mathis Mathinus (pick a card, run its primary with /play's card controls), Strategize (its secondary), Vaults of the Heir (purge a technology, gain a relic), Ta Zern (purge for everyone, replacements), The Silver Flame (point or purge the home system). Left: Planetary Rigs (Discordant Stars), Executive Order (a whole agenda inside the action), Sins of the Father (Twilight's Fall). Check: parity-components-check.cjs |
+| Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Partial | Native: Industrial and Mining Initiative show the trade goods, Total War and Book of Latvinia show what the component recorded. Left: Age of Exploration places a tile on the map, like Star Chart |
 | Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Via More controls | Not in MapTab. |
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
 | Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative and Ancient Burial Sites are on the agenda screen (AgendaCards.tsx); Engineer, Reverse and Thieve stay on the table screen. |
