@@ -97,7 +97,9 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "START_VOTING": return "Voting started";
     case "HIDE_AGENDA": return ev.veto ? `Agenda vetoed: ${ev.agenda}` : null;
     case "PLAY_RIDER": return ev.outcome ? `played ${ev.rider}, predicting ${who(ev.outcome)}` : `played ${ev.rider}`;
-    case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}` : `used ${ev.relic}`;
+    case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}`
+      : ev.relic === "The Crown of Emphidia" ? "purged The Crown of Emphidia for 1 point" : `used ${ev.relic}`;
+    case "PLAY_LEADER": return `used ${ev.leader}`;
     case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;
     case "SELECT_SUB_AGENDA": return ev.subAgenda && ev.subAgenda !== "None" ? `Covert Legislation was ${ev.subAgenda}` : null;
     case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;

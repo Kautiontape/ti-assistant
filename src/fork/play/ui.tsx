@@ -8,6 +8,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import { Button, kit, Sheet as KitSheet } from "../ui/kit";
 import type { useWrite } from "./useWrite";
 import type { AgendaCardKind } from "./AgendaCards";
+import type { StatusAbility } from "./StatusAbilities";
 
 export { Chip, cx, pcolor, Swatch } from "../ui/kit";
 // Older name for the kit's Sheet.
@@ -20,6 +21,7 @@ export type Sheet =
   | { kind: "unlock" }
   | { kind: "setupChoice"; faction: FactionId }
   | { kind: "agendaCard"; card: AgendaCardKind }
+  | { kind: "statusAbility"; ability: StatusAbility }
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }

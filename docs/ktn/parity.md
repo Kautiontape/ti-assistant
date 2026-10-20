@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 93 | Works in `/play`. |
-| Partial | 43 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 16 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Native | 99 | Works in `/play`. |
+| Partial | 42 | Works in `/play`, with the gap named in Notes. |
+| Table screen | 12 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 43 | No way to do it from `/play`. |
+| Missing | 42 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -173,21 +173,21 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Per-round scoring overview by initiative order | StatusPhase.tsx | Native | NowStatus "This round" list with Public/Secret tags |
 | Scoring only objectives valid for the phase (phase-restricted secrets) | StatusPhase.tsx | Native | logic.ts scorablePublics / scorableSecrets |
 | Reveal the stage I/II public objective (speaker) | StatusPhase.tsx (ObjectiveSelectHoverMenu) | Native | RevealSheet; stage picked by round; hidden when OBJECTIVES hidden |
-| Un-reveal an objective (HideObjectiveEvent) | StatusPhase.tsx (removeObjective) | Missing | No HideObjective in src/fork; use the log Undo, else table screen |
+| Un-reveal an objective (HideObjectiveEvent) | StatusPhase.tsx (removeObjective) | Native | "Take back" on the revealed objective in Table steps (and in setup). Check: parity-statusabilities-check.cjs |
 | Support for the Throne give/move/return | src/components/OtherModal/OtherPanel.tsx; AgendaDetails | Native | NowStatus ThroneRow + GiveSheet; also Points sheet |
 | Imperial strategy card point / Imperial primary scoring | StrategyCard flow | Native | NowCards.tsx opens ScoreSheet with anyPhase |
 | Custodians token / Mecatol claim point | claim planet | Native | Same ClaimPlanetEvent (MapTab, claim sheet) |
 | Manual VP adjustment | OtherPanel / FactionPanel | Native | NowPoints.tsx ManualVPUpdateEvent, +/-3 |
 | Secrets scored outside status (action/agenda phase) | objective modal | Native | PointsButton "Points changed?" |
-| Start-of-status abilities list (Arborec Mitosis, Wormhole Generator, Hydrothermal Mining, Crown of Emphidia, Genesis, Bioplasmosis, Oracle, Minister of Policy) | StatusPhase.tsx getStartOfStatusPhaseAbilities | Table screen | NowStatus names The Oracle / Crown but only links out; no reminders or "use" buttons (Oracle PlayLeader, Crown VP) |
-| End-of-status abilities hover list | StatusPhase.tsx getEndOfStatusPhaseAbilities | Table screen | Not shown at all in /play, no link to it specifically |
-| Thunder's Edge: Entropic Scar research (gain faction tech) | StatusPhase.tsx EntropicScarResearch | Table screen | Link-out only; /play lists "Entropic Scar" as on table screen |
-| Thunder's Edge: Radical Advancement (replace tech) | StatusPhase.tsx RadicalAdvancement | Table screen | Link-out only |
+| Start-of-status abilities list (Arborec Mitosis, Wormhole Generator, Hydrothermal Mining, Crown of Emphidia, Genesis, Bioplasmosis, Oracle, Minister of Policy) | StatusPhase.tsx getStartOfStatusPhaseAbilities | Native | StatusAbilities.tsx: Mitosis, Wormhole Generator and Hydrothermal Mining as reminders (as upstream); Entropic Scar and Radical Advancement as sheets. The Oracle and the Crown are end-of-phase rows. Check: parity-statusabilities-check.cjs (The Oracle not exercised: no Naalu snapshot) |
+| End-of-status abilities hover list | StatusPhase.tsx getEndOfStatusPhaseAbilities | Native | StatusAbilities.tsx: Genesis, Bioplasmosis and Minister of Policy as reminders; The Crown of Emphidia (with the Tomb: purge for "Tomb + Crown of Emphidia") and The Oracle recorded, with take back |
+| Thunder's Edge: Entropic Scar research (gain faction tech) | StatusPhase.tsx EntropicScarResearch | Native | Sheet: choose a player, gain one of their faction technologies (none for Nekro or anyone with both), take back |
+| Thunder's Edge: Radical Advancement (replace tech) | StatusPhase.tsx RadicalAdvancement | Native | Sheet: return a technology, gain one of its colour with one more prerequisite; take back restores the returned one |
 | Draw action cards per faction (Neural Motivator, Yssaril 3, etc.) | StatusPhase.tsx ActionCardDraws | Not needed | Counts shown upstream are reminders; /play prints the rule text under "Then on the board (not tracked)" |
 | Remove command tokens / gain and redistribute (Sol, Hyper Metabolism) | StatusPhase.tsx CommandTokenGains | Not needed | Reminder text only in /play; nothing is recorded upstream beyond a log note |
 | Ready cards, repair units, return strategy cards | StatusPhase.tsx steps | Not needed | Text reminder only |
 | Step checklist with numbered steps | StatusPhase.tsx | Partial | /play has a three-card layout without upstream's numbered steps |
-| Lock the phase until an objective is revealed | StatusPhase.tsx (LockedButtons, statusPhaseComplete) | Partial | /play shows a hint but "Start the agenda phase" is not locked by the reveal |
+| Lock the phase until an objective is revealed | StatusPhase.tsx (LockedButtons, statusPhaseComplete) | Native | The next-phase buttons wait for the reveal; "Go on without one" opens the lock, as upstream's lock does on a tap |
 | End phase: go to agenda or skip to next round when Mecatol is unclaimed | StatusPhase.tsx nextPhaseButtons | Native | AdvancePhaseEvent(skip) in NowStatus |
 | Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Table screen | Finish-phase link-out; Edict phase itself (Arbitrate, Convene, Splice, Legacy of Ixth) is NotNativeYet |
 | Hide objectives option (OBJECTIVES section hidden) | Conditional appSection | Native | NowStatus respects options.hide |

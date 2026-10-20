@@ -3,7 +3,7 @@
 // tracked; the rest of the phase happens on the board. Rules follow upstream's
 // main/phase/status/StatusPhase.tsx (see logic.ts).
 import { useState } from "react";
-import { useCurrentTurn, useOptions, usePlanets, useRelics, useStrategyCards } from "../../context/dataHooks";
+import { useCurrentTurn, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useAgendaUnlocked, useRound, useSpeaker } from "../../context/stateDataHooks";
@@ -15,6 +15,7 @@ import {
   scoredThisPhase, SFTT, throneHolder,
 } from "./logic";
 import styles from "./play.module.scss";
+import { StatusAbilities } from "./StatusAbilities";
 import { HelpBanner, type Ctx, type Sheet } from "./ui";
 import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
 
@@ -38,7 +39,6 @@ export default function NowStatus(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open, gameId } = ctx;
   const objectives = useObjectives();
   const currentTurn = useCurrentTurn();
-  const relics = useRelics();
   const round = useRound();
   const speaker = useSpeaker();
   const agendaUnlocked = useAgendaUnlocked();
@@ -47,13 +47,10 @@ export default function NowStatus(ctx: Ctx) {
   const who = helping ?? seat;
   const revealed = revealedThisPhase(currentTurn);
   const hideObjectives = !!options.hide?.includes("OBJECTIVES");
+  const [skipReveal, setSkipReveal] = useState(false);
+  const locked = !revealed.length && !hideObjectives && !skipReveal;
   const scored = (id: FactionId) => scoredThisPhase(currentTurn, objectives, id);
   const name = (id: ObjectiveId) => objectives[id]?.name ?? id;
-
-  const extras: string[] = [];
-  if (factions["Naalu Collective"]) extras.push("The Oracle");
-  if (relics["The Crown of Emphidia"]?.owner) extras.push("The Crown of Emphidia");
-  if (options.expansions.includes("THUNDERS EDGE") && !options.hide?.includes("TECHS")) extras.push("Entropic Scar", "Radical Advancement");
 
   const stage = revealStage(round) === "STAGE ONE" ? "Stage I" : "Stage II";
 
@@ -109,10 +106,12 @@ export default function NowStatus(ctx: Ctx) {
       <section className={kit.card} aria-label="Table steps">
         <p className={kit.eyebrow}><span>Table steps</span></p>
         {hideObjectives ? null : revealed.length ? (
-          <div className={kit.line}>
-            <span className={kit.grow}><b>Revealed: {revealed.map(name).join(", ")}</b></span>
-            <Tag tone="done">Done</Tag>
-          </div>
+          <Rows>
+            {revealed.map((id) => (
+              <RowAction key={id} verb="Take back" disabled={w.pending} title={`Revealed: ${name(id)}`} detail={objectives[id]?.description}
+                onClick={() => w.write([Events.HideObjectiveEvent(id)], `Took back ${name(id)}`, speaker)} />
+            ))}
+          </Rows>
         ) : (
           <div className={kit.line}>
             <span className={kit.grow}><b>Reveal a {stage} objective</b><br /><span className={kit.sub}>{speaker === seat ? "Your job as speaker" : `${short(speaker)}'s job as speaker`}</span></span>
@@ -126,27 +125,28 @@ export default function NowStatus(ctx: Ctx) {
             Gain 2 command tokens (Sol 3; 1 more with Hyper Metabolism) and redistribute. Ready cards, repair units, return strategy cards.
           </p>
         </details>
-        {extras.length ? (
-          <>
-            <p className={kit.sub}>{extras.join(", ")} {extras.length > 1 ? "are" : "is"} on the table screen.</p>
-            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
-          </>
-        ) : null}
+        <StatusAbilities ctx={ctx} />
       </section>
 
       <section className={kit.card} aria-label="Finish the status phase">
-        {!revealed.length && !hideObjectives ? <p className={kit.sub}>No objective has been revealed yet this round.</p> : null}
+        {/* Upstream locks the phase until the speaker reveals an objective; its lock opens on a tap, and so does this one. */}
+        {locked ? (
+          <div className={kit.line}>
+            <p className={cx(kit.sub, kit.grow)}>No objective has been revealed yet this round. The speaker reveals one before the phase ends.</p>
+            <Button kind="quiet" onClick={() => setSkipReveal(true)}>Go on without one</Button>
+          </div>
+        ) : null}
         {options.expansions.includes("TWILIGHTS FALL") ? (
           <Rows><RowLink href={`/game/${gameId}/main`} external title="Finish the phase on the table screen" /></Rows>
         ) : agendaUnlocked ? (
-          <Button kind="primary" size="tall" block disabled={w.pending}
+          <Button kind="primary" size="tall" block disabled={w.pending || locked}
             onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase</Button>
         ) : (
           <>
             <p className={kit.sub}>Nobody controls Mecatol Rex yet, so there's no agenda phase this round.</p>
-            <Button kind="primary" size="tall" block disabled={w.pending}
+            <Button kind="primary" size="tall" block disabled={w.pending || locked}
               onClick={() => w.write([Events.AdvancePhaseEvent(true)], `Round ${round + 1} started`)}>Start round {round + 1}</Button>
-            <Button block disabled={w.pending}
+            <Button block disabled={w.pending || locked}
               onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase anyway</Button>
           </>
         )}

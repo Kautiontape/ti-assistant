@@ -21,6 +21,7 @@ import { ExpeditionCard, ExpeditionSheet } from "./NowExpedition";
 import MapTab, { SystemSheet } from "./MapTab";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { AgendaCardSheet } from "./AgendaCards";
+import { StatusAbilitySheet } from "./StatusAbilities";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
 import NowEnd, { GameEndBanner } from "./NowEnd";
@@ -388,6 +389,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "vote":
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "statusAbility":
+      return <StatusAbilitySheet ability={sheet.ability} close={close} ctx={ctx} />;
     case "agendaCard":
       return <AgendaCardSheet card={sheet.card} close={close} ctx={ctx} />;
     case "setupChoice":
