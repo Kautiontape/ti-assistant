@@ -10,7 +10,7 @@ import { combats, pointsBySource, SFTT } from "./logic";
 import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
-import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
+import { CardTag, Chip, Cite, kit, RowLink, Rows, Section, Sheet, Tag, type Thing } from "../ui/kit";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
 const TECH_COLOURS: [string, string][] = [["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Other"]];
@@ -103,6 +103,7 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         })}
         {!myTechs.length ? <p className={kit.sub}>None</p> : null}
         {f.breakthrough?.name ? <Items items={[{ thing: { kind: "breakthrough", id }, name: `${f.breakthrough.name} (breakthrough)`, state: f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked" }]} /> : null}
+        <Rows><RowLink onClick={() => ctx.open({ kind: "techTree", faction: id })} title="Technology tree" detail="What they own and can research next" /></Rows>
       </Section>
 
       {myRelics.length ? (
@@ -142,6 +143,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
           <Items items={f.abilities.map((a) => ({ thing: { kind: "ability", id: `${id}|${a.name}` }, name: a.name }))} />
         </Section>
       ) : null}
+
+      <Rows><RowLink onClick={() => ctx.open({ kind: "playerEdit", faction: id })} title={`Change something for ${short(id)}`} detail="Leaders, technology, planets, relics, alliances" /></Rows>
     </Sheet>
   );
 }

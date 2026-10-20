@@ -12,6 +12,7 @@ import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
 import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import { ExpeditionButton } from "./NowExpedition";
+import { FrontierRow } from "./Frontier";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
@@ -90,6 +91,7 @@ export default function NowAction(ctx: Ctx) {
                 {selected === "Tactical" ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
                 {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <FrontierRow active={active} ctx={ctx} /> : null}
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
               </Rows>

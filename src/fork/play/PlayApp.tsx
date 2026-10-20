@@ -24,6 +24,10 @@ import { AgendaCardSheet } from "./AgendaCards";
 import { StatusAbilitySheet } from "./StatusAbilities";
 import { GiftSheet, SwapSheet } from "./StrategyAbilities";
 import { LawSheet, LawsCard } from "./Laws";
+import { PlayerEditSheet } from "./PlayerEdit";
+import { TechTreeSheet } from "./TechTreeSheet";
+import { FrontierSheet } from "./Frontier";
+import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
 import NowEnd, { GameEndBanner } from "./NowEnd";
@@ -88,6 +92,7 @@ export default function PlayApp() {
 
   const active = useActiveFactionId();
   const phase = state.phase;
+  useUpstreamTimers();
 
   // Helping lasts as long as what it was for: the phase, and in turn-based
   // phases the helped player's turn (they may end it from their own phone).
@@ -125,6 +130,7 @@ export default function PlayApp() {
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
             <LockedBanner open={setSheet} />
+            <PausedBanner ctx={ctx} />
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
@@ -282,6 +288,7 @@ function TableTab(ctx: Ctx) {
       </Rows>
     </section>
     <LawsCard ctx={ctx} />
+    <ClockCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
     </>
   );
@@ -392,6 +399,12 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "vote":
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "playerEdit":
+      return <PlayerEditSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "techTree":
+      return <TechTreeSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "frontier":
+      return <FrontierSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "law":
       return <LawSheet agenda={sheet.agenda} close={close} ctx={ctx} />;
     case "gift":

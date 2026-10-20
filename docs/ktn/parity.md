@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 107 | Works in `/play`. |
-| Partial | 40 | Works in `/play`, with the gap named in Notes. |
+| Native | 128 | Works in `/play`. |
+| Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 39 | No way to do it from `/play`. |
+| Via More controls | 15 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Missing | 29 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -56,7 +56,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Hacan: Quantum Datahub Node (swap cards) | SP QuantumDatahubNode l.112 | Native | SwapSheet for Hacan, Nekro (with the tech) or the ability's owner: give one card, take another player's, confirmed |
 | Imperial Arbiter swap (agenda) | SP ImperialArbiter l.272 | Native | SwapSheet with the arbiter flag; upstream's handler discards the law |
 | Naalu 0-initiative card shown as separate "Naalu" token | SP l.679 | Native | Order 0 follows the gift (upstream's GIFT_OF_PRESCIENCE) |
-| Active player / on deck, per-faction timer | SP l.828-880 (FactionTimer, StaticFactionTimer) | Partial | "Picking" tag and order list; no clock in strategy phase (clock only in action phase turn). |
+| Active player / on deck, per-faction timer | SP l.828-880 (FactionTimer, StaticFactionTimer) | Native | The active player's upstream faction timer runs in the strategy phase too (Clock.tsx useUpstreamTimers); each player's total is on the Table tab's Game clock. Check: parity-player-check.cjs |
 | End phase: "Advance to Action Phase" | SP l.941 | Native | "Start the action phase" button (AdvancePhaseEvent). |
 | Undo last pick | UndoButton / ControlButtons | Native | Toast Undo + Undo in log (useWrite). |
 
@@ -77,8 +77,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Ral Nel hero: unpass | AP UnpassSection l.1938 | Missing | Not in fork or faction page (table screen only). |
 | Faunus (Pass-turn faction ability) | AP/Actions/Faunus.tsx | Via More controls | Not in fork. |
 | Prove Endurance (score on pass) | AP l.1435 | Via More controls | Not in fork (check `score` sheet is status/anyPhase only). |
-| Turn timer (per-turn clock) | AP FactionTimer, src/components/TurnTimer | Partial | Elapsed clock shown in hero (turnStartedAt / fmtDuration); no per-faction totals, no pause. |
-| Game timer pause/unpause, phase timer | src/components/GameTimer, TurnTimer | Missing | Not in /play. |
+| Turn timer (per-turn clock) | AP FactionTimer, src/components/TurnTimer | Native | Hero clock for the turn, plus upstream's faction timer for the active player (totals on the Table tab). Secondary timers stay off: upstream starts them on MARK_PRIMARY, which /play doesn't send. Check: parity-player-check.cjs |
+| Game timer pause/unpause, phase timer | src/components/GameTimer, TurnTimer | Native | Clock.tsx: /play runs upstream's game timer (it was frozen when everyone used /play, so log entries carried game time 0); Pause/Resume on the Table tab, a banner on Now while paused. Check: parity-player-check.cjs |
 | Selected-action card board (who holds/played which cards) | StrategyCardColumn l.1825 | Native | CardBoard in PlayApp. |
 | Advance to Status Phase | AP l.1905 | Native | "Start the status phase" (asks to end an open combat first). |
 | Action log / undo | GameLog, UndoButton | Native | Log tab, Undo toast. |
@@ -94,9 +94,9 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Space / ground combat (fork-only feature) | src/fork/actions/combat.ts | Native | Combat.tsx (start, banner clock, end). Not in upstream. |
 | Score action-phase objectives (up to 4) | TacticalAction l.125-190 | Missing | `score` sheet exists but pickers are for status phase/Imperial; no action-phase objective list. Via More controls. |
 | Become a Martyr (score on losing home) | TacticalAction l.395 | Via More controls | Not in fork. |
-| Gain relic from frontier exploration | TacticalAction l.193; GainRelic | Native | RelicSheet; reached only from a component action. Partial for tactical: a tactical frontier has no path to it. |
-| Frontier exploration (explore token) | src/components/FrontierExploration | Via More controls | Not in fork. |
-| Mirage claim (Mirage planet from frontier) | FrontierExploration l.52 | Via More controls | Not in fork. |
+| Gain relic from frontier exploration | TacticalAction l.193; GainRelic | Native | RelicSheet, from a component action or the frontier sheet after a tactical action (Frontier.tsx) |
+| Frontier exploration (explore token) | src/components/FrontierExploration | Native | Frontier.tsx: "Explored a frontier?" after a tactical action: gain a relic or find Mirage. Check: parity-player-check.cjs |
+| Mirage claim (Mirage planet from frontier) | FrontierExploration l.52 | Native | Frontier sheet: take control of Mirage, with take back |
 | Nekro Technological Singularity (copy 4 techs) | TacticalAction l.195 | Via More controls | Not in fork. |
 | Embers of Muaat: Adjudicator Ba'al (replace system) | TacticalAction l.245 | Via More controls | Not in fork. |
 | Thunder's Edge expedition (6 slots, tie-break owner) | src/components/Expedition | Native | NowExpedition.tsx (commit, take back, tie-break). |
@@ -111,7 +111,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Component description | ComponentDetails l.545 | Native | Shown under component name. |
 | Research a tech (Plagiarize, Focused Research, Enigmatic Device, Flayesh) | ComponentAction l.28-41, 185 | Native | "Record the technology" -> ResearchSheet. |
 | Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Partial | Gain Relic/Black Market/Hesh and Prit native (RelicSheet); Create, Fabrication, Forge Legend not in RELIC set. |
-| Exploration Probe / Circlet of the Void (frontier) | ComponentAction l.58 | Missing | Component is recorded, no frontier UI. Via More controls. |
+| Exploration Probe / Circlet of the Void (frontier) | ComponentAction l.58 | Native | The component's card offers the frontier sheet |
 | Share Knowledge, Divert Funding, Dynamis Core, Visionaria Select | ComponentActions/*.tsx | Via More controls | Component recorded only. |
 | Stellar Converter, Conventions of War Abandoned (purge planet) | ComponentActions/PurgePlanet.tsx | Via More controls | Recorded only. |
 | Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Partial | Attach via map system sheet by hand; no guided flow. |
@@ -122,10 +122,10 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
 | Action cards played at other times (record who) | `PLAY_ACTION_CARD` (upstream logs only) | Native | NowActionCards.tsx (fork addition). Assassinate Representative and Ancient Burial Sites are on the agenda screen (AgendaCards.tsx); Engineer, Reverse and Thieve stay on the table screen. |
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Partial | Notes with component actions appear in the sheet; SftT and alliances show on PlayerSheet read-only; scoring Support for the Throne is in NowPoints only if status/any phase. |
-| Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Missing | Component action sets state in data layer; /play never edits leader/tech/relic state by hand. |
-| Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Missing | PlayerSheet shows state only. |
+| Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Partial | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play |
+| Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Native | PlayerEdit.tsx: lock and unlock, as upstream's faction panel |
 | Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Missing | TF not supported in /play (expedition hidden when TF on). |
-| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Missing | Not in fork. |
+| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Partial | Relic purge in PlayerEdit.tsx and repeal in Laws.tsx; Unravel itself is only recorded as the component |
 
 ### 3d. Strategic actions
 
@@ -151,16 +151,16 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
-| Faction panel: leaders (agent/commander/hero) with ready/exhaust/purge | src/components/FactionPanel.tsx l.566-740 | Partial | PlayerSheet lists them with state; read-only. |
+| Faction panel: leaders (agent/commander/hero) with ready/exhaust/purge | src/components/FactionPanel.tsx l.566-740 | Native | PlayerEdit.tsx "Leaders": exhaust and ready agents, unlock commanders and heroes, purge and unpurge heroes. Check: parity-player-check.cjs |
 | Faction techs, unit upgrades, unit stats | FactionPanel l.756, 1023, 1097 | Partial | PlayerSheet lists techs by colour (cite popouts). Tech add/remove: ResearchSheet / Undo only. No unit stat blocks. |
 | Faction abilities, promissory notes, genomes, paradigms | FactionPanel l.794-977 | Partial | Abilities listed in PlayerSheet (popout text); notes and TF cards not shown. |
-| Planets owned with resources/influence totals, attachments, exhaust | Sidebars; PlanetRow; PlanetTab | Partial | PlayerSheet lists planets + totals; map tab shows owners/attachments; exhaust/ready and structures (ToggleStructureEvent) missing. |
-| Add / remove tech manually | TechTab l.73, 104 | Missing | Via faction page "Your faction's full screen". |
-| Claim/unclaim planet manually | PlanetTab l.51, 80; PlanetPanel | Partial | Claim from system sheet / map; no unclaim. |
+| Planets owned with resources/influence totals, attachments, exhaust | Sidebars; PlanetRow; PlanetTab | Native | PlayerSheet lists planets and totals; the map tab shows owners and attachments. Exhausting planets and structures is not tracked (Shawn, 2026-10-18) |
+| Add / remove tech manually | TechTab l.73, 104 | Native | PlayerEdit.tsx "Technology": add (research sheet) and remove. Check: parity-player-check.cjs |
+| Claim/unclaim planet manually | PlanetTab l.51, 80; PlanetPanel | Native | Take from the claim sheet or map; lose in PlayerEdit.tsx "Planets". Check: parity-player-check.cjs |
 | Objectives tab (reveal/score/unscore) | ObjectiveTab.tsx | Native | `score` sheet / NowPoints / NowStatus. |
-| Relics owned, gain/purge | FactionPanel; GainRelic, PurgeRelic | Partial | RelicSheet gains; purge missing. |
+| Relics owned, gain/purge | FactionPanel; GainRelic, PurgeRelic | Native | Gain in RelicSheet; purge, unpurge and lose in PlayerEdit.tsx "Relics". Check: parity-player-check.cjs |
 | Commodities / trade goods / command tokens | Command-token tracking (option), Sidebars | Missing | No counters in /play. Only expedition's trade-goods slot and card trade goods. |
-| Support for the Throne, alliances, fleet pool | PromissoryMenu l.99-280 | Partial | Display only (PlayerSheet "In their play area"). |
+| Support for the Throne, alliances, fleet pool | PromissoryMenu l.99-280 | Native | Support for the Throne in Points/Status; alliances and Mahact's fleet pool tokens in PlayerEdit.tsx, confirmed. Check: parity-player-check.cjs |
 
 ## 4. Status phase
 
@@ -219,7 +219,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Post-resolve effects: Incentive Program, Colonial Redistribution, Minister of Antiquities (relic), planet elections (give planet), Drive the Debate | components/AgendaDetails.tsx | Native | AgendaCards.tsx ResolveFollowUps, in the resolve sheet before Confirm (as upstream records them before the resolve): Drive the Debate for the elected player or planet owner, Incentive Program's objective, Colonial Redistribution's planet, Minister of Antiquities' relic, each with take back. Check: parity-agendafollow-check.cjs |
 | Dictate Policy, Mutiny points etc. | AgendaPhase.tsx DictatePolicy | Native | DictatePolicyRows on the agenda screen once 3 laws are in play (upstream's rule; one scorer when it's a secret). Mutiny and other agenda points are applied by upstream's resolve |
 | Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Native | AgendaCards.tsx before the first agenda. Ancient Burial Sites also lowers that player's available votes, which upstream's tally never does (it reads a state field nothing sets) |
-| Agenda timers per agenda | src/components/AgendaTimer | Missing | No timers in /play |
+| Agenda timers per agenda | src/components/AgendaTimer | Native | The agenda card shows game time on this agenda, and the end of the phase shows both (upstream's AgendaTimer rule, Clock.tsx useAgendaTimes) |
 | Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Native | Laws.tsx: "Laws in effect" on the Table tab, each with its text, who was elected, and a confirmed Repeal (undoable). Check: parity-laws-check.cjs |
 | Laws' effects on gameplay (e.g. Representative Government, Checks and Balances, Minister of Policy) | various | Partial | Applied where built (RepGov, Checks and Balances at pick); others not surfaced |
 | Ready planets, then start next round | AgendaPhase.tsx | Native | "Both agendas are resolved" card, AdvancePhaseEvent |
@@ -250,8 +250,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Revert/edit arbitrary older log entries | GameLog.tsx | Missing | Only the newest group can be undone |
 | Objectives page (all objectives, reveal/hide/score by anyone) | objectives/objective-page.tsx, ObjectiveModal | Partial | Score/reveal for the current step only; no full objectives browser, no scorers list per objective |
 | Per-faction page: Phase section (what this faction does now) | (faction)/[factionId]/elements/PhaseSection.tsx | Native | Now tab is seat-based |
-| Faction page: Techs tab (add/remove, tech tree) | elements/TechTab.tsx, src/components/TechTree | Partial | PlayerSheet lists techs; research via ResearchSheet; no tech tree view |
-| Faction page: Planets tab (claim, exhaust, attach) | elements/PlanetTab.tsx | Partial | PlayerSheet lists planets; claim via claim sheet; attachments via MapTab; no ready/exhaust |
+| Faction page: Techs tab (add/remove, tech tree) | elements/TechTab.tsx, src/components/TechTree | Native | TechTreeSheet.tsx: each colour by prerequisites, owned / can research / missing; add and remove via PlayerEdit. Check: parity-player-check.cjs |
+| Faction page: Planets tab (claim, exhaust, attach) | elements/PlanetTab.tsx | Native | Claim and lose in PlayerEdit / claim sheet; attachments via MapTab. Planet exhaustion isn't tracked (Shawn, 2026-10-18) |
 | Faction page: Objectives tab | elements/ObjectiveTab.tsx | Partial | PlayerSheet "Points"; no per-objective scoring list |
 | Faction page: leaders, abilities, units, promissories | FactionContent / FactionPanel | Partial | PlayerSheet shows leaders and abilities; hero play via NowComponent; no unit stats, no promissory tracking beyond component sheet |
 | Faction links nav (switch faction) | FactionLinks.tsx | Native | Race / Table tab to PlayerSheet |
@@ -261,12 +261,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Tyrant (Twilight's Fall) | Footer.tsx | Missing | |
 | Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Partial | Planet claim, research, relic, expedition in sheets; no free-edit modal for objectives or planets |
 | Thunder's Edge expedition | OtherPanel.tsx | Native | NowExpedition.tsx |
-| Relics (gain/purge, Crown) | OtherPanel.tsx | Partial | RelicSheet gains; no purge/unowned lists |
-| Promissory notes and alliances (Fleet pool, Alliances) | OtherPanel.tsx | Missing | No alliance/commander-ownership UI beyond NowComponent promissory |
+| Relics (gain/purge, Crown) | OtherPanel.tsx | Native | Gain, purge and lose by hand (PlayerEdit.tsx); the Crown in the status phase |
+| Promissory notes and alliances (Fleet pool, Alliances) | OtherPanel.tsx | Native | PlayerEdit.tsx "Alliance": who holds a player's Alliance, confirmed; Mahact's fleet pool tokens. Check: parity-player-check.cjs |
 | ControlButtons: password entry when view-only | game/[gameId]/ControlButtons.tsx, Header.tsx | Native | NowLocked.tsx: a banner on Now while the game is view-only, and any write or Undo opens the password sheet (upstream's useEnterPassword). Check: parity-lock-check.cjs |
-| Pause / end game / continue | Header.tsx | Partial | End/Continue native; there is no pause |
-| Game timer | src/components/GameTimer | Missing | |
-| Turn timer / faction timers | src/components/TurnTimer, TimerDisplay | Missing | |
+| Pause / end game / continue | Header.tsx | Native | End/Continue (NowEnd) and pause (Table tab Game clock) |
+| Game timer | src/components/GameTimer | Native | Clock.tsx runs it; the Table tab shows it |
+| Turn timer / faction timers | src/components/TurnTimer, TimerDisplay | Native | Active player's faction timer runs; totals on the Table tab; the turn clock is in the hero |
 | Map view | src/components/Map, main page | Native | MapTab (zoom, find a planet) |
 | Map interactions: system details, claim planet, attachments | src/components/Map, PlanetModal | Native | SystemSheet |
 | Map interactions: frontier tokens, Mallice/Nexus, Wormhole Nexus | Map components, FrontierExploration | Partial | Wormhole nexus shown; frontier exploration not handled |
@@ -308,13 +308,13 @@ From setup to the action phase:
 1. Setup: only the Milty draft creates games natively (6 players, fixed options). Player count, variants/alliances, events, Discordant Stars, map type/string, tracking toggles, command tokens, password and colour changes all live on upstream's /setup.
 2. Faction-specific and card-specific component actions (about 35 cases: PurgePlanet, Overrule, Strategize, Z'eu, Transpose, Plagiarize beyond tech, AddSystemToMap, etc.): /play only records the component, then needs "More controls".
 3. Tactical extras: frontier exploration (+ Mirage), action-phase objective scoring, Become a Martyr, Nekro Technological Singularity, Adjudicator Ba'al, Prove Endurance, Faunus: none native; only reachable through the faction page.
-4. Turn-flow controls: skip turn, "take another action", Puppets on a String, Ral Nel unpass, un-select action, mark-primary "Done", Politics end-turn guard, game/phase timers: absent in /play.
+4. Turn-flow controls: skip turn, "take another action", Puppets on a String, Ral Nel unpass, un-select action, mark-primary "Done", Politics end-turn guard: absent in /play.
 5. Twilight's Fall (splices, TF strategy cards, Lux/Civitas/Amicus) and trade-goods/commodity/command-token tracking have no /play counterpart; the Strategy-phase end abilities (Naalu, Hacan, Imperial Arbiter) and start-of-phase reminders are only a hint plus link.
 
 From the status phase to the whole game:
 
 1. Agenda special cases: post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
-3. Timers (game, turn, agenda, faction) are not shown anywhere, and so the results timer view is missing.
+3. The results timer view is missing (the timers themselves run in /play now).
 4. Results extras: VP graph, tech graph, map lapse, annotated log, and export/download.
 5. Sharing and settings: no share link or QR, no game code display, no in-game settings, no language picker.

@@ -10,7 +10,8 @@ import { hasTech } from "../../util/api/techs";
 import { Events } from "../../util/api/events";
 import { outcomeString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
-import { bonusOffered, VOTE_BONUSES, votingOrder } from "./logic";
+import { bonusOffered, fmtDuration, VOTE_BONUSES, votingOrder } from "./logic";
+import { useAgendaTimes } from "./Clock";
 import { BeforeVotingRows, DictatePolicyRows, ResolveFollowUps, StartOfAgendaRows } from "./AgendaCards";
 import { available, canVote, outcomeLabel, playedBonuses, useAgendaData, voteTotal, type AgendaData } from "./agendaData";
 import styles from "./play.module.scss";
@@ -22,6 +23,7 @@ const AGENDA_NAMES = ["first", "second"];
 export default function NowAgenda(ctx: Ctx) {
   const { seat, helping, w, open, factions, short } = ctx;
   const d = useAgendaData();
+  const times = useAgendaTimes();
   const { agenda, speaker, state } = d;
   const agendaNum = state.agendaNum ?? 1;
   const speakerJob = speaker === seat ? "Your job as speaker" : `${short(speaker)}'s job as speaker`;
@@ -36,6 +38,7 @@ export default function NowAgenda(ctx: Ctx) {
         <section className={kit.card} aria-label="Agendas done">
           <p className={kit.eyebrow}><span>Agenda phase</span></p>
           <h2 className={kit.title}>Both agendas are resolved</h2>
+          <p className={kit.sub}>Game time: first agenda <span className={kit.num}>{fmtDuration(times[0])}</span>, second <span className={kit.num}>{fmtDuration(times[1])}</span>.</p>
           <p className={kit.sub}>{three ? "Checks and Balances was voted down, so each player readies only 3 planets. Then start the next round." : "Ready your planets on the board, then start the next round."}</p>
           <Button kind="primary" size="tall" block disabled={w.pending}
             onClick={() => w.write([Events.AdvancePhaseEvent()], `Round ${(state.round ?? 0) + 1} started`)}>Start round {(state.round ?? 0) + 1}</Button>
@@ -101,6 +104,7 @@ function electText(elect: OutcomeType) {
 
 function AgendaCard({ d, agendaNum, ctx }: { d: AgendaData; agendaNum: number; ctx: Ctx }) {
   const a = d.agenda!;
+  const times = useAgendaTimes();
   const elect = !d.covert ? electText(a.elect) : d.outcomes ? `Hidden agenda: ${electText(d.outcomes).toLowerCase()}` : "The speaker reads out the hidden agenda's outcomes";
   return (
     <section className={kit.card} aria-label="Agenda">
@@ -110,6 +114,7 @@ function AgendaCard({ d, agendaNum, ctx }: { d: AgendaData; agendaNum: number; c
       </p>
       <h2 className={kit.title}>{a.name}</h2>
       <p className={kit.sub}><b>{elect}.</b> {a.description}</p>
+      <p className={kit.sub}>On this agenda for <span className={kit.num}>{fmtDuration(times[agendaNum - 1] ?? 0)}</span> of game time.</p>
     </section>
   );
 }

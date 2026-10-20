@@ -52,6 +52,10 @@ constructors and data hooks:
   `app/[locale]/game/[gameId]/main/phase/setup/SetupPhase.tsx`, for when the
   game can start; the starting-technology choices are copied from
   `StartingComponents.tsx` (`startingTechChoices` in `logic.ts`).
+- Upstream's timers: `TimerContext` (from `TimerProvider` in the shared
+  layout), `useSetGlobalPause` and the `timers` document. `/play` activates
+  the game timer and the active player's timer as upstream's `GameTimer` and
+  `FactionTimer` do (`src/fork/play/Clock.tsx`).
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
 - `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork

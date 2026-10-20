@@ -25,6 +25,9 @@ export type Sheet =
   | { kind: "statusAbility"; ability: StatusAbility }
   | { kind: "gift" }
   | { kind: "law"; agenda: AgendaId }
+  | { kind: "playerEdit"; faction: FactionId }
+  | { kind: "techTree"; faction: FactionId }
+  | { kind: "frontier"; faction: FactionId }
   | ({ kind: "strategySwap" } & StrategySwap)
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
