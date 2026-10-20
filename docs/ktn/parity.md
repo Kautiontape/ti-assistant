@@ -4,12 +4,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 154 | Works in `/play`. |
-| Partial | 31 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Native | 172 | Works in `/play`. |
+| Partial | 24 | Works in `/play`, with the gap named in Notes. |
+| Table screen | 3 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 11 | No way to do it from `/play`. |
-| Not needed | 14 | Left out on purpose; the reason is in Notes. |
+| Missing | 7 | No way to do it from `/play`. |
+| Not needed | 13 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
@@ -17,26 +17,26 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
-| Entry to new game | SETUP page.tsx | Table screen | Start page (src/fork/home/StartPage.tsx) has "New game" `external` to /setup. |
-| Player count (3-8 chips) | SETUP (PlayerCount, ~l.182) | Partial | Only the Milty draft (src/fork/draft/NewDraft.tsx), fixed at 6 players. |
-| Expansions: PoK, Thunder's Edge, Codex I-IV, Twilight's Fall | SETUP l.235-325 | Partial | Draft has an expansions list (NewDraft.tsx); Codex/TF handling there not checked. Other setups: upstream. |
-| Homebrew: Discordant Stars | SETUP l.359 | Table screen | Not in draft. |
-| Events (shown when TF is off) | SETUP l.387 | Table screen | Not in draft. |
-| Game variant: normal / alliance-separate / alliance-combined (4, 6, 8 players only) | SETUP l.213, 539 | Table screen | Draft always makes "normal" (server.ts `BASE_OPTIONS`). |
-| Victory points (+ secondary VP for separate alliance) | SETUP l.205 | Partial | Draft sets `victory-points`; no secondary VP. |
-| Map type chips (standard/warp/skinny/large by player count) | SETUP l.447 | Missing | Draft hardcodes "standard". |
-| Map string input, validates, filters non-claimable planets | SETUP l.479, 1952 | Partial | Draft builds the map string from the chosen slices (src/fork/draft/server.ts gamePayload). No manual entry. |
-| Faction pick per seat (radial menu, filtered by expansions, removedIn) | SETUP l.1177, 1700 | Partial | Draft picks factions per player (draftableFactions copies the filter). |
-| Colour picker per seat (Magenta/Orange only with PoK) | setup/components/ColorPicker.tsx | Partial | Draft auto-assigns (pickColor); can't change. |
-| Player name per seat | setup/components/PlayerNameInput.tsx | Native | Draft collects names. |
-| Speaker choice | SETUP l.2285 | Partial | Draft: position 0 is speaker; picked in the draft. |
-| Alliance partner pairing | SETUP l.961, 1239 | Table screen | Not in draft. |
-| Randomize factions + Reset | SETUP l.2045-2078, 2441 | Missing | Draft has its own random faction pool. |
-| "Select all factions and colors" gate | SETUP l.2381 | Not needed | Draft guarantees it. |
-| Track toggles: Cards, Techs, Planets, Objectives, Relics | SETUP l.2148-2211 | Missing | Draft uses `BASE_OPTIONS`; no choice. |
+| Entry to new game | SETUP page.tsx | Native | The start page's "New game" opens /start/new (NewGame.tsx), the fork's setup page; the game it makes opens on /play. Check: parity-newgame-check.cjs |
+| Player count (3-8 chips) | SETUP (PlayerCount, ~l.182) | Native | NewGame.tsx: 3 to 8, or 3 to 6 without Prophecy of Kings; changing it resets the map type and, for odd counts, the variant (upstream's rules). Check: parity-newgame-check.cjs |
+| Expansions: PoK, Thunder's Edge, Codex I-IV, Twilight's Fall | SETUP l.235-325 | Native | NewGame.tsx: Prophecy of Kings, Thunder's Edge (which brings the codices) and each codex when Thunder's Edge is off; turning one off clears factions and colours it allowed. Twilight's Fall is left for its branch (/play doesn't run it yet). |
+| Homebrew: Discordant Stars | SETUP l.359 | Native | NewGame.tsx switch; adds its factions to the faction list. |
+| Events (shown when TF is off) | SETUP l.387 | Native | NewGame.tsx: an Events sheet lists the events of the chosen expansions with their text. |
+| Game variant: normal / alliance-separate / alliance-combined (4, 6, 8 players only) | SETUP l.213, 539 | Native | NewGame.tsx: offered for 4, 6 and 8 players; picking one sets upstream's starting points (10, 14, 22). How /play runs an alliance game is not checked. |
+| Victory points (+ secondary VP for separate alliance) | SETUP l.205 | Native | NewGame.tsx steppers; the second one shows for separate alliance points. Check: parity-newgame-check.cjs |
+| Map type chips (standard/warp/skinny/large by player count) | SETUP l.447 | Native | NewGame.tsx: the types upstream allows for the player count. |
+| Map string input, validates, filters non-claimable planets | SETUP l.479, 1952 | Native | NewGame.tsx: the same check as NowSetup, a map preview, and home systems on the map set the factions (upstream's extractFactionIds). The processed string is saved for the planet filter. Check: parity-newgame-check.cjs |
+| Faction pick per seat (radial menu, filtered by expansions, removedIn) | SETUP l.1177, 1700 | Native | NewGame.tsx seat sheet: a searchable list with upstream's filter; taking another seat's faction moves it. Check: parity-newgame-check.cjs |
+| Colour picker per seat (Magenta/Orange only with PoK) | setup/components/ColorPicker.tsx | Native | NewGame.tsx: a faction gets its own colour or the first free one from its list; taking another seat's colour swaps the two. Check: parity-newgame-check.cjs |
+| Player name per seat | setup/components/PlayerNameInput.tsx | Native | NewGame.tsx seat sheet; the Milty draft collects names too. Check: parity-newgame-check.cjs |
+| Speaker choice | SETUP l.2285 | Native | NewGame.tsx: speaker choice and a random speaker. Check: parity-newgame-check.cjs |
+| Alliance partner pairing | SETUP l.961, 1239 | Native | NewGame.tsx seat sheet, in an alliance variant; pairing is mutual, as upstream's. |
+| Randomize factions + Reset | SETUP l.2045-2078, 2441 | Native | NewGame.tsx: "Random factions" fills the empty seats; "Start over". Check: parity-newgame-check.cjs |
+| "Select all factions and colors" gate | SETUP l.2381 | Native | NewGame.tsx: "Start the game" stays off and says which seat still needs a faction, colour or partner. Check: parity-newgame-check.cjs |
+| Track toggles: Cards, Techs, Planets, Objectives, Relics | SETUP l.2148-2211 | Native | NewGame.tsx switches. Check: parity-newgame-check.cjs. Whether /play's screens respect them is the "Hidden app sections" row |
 | Advanced tracking: Command Tokens (+ disclaimer) | SETUP l.2221-2272 | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all |
-| Password (optional) | SETUP l.2307 | Missing | Draft creates games without one. |
-| Start Game button | SETUP l.2343 | Native (draft) | Draft's "Create the game" calls create-game (server.ts l.154). |
+| Password (optional) | SETUP l.2307 | Native | NewGame.tsx; create-game stores it hashed. Check: parity-newgame-check.cjs |
+| Start Game button | SETUP l.2343 | Native | NewGame.tsx calls upstream's /api/create-game and opens /play/<id>; the Milty draft makes its games too. Check: parity-newgame-check.cjs |
 | Language selector, theme | setup header | Not needed | Device settings sheet in /play covers theme/text size. |
 | Game-phase SETUP (starting techs, speaker actions, reveal 2 stage I) | main/phase/setup | Native | NowSetup.tsx: starting technology choices (Winnu, Argent, Keleres, Deepwrought and the rest), Keleres' home system, the speaker's two stage I objectives (with take back), the map string, then Start the game once upstream's setupPhaseComplete allows. Twilight's Fall choices link to the table screen. Check: parity-setup-check.cjs |
 
@@ -285,7 +285,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Demo game | game/[gameId]/demo | Not needed | Group has its own games |
 | FAQ | app/[locale]/FAQ | Native | The start page links upstream's FAQ page. Check: parity-global-check.cjs |
 | Map builder | app/[locale]/map-builder | Table screen | Start page external link |
-| New game setup | app/[locale]/setup | Table screen | Start page external link; Milty draft is native (src/fork/draft) |
+| New game setup | app/[locale]/setup | Native | /start/new (NewGame.tsx); see section 1 |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Missing | Applies if HideOnPlay doesn't skip it; no offline or install prompt in /play (not verified at runtime) |
 | Setup phase (starting techs, map string) | main/phase/setup | Native | See section 1's game-phase SETUP row |
@@ -305,7 +305,7 @@ Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS 
 
 From setup to the action phase:
 
-1. Setup: only the Milty draft creates games natively (6 players, fixed options). Player count, variants/alliances, events, Discordant Stars, map type/string, tracking toggles, command tokens, password and colour changes all live on upstream's /setup.
+1. Setup: native (/start/new and the Milty draft). Twilight's Fall games are left for that branch.
 2. Faction-specific and card-specific component actions (about 35 cases: PurgePlanet, Overrule, Strategize, Z'eu, Transpose, Plagiarize beyond tech, AddSystemToMap, etc.): /play only records the component, then needs "More controls".
 3. Tactical extras: frontier exploration (+ Mirage), action-phase objective scoring, Become a Martyr, Nekro Technological Singularity, Adjudicator Ba'al, Prove Endurance, Faunus: none native; only reachable through the faction page.
 4. Turn-flow controls: mark-primary "Done" is not sent (by design; it only collapses upstream's panel).
