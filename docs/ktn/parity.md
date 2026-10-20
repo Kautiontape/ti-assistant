@@ -8,8 +8,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 8 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 21 | No way to do it from `/play`. |
-| Not needed | 13 | Left out on purpose; the reason is in Notes. |
+| Missing | 20 | No way to do it from `/play`. |
+| Not needed | 14 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
@@ -277,7 +277,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Settings modal (victory points, factions, options) | src/components/SettingsModal | Missing | No in-game settings; VP target is read-only |
 | Theme toggle (dark/light) | app/[locale]/ThemeToggle.tsx | Native | DeviceSheet theme choice |
 | Text size, shared-screen mode, dock | n/a (fork-only) | Native | DeviceSheet |
-| Languages (i18n, LangSelectHoverMenu) | src/components/LangSelectHoverMenu | Missing | /play strings are English only; no language picker |
+| Languages (i18n, LangSelectHoverMenu) | src/components/LangSelectHoverMenu | Not needed | /play stays English, with no language picker (Shawn, 2026-10-20). Its strings are fork code, so upstream's message files stay untouched |
 | Download/export game data | Header / game page | Missing | |
 | Archive | app/[locale]/archive | Not needed | Dropped by Shawn |
 | Stats | app/[locale]/stats | Not needed | Dropped by Shawn |
@@ -317,4 +317,4 @@ From the status phase to the whole game:
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
 3. The results timer view is missing (the timers themselves run in /play now).
 4. Results extras: VP graph, tech graph, map lapse, annotated log, and export/download.
-5. Sharing and settings: no share link or QR, no game code display, no in-game settings, no language picker.
+5. Sharing and settings: no share link or QR, no game code display, no in-game settings.
