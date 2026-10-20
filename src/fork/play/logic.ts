@@ -100,6 +100,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}`
       : ev.relic === "The Crown of Emphidia" ? "purged The Crown of Emphidia for 1 point" : `used ${ev.relic}`;
     case "PLAY_LEADER": return `used ${ev.leader}`;
+    case "GIFT_OF_PRESCIENCE": return ev.faction === "Naalu Collective" ? "Naalu kept the 0 token" : `Naalu gave the 0 token to ${name(ev.faction)}`;
+    case "SWAP_STRATEGY_CARDS": return `${ev.cardOne} and ${ev.cardTwo} were swapped${ev.imperialArbiter ? " (Imperial Arbiter)" : ""}`;
     case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;
     case "SELECT_SUB_AGENDA": return ev.subAgenda && ev.subAgenda !== "None" ? `Covert Legislation was ${ev.subAgenda}` : null;
     case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;

@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 99 | Works in `/play`. |
-| Partial | 42 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 12 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Native | 104 | Works in `/play`. |
+| Partial | 41 | Works in `/play`, with the gap named in Notes. |
+| Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 42 | No way to do it from `/play`. |
+| Missing | 41 | No way to do it from `/play`. |
 | Not needed | 10 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -51,11 +51,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Card taken / invalid cards disabled | SP l.476 | Native | `disabled` on RowLink. |
 | 4-and-fewer players pick two cards (2x picks) | SP haveAllFactionsPicked l.652 | Native | Order list shows several picks per player (picks(id)). Ending relies on `active` going empty. |
 | Checks and Balances (picker gives card to another) | SP ChecksAndBalancesMenu l.42 | Native | PlayApp card sheet + logic.ts checksAndBalancesTargets. |
-| Start-of-phase reminders (AI Revolution/Arms Reduction/New Constitution results, Council Patronage) | SP l.549-625, 695 | Missing | Not shown anywhere in NowStrategy. |
-| Naalu: Gift of Prescience (swap 0-initiative card) | SP l.763-790 | Table screen | Only a text hint plus link when all have picked (NowStrategy useEndOfStrategyAbilities). |
-| Hacan: Quantum Datahub Node (swap cards) | SP QuantumDatahubNode l.112 | Table screen | Same hint + link. |
-| Imperial Arbiter swap (agenda) | SP ImperialArbiter l.272 | Table screen | Same hint + link. |
-| Naalu 0-initiative card shown as separate "Naalu" token | SP l.679 | Partial | Card list shows it; no gift UI. |
+| Start-of-phase reminders (AI Revolution/Arms Reduction/New Constitution results, Council Patronage) | SP l.549-625, 695 | Native | StrategyAbilities.tsx StartOfStrategy: those laws in the round they apply, and Council Patronage. Check: parity-strategyabilities-check.cjs |
+| Naalu: Gift of Prescience (swap 0-initiative card) | SP l.763-790 | Native | GiftSheet: who gets the 0 token, confirmed; "Naalu keeps it" takes it back |
+| Hacan: Quantum Datahub Node (swap cards) | SP QuantumDatahubNode l.112 | Native | SwapSheet for Hacan, Nekro (with the tech) or the ability's owner: give one card, take another player's, confirmed |
+| Imperial Arbiter swap (agenda) | SP ImperialArbiter l.272 | Native | SwapSheet with the arbiter flag; upstream's handler discards the law |
+| Naalu 0-initiative card shown as separate "Naalu" token | SP l.679 | Native | Order 0 follows the gift (upstream's GIFT_OF_PRESCIENCE) |
 | Active player / on deck, per-faction timer | SP l.828-880 (FactionTimer, StaticFactionTimer) | Partial | "Picking" tag and order list; no clock in strategy phase (clock only in action phase turn). |
 | End phase: "Advance to Action Phase" | SP l.941 | Native | "Start the action phase" button (AdvancePhaseEvent). |
 | Undo last pick | UndoButton / ControlButtons | Native | Toast Undo + Undo in log (useWrite). |

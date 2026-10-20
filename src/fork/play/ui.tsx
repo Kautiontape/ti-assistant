@@ -9,6 +9,7 @@ import { Button, kit, Sheet as KitSheet } from "../ui/kit";
 import type { useWrite } from "./useWrite";
 import type { AgendaCardKind } from "./AgendaCards";
 import type { StatusAbility } from "./StatusAbilities";
+import type { StrategySwap } from "./StrategyAbilities";
 
 export { Chip, cx, pcolor, Swatch } from "../ui/kit";
 // Older name for the kit's Sheet.
@@ -22,6 +23,8 @@ export type Sheet =
   | { kind: "setupChoice"; faction: FactionId }
   | { kind: "agendaCard"; card: AgendaCardKind }
   | { kind: "statusAbility"; ability: StatusAbility }
+  | { kind: "gift" }
+  | ({ kind: "strategySwap" } & StrategySwap)
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }
   | { kind: "player"; faction: FactionId }
