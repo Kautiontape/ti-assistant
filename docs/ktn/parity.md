@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 186 | Works in `/play`. |
-| Partial | 14 | Works in `/play`, with the gap named in Notes. |
+| Native | 189 | Works in `/play`. |
+| Partial | 11 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
@@ -139,11 +139,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Politics primary (new speaker, swap/undo) | StrategicActions/Politics.tsx | Native | PoliticsPrimary. Draw action cards: board. |
 | Politics: End Turn blocked until speaker chosen | NextPlayerButtons l.1566 | Native | End turn waits for the new speaker, with a hint. Check: parity-turn-check.cjs |
 | Imperial primary (score public obj or secret / Mecatol +1) | StrategicActions/Imperial.tsx | Native | ImperialPrimary + `score` sheet. |
-| Imperial secondary (draw secret obj), Imperial points for Mecatol | AP l.1313 | Partial | Text only. |
+| Imperial secondary (draw secret obj), Imperial points for Mecatol | AP l.1313 | Native | Upstream's Imperial.tsx has only a primary: the Imperial point for Mecatol Rex and a public objective to score, both in /play (ImperialPrimary). The secondary (draw a secret) records nothing upstream either. Check: cards-check.cjs (Imperial in round 5) |
 | Diplomacy primary (Xxcha Peace Accords planet claim) | StrategicActions/Diplomacy.tsx | Native | A Peace Accords row on Diplomacy's primary when Xxcha plays it, and on the secondaries card when another player does; it opens the claim sheet without Mecatol Rex (Diplomacy.tsx's filter). Hidden when the game doesn't track planets. Check: parity-rare-check.cjs |
-| Diplomacy primary/secondary (ready planets, refresh) | AP l.647 | Partial | Text only. |
+| Diplomacy primary/secondary (ready planets, refresh) | AP l.647 | Native | Upstream's Diplomacy.tsx records only Xxcha's Peace Accords (native, see the row above); readying planets isn't tracked, since upstream hides planet state by default. Check: parity-rare-check.cjs |
 | Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all. The Leadership card itself is native (select, text, secondaries) |
-| Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Partial | Select + text + secondaries; no trade-goods or commodity counters anywhere in fork. |
+| Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Native | Upstream has no Construction or Trade screen and doesn't track trade goods or commodities. Warfare with Thunder's Edge gets the tactical rows (take a planet, score an action-phase objective), as upstream's Warfare.tsx does. Check: parity-rare-check.cjs |
 | Warfare primary objective scoring | StrategicActions/Warfare.tsx | Native | With Thunder's Edge, Warfare's primary gets the tactical rows: take a planet, frontier, scored a secret |
 | Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Twilight's Fall branch | TF has no /play support. |
 | Cards on table (who picked, played/ready) | AP StrategyCardColumn | Native | CardBoard. |
@@ -307,6 +307,5 @@ Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS 
 What's left, by the rows above that aren't Native or Not needed:
 
 1. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
-2. Strategy cards shown as text only: Diplomacy (readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
-3. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
-4. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
+2. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
+3. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
