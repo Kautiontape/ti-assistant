@@ -6,11 +6,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 |---|---|---|
 | Native | 175 | Works in `/play`. |
 | Partial | 23 | Works in `/play`, with the gap named in Notes. |
-| Table screen | 2 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
+| Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
-| Not needed | 15 | Left out on purpose; the reason is in Notes. |
-| Twilight's Fall branch | 4 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
+| Not needed | 16 | Left out on purpose; the reason is in Notes. |
+| Twilight's Fall branch | 5 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 have the status "Twilight's Fall branch", and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
@@ -285,12 +285,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Supporters, support links | app/[locale]/supporters, SupportSection.tsx | Not needed | Dropped by Shawn |
 | Demo game | game/[gameId]/demo | Not needed | Group has its own games |
 | FAQ | app/[locale]/FAQ | Native | The start page links upstream's FAQ page. Check: parity-global-check.cjs |
-| Map builder | app/[locale]/map-builder | Table screen | Start page external link |
+| Map builder | app/[locale]/map-builder | Not needed | Upstream's own page, kept and linked from the start page (it opens upstream's page). It makes map strings for setup and isn't part of a game, so /play doesn't need a copy |
 | New game setup | app/[locale]/setup | Native | /start/new (NewGame.tsx); see Game setup |
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Not needed | Upstream doesn't run one: `ServiceWorkerWrapper` is never mounted and there's no web manifest, so upstream has no offline mode or install prompt either |
 | Setup phase (starting techs, map string) | main/phase/setup | Native | See the game-phase setup row in Game setup |
-| Fallback link to upstream faction page | (faction)/[factionId] | Table screen | NotNativeYet links to /game/<id>/<faction> |
+| Fallback link to upstream faction page | (faction)/[factionId] | Twilight's Fall branch | NotNativeYet links to /game/<id>/<faction>. Every phase but the edict phase is native now, and only Twilight's Fall has an edict phase |
 | Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Native | Ctx.tracks() in PlayApp. With a section off, /play leaves out what upstream's Conditional hides: research (Technology card, secondaries, components, player edit), planet claims (tactical, map, Faunus, follow-ups), objective scoring (Imperial, tactical secrets, Prove Endurance, points sheet), relic rows, the player sheet's sections and the results' Technology view. Status, setup and agenda screens already checked it. Check: parity-hidden-check.cjs |
 
 ## 8. Twilight's Fall in /play
