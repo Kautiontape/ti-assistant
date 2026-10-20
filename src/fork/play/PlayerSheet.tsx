@@ -7,10 +7,10 @@ import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { combats, pointsBySource, SFTT } from "./logic";
+import { TfOwnedCards } from "../tfplay/TfCards";
 import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
-import { TfOwnedCards } from "../tfplay/TfCards";
 import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
