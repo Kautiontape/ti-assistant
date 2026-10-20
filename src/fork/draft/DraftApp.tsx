@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import FactionIcon from "../../components/FactionIcon/FactionIcon";
 import GameMap from "../../components/Map/GameMap";
-import { getDefaultMapString, getFactionSystemNumber } from "../../util/map";
+import { getFactionSystemNumber } from "../../util/map";
 import { Optional } from "../../util/types/types";
 import styles from "../play/play.module.scss";
 import { Button, Choices, cx, kit, RowLink, Rows, Sheet as KitSheet, Tag, rootAttrs, useDevicePrefs } from "../ui/kit";
-import { buildMapString, holdings, newSeed, pickerAt, pickFactions, sliceStats, toPixel, wedges, type Draft, type PickKind, type TileInfo, type Wedges } from "./milty";
+import { layoutFor } from "./layout";
+import { buildMapString, drawFactions, holdings, newSeed, pickerAt, sliceStats, type Draft, type Layout, type PickKind, type TileInfo } from "./milty";
 import { draftableFactions, makeSlices } from "./NewDraft";
+import { SliceArt } from "./SliceArt";
 import { useBase, useDraft, useDraftApi } from "./useDraft";
 
 const POSITIONS = ["Speaker", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
@@ -68,7 +70,7 @@ function Live({ draft: d }: { draft: Draft }) {
   const up = pickerAt(d.order, d.picks.length);
   const done = up === undefined;
   const acting = up !== undefined && (up === me || up === helping) ? up : undefined;
-  const w = wedges(getDefaultMapString(n, "standard", d.expansions.includes("THUNDERS EDGE")));
+  const w = layoutFor(n, d.expansions);
   const took = (kind: PickKind, value: number | string) => d.picks.find((p) => p.kind === kind && p.value === value)?.player;
 
   // Helping is for one pick: it ends when the pick count moves.
@@ -91,12 +93,20 @@ function Live({ draft: d }: { draft: Draft }) {
     if (faction) try { localStorage.setItem(`play-seat-${gameId}`, faction); } catch {}
     router.push(`/play/${gameId}`);
   }
+  // Slices entered by hand stay; the factions are drawn again (from the host's choice, if any).
   async function reroll() {
     const seed = newSeed();
-    const g = makeSlices(base, d.expansions, d.slices.length, d.limits, seed);
-    if ("error" in g) { api.say(g.error, true); return; }
-    await api.act({ action: "reroll", seen: 0, slices: g.slices, factions: pickFactions(draftableFactions(base.factions, d.expansions), d.factions.length, seed), order: d.order, seed }, "New slices and factions");
+    let slices = d.slices;
+    if (!d.customSlices) {
+      const g = makeSlices(base, d.expansions, n, d.slices.length, d.limits, seed);
+      if ("error" in g) { api.say(g.error, true); return; }
+      slices = g.slices;
+    }
+    const factions = drawFactions(draftableFactions(base.factions, d.expansions), d.factionPool ?? [], d.factions.length, seed);
+    await api.act({ action: "reroll", seen: 0, slices, factions, order: d.order, seed }, d.customSlices ? "New factions" : "New slices and factions");
   }
+  // Nothing to draw again when the slices are by hand and the factions are exactly the host's choice.
+  const canReroll = !(d.customSlices && d.factionPool && d.factionPool.length <= d.factions.length);
 
   const mine = me !== undefined ? holdings(d.picks, me) : undefined;
   const need = acting !== undefined ? (["slice", "faction", "position"] as PickKind[]).filter((k) => holdings(d.picks, acting)[k] === undefined) : [];
@@ -162,7 +172,7 @@ function Live({ draft: d }: { draft: Draft }) {
                   return (
                     <button key={i} className={styles.slice} data-taken={owner !== undefined || undefined} onClick={() => setSheet({ kind: "slice", value: i })} aria-label={`Slice ${i + 1}`} aria-haspopup="dialog">
                       <b>Slice {i + 1} <span aria-hidden="true" style={{ color: "var(--muted)" }}>›</span></b>
-                      <SliceArt tiles={tiles} w={w} size={22} home={homeFaction ? getFactionSystemNumber({ id: homeFaction as FactionId }) : undefined} />
+                      <SliceArt tiles={tiles} canonical={w.canonical} size={22} home={homeFaction ? getFactionSystemNumber({ id: homeFaction as FactionId }) : undefined} />
                       <span className={kit.num}>{st.optimal.resources} / {st.optimal.influence}</span>
                       <span className={kit.sub} style={{ fontSize: "calc(var(--fs) * 0.78)" }}>{badges(st)}</span>
                       {owner !== undefined ? <Tag>{nameOf(owner)}</Tag> : null}
@@ -194,7 +204,7 @@ function Live({ draft: d }: { draft: Draft }) {
                   const owner = took("position", pos);
                   return (
                     <RowLink key={pos} disabled={owner !== undefined && acting !== undefined} onClick={() => setSheet({ kind: "position", value: pos })}
-                      title={POSITIONS[pos]} detail={pos === 0 ? "Speaker in round 1, seat at the top of the map" : `Seat ${pos + 1}, clockwise from the speaker`}
+                      title={POSITIONS[pos]} detail={pos === 0 ? "Speaker in round 1" : `Seat ${pos + 1}, clockwise from the speaker`}
                       end={owner !== undefined ? nameOf(owner) : undefined} />
                   );
                 })}
@@ -226,7 +236,7 @@ function Live({ draft: d }: { draft: Draft }) {
                 Undo: {nameOf(last.player)} took {describe(last.kind, last.value)}
               </Button>
             ) : null}
-            {!d.picks.length ? <Button block disabled={api.pending} onClick={reroll} detail="Only before the first pick">New slices and factions</Button> : null}
+            {!d.picks.length && canReroll ? <Button block disabled={api.pending} onClick={reroll} detail="Only before the first pick">{d.customSlices ? "New factions" : "New slices and factions"}</Button> : null}
             <p className={kit.sub}>Draft code <b className={kit.num}>{d.id}</b>. Others join at /draft with this code.</p>
           </section>
         </div>
@@ -259,27 +269,8 @@ function badges(st: ReturnType<typeof sliceStats>) {
   ].filter(Boolean).join(" · ") || "No skips or wormholes";
 }
 
-// The slice as it sits on the map: the home at the bottom, the centre above.
-function SliceArt({ tiles, w, size, home }: { tiles: string[]; w: Wedges; size: number; home?: string }) {
-  const cells = [{ c: [0, 0, 0] as [number, number, number], id: home, isHome: true }, ...w.canonical.map((c, j) => ({ c, id: tiles[j], isHome: false }))]
-    .map((x) => ({ ...x, ...toPixel([-x.c[0], -x.c[1], -x.c[2]], size) }));
-  const hw = size, hh = (Math.sqrt(3) / 2) * size;
-  const minX = Math.min(...cells.map((p) => p.x)) - hw, maxX = Math.max(...cells.map((p) => p.x)) + hw;
-  const minY = Math.min(...cells.map((p) => p.y)) - hh, maxY = Math.max(...cells.map((p) => p.y)) + hh;
-  return (
-    <div className={styles.sliceArt} style={{ width: maxX - minX, height: maxY - minY }} aria-hidden="true">
-      {cells.map((p, k) => p.id ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={k} src={`/images/systems/ST_${p.id}.png`} alt="" style={{ left: p.x - hw - minX, top: p.y - hh - minY, width: 2 * hw, height: 2 * hh }} />
-      ) : (
-        <span key={k} className={styles.hexHome} style={{ left: p.x - hw - minX, top: p.y - hh - minY, width: 2 * hw, height: 2 * hh }}>{p.isHome ? "Home" : ""}</span>
-      ))}
-    </div>
-  );
-}
-
 function PickSheet({ d, sheet, w, acting, owner, nameOf, fname, pending, close, pick }: {
-  d: Draft; sheet: { kind: PickKind; value: number | string }; w: Wedges; acting: Optional<number>; owner: Optional<number>;
+  d: Draft; sheet: { kind: PickKind; value: number | string }; w: Layout; acting: Optional<number>; owner: Optional<number>;
   nameOf: (p: Optional<number>) => string; fname: (f: string) => string; pending: boolean; close: () => void; pick: () => void;
 }) {
   const base = useBase();
@@ -292,7 +283,7 @@ function PickSheet({ d, sheet, w, acting, owner, nameOf, fname, pending, close, 
     <KitSheet title={title} close={close}>
       {kind === "slice" ? (
         <>
-          <SliceArt tiles={tiles} w={w} size={40} />
+          <SliceArt tiles={tiles} canonical={w.canonical} size={40} />
           <ul className={styles.list}>
             {tiles.map((t) => <TileRow key={t} info={base.info(t)} planets={(base.systems[t]?.planets ?? []).map((pid) => base.planets[pid]).filter((p): p is NonNullable<typeof p> => !!p)} />)}
           </ul>
@@ -324,19 +315,18 @@ function TileRow({ info, planets }: { info: TileInfo; planets: { name: string; r
   );
 }
 
-function MapPreview({ d, w, fname, nameOf }: { d: Draft; w: Wedges; fname: (f: string) => string; nameOf: (p: Optional<number>) => string }) {
+function MapPreview({ d, w, fname, nameOf }: { d: Draft; w: Layout; fname: (f: string) => string; nameOf: (p: Optional<number>) => string }) {
   const n = d.players.length;
   const seated = Array.from({ length: n }, (_, pos) => d.players.findIndex((_, p) => holdings(d.picks, p).position === pos));
-  const template = getDefaultMapString(n, "standard", d.expansions.includes("THUNDERS EDGE"));
-  const withSlices = buildMapString(template, w, seated.map((p) => (p >= 0 && holdings(d.picks, p).slice !== undefined ? d.slices[holdings(d.picks, p).slice!] : undefined)));
+  const withSlices = buildMapString(w.template, w, seated.map((p) => (p >= 0 && holdings(d.picks, p).slice !== undefined ? d.slices[holdings(d.picks, p).slice!] : undefined)));
   // Homes drawn from the drafted factions; a seat nobody holds yet stays empty.
   const factionAt = seated.map((p) => (p >= 0 ? holdings(d.picks, p).faction : undefined));
   const mapString = withSlices.split(" ").map((t) => { const m = t.match(/^P(\d)$/); if (!m) return t; const f = factionAt[Number(m[1]) - 1]; return f ? getFactionSystemNumber({ id: f as FactionId }) : "0"; }).join(" ");
   return (
     <section className={kit.card} aria-label="Map">
-      <p className={kit.eyebrow}><span>Map so far</span><span>Speaker at the top</span></p>
+      <p className={kit.eyebrow}><span>Map so far</span><span>Speaker at the top{n === 4 ? " right" : ""}</span></p>
       <div className={styles.board}><div className={styles.boardInner} style={{ cursor: "default" }}>
-        <GameMap mapString={mapString} mapStyle="standard" factions={factionAt.map((f) => (f ? { id: f as FactionId } : {}))} expansions={d.expansions as Expansion[]} hideLegend hideFracture />
+        <GameMap mapString={mapString} mapStyle={w.style} factions={factionAt.map((f) => (f ? { id: f as FactionId } : {}))} expansions={d.expansions as Expansion[]} hideLegend hideFracture />
       </div></div>
       <ul className={styles.list}>
         {seated.map((p, pos) => (
