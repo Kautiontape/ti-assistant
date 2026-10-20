@@ -20,7 +20,7 @@ export function actorOf(e: Optional<Entry>): Optional<Actor> {
   return d?.actor ?? d?.event?.actor;
 }
 
-const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "CONTINUE_GAME", "SWAP_MAP_TILES"]);
+const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "REPEAL_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "CONTINUE_GAME", "SWAP_MAP_TILES"]);
 
 // The faction an entry is about, if any. `turn` is whose turn the entry fell in
 // (see turnOwners), for entries such as SELECT_ACTION that name no faction.
@@ -94,6 +94,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       return ev.votes ? `cast ${n} vote${n === 1 ? "" : "s"} for ${who(ev.target)}` : "abstained";
     }
     case "RESOLVE_AGENDA": return `${ev.agenda}: ${who(ev.target)}`;
+    case "REPEAL_AGENDA": return `Law repealed: ${ev.agenda}`;
     case "START_VOTING": return "Voting started";
     case "HIDE_AGENDA": return ev.veto ? `Agenda vetoed: ${ev.agenda}` : null;
     case "PLAY_RIDER": return ev.outcome ? `played ${ev.rider}, predicting ${who(ev.outcome)}` : `played ${ev.rider}`;

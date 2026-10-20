@@ -24,6 +24,7 @@ export type Sheet =
   | { kind: "agendaCard"; card: AgendaCardKind }
   | { kind: "statusAbility"; ability: StatusAbility }
   | { kind: "gift" }
+  | { kind: "law"; agenda: AgendaId }
   | ({ kind: "strategySwap" } & StrategySwap)
   | { kind: "claim"; faction: FactionId }
   | { kind: "pass"; faction: FactionId }

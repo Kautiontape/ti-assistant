@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 106 | Works in `/play`. |
-| Partial | 41 | Works in `/play`, with the gap named in Notes. |
+| Native | 107 | Works in `/play`. |
+| Partial | 40 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 17 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 39 | No way to do it from `/play`. |
@@ -220,7 +220,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Dictate Policy, Mutiny points etc. | AgendaPhase.tsx DictatePolicy | Native | DictatePolicyRows on the agenda screen once 3 laws are in play (upstream's rule; one scorer when it's a secret). Mutiny and other agenda points are applied by upstream's resolve |
 | Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Native | AgendaCards.tsx before the first agenda. Ancient Burial Sites also lowers that player's available votes, which upstream's tally never does (it reads a state field nothing sets) |
 | Agenda timers per agenda | src/components/AgendaTimer | Missing | No timers in /play |
-| Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Partial | PlayerSheet shows "Laws that name them" only; no all-laws list, no repeal |
+| Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Native | Laws.tsx: "Laws in effect" on the Table tab, each with its text, who was elected, and a confirmed Repeal (undoable). Check: parity-laws-check.cjs |
 | Laws' effects on gameplay (e.g. Representative Government, Checks and Balances, Minister of Policy) | various | Partial | Applied where built (RepGov, Checks and Balances at pick); others not surfaced |
 | Ready planets, then start next round | AgendaPhase.tsx | Native | "Both agendas are resolved" card, AdvancePhaseEvent |
 

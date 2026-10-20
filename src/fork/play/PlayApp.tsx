@@ -23,6 +23,7 @@ import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { AgendaCardSheet } from "./AgendaCards";
 import { StatusAbilitySheet } from "./StatusAbilities";
 import { GiftSheet, SwapSheet } from "./StrategyAbilities";
+import { LawSheet, LawsCard } from "./Laws";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
 import NowEnd, { GameEndBanner } from "./NowEnd";
@@ -280,6 +281,7 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <LawsCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
     </>
   );
@@ -390,6 +392,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "vote":
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "law":
+      return <LawSheet agenda={sheet.agenda} close={close} ctx={ctx} />;
     case "gift":
       return <GiftSheet close={close} ctx={ctx} />;
     case "strategySwap":
