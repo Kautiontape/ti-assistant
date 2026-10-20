@@ -10,6 +10,11 @@ import styles from "./play.module.scss";
 import { useRace, type Ctx } from "./ui";
 import { Button, Chip, cx, kit, pcolor, RowLink, Rows } from "../ui/kit";
 
+// Upstream's results page (points and technologies by round, map lapse, timers).
+export function ResultsRow({ open }: Pick<Ctx, "open">) {
+  return <Rows><RowLink onClick={() => open({ kind: "results" })} title="How the game went" detail="Points and technology by round, the map by round, time per player" /></Rows>;
+}
+
 // Who has reached the target. Upstream's header offers "End Game" on the same
 // condition (normal games; alliance games link to the table screen).
 export function useReachedTarget(factions: Ctx["factions"]) {
@@ -73,6 +78,7 @@ export default function NowEnd(ctx: Ctx) {
               end={<span className={styles.vp}>{r.total}</span>} />
           ))}
         </Rows>
+        <ResultsRow open={open} />
       </section>
       <CombatSummary {...ctx} />
       <section className={kit.card} aria-label="Back to the game">

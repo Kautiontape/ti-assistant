@@ -119,6 +119,22 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
   }
 }
 
+// The round each entry falls in (0 for setup). ADVANCE_PHASE records the phase
+// and round it ends; a round ends with the agenda phase, or with the status
+// phase when the agenda phase is skipped.
+export function roundsOf(log: ActionLog): WeakMap<Entry, number> {
+  const out = new WeakMap<Entry, number>();
+  let round = 0;
+  for (const e of [...log].reverse()) {
+    out.set(e, round);
+    if (e.data.action !== "ADVANCE_PHASE") continue;
+    const ev = (e.data as { event?: { state?: { phase?: string; round?: number }; skipAgenda?: boolean } }).event;
+    const phase = ev?.state?.phase, r = ev?.state?.round ?? round;
+    round = phase === "SETUP" ? 1 : phase === "AGENDA" || (phase === "STATUS" && ev?.skipAgenda) ? r + 1 : r;
+  }
+  return out;
+}
+
 // Undo groups: the newest entries that share one action id.
 export function newestGroup(log: ActionLog): Entry[] {
   const first = log[0];

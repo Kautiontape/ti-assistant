@@ -56,6 +56,12 @@ constructors and data hooks:
   layout), `useSetGlobalPause` and the `timers` document. `/play` activates
   the game timer and the active player's timer as upstream's `GameTimer` and
   `FactionTimer` do (`src/fork/play/Clock.tsx`).
+- The results views (`src/fork/play/Results.tsx`) run upstream's replay worker,
+  `main/phase/results/game-log.worker.tsx`, by URL, with the starting state
+  built as `ResultsPhase.tsx` builds it (copied into `src/fork/play/results.ts`,
+  since that page doesn't export it). Turbopack's dev server can't start the
+  worker (upstream's results page fails there too); `next dev --webpack` and
+  production builds can.
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
 - `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork

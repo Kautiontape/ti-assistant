@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 140 | Works in `/play`. |
-| Partial | 31 | Works in `/play`, with the gap named in Notes. |
+| Native | 147 | Works in `/play`. |
+| Partial | 29 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 8 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 20 | No way to do it from `/play`. |
+| Missing | 15 | No way to do it from `/play`. |
 | Not needed | 14 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -232,13 +232,13 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Back to Game (Continue) | Header.tsx | Native | NowEnd "Back to the game" |
 | Winner announcement and ties | results/ResultsPhase.tsx | Native | NowEnd game-over card |
 | Final scores with points by source | summary-column "Final Score" | Native | NowEnd Results rows, tap for PlayerSheet |
-| Game log (Beta) annotated by round | results/game-log.worker.tsx, ResultsPhase | Partial | Log tab has the live log with filter and undo, no round grouping or annotations |
-| Victory points graph by round | results/VictoryPointsGraph.tsx | Missing | No chart |
-| Techs graph | results/TechGraph.tsx | Missing | No chart |
-| Map lapse (map by round) | results/MapLapse.tsx | Missing | MapTab shows the current map only |
-| Timers summary (per round, per faction, agenda) | results/Timers.tsx | Partial | NowEnd shows time per player on turns and in combat (fork-derived), not upstream's timer data |
+| Game log (Beta) annotated by round | results/game-log.worker.tsx, ResultsPhase | Native | The Log tab has a heading where each round starts (logic.ts roundsOf). Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
+| Victory points graph by round | results/VictoryPointsGraph.tsx | Native | Results.tsx: "How the game went" (game-over screen, Table tab): points by round from upstream's replay worker, a legend that highlights a player, a table view. Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
+| Techs graph | results/TechGraph.tsx | Native | Same sheet, "Technology": technologies by round. Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
+| Map lapse (map by round) | results/MapLapse.tsx | Native | Same sheet, "Map": upstream's GameMap at the end of each round. Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
+| Timers summary (per round, per faction, agenda) | results/Timers.tsx | Native | Same sheet, "Time": each player's turn time (upstream timers, which /play runs since stage 3), turns and longest turn from the replay. Secondary timers stay off. Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
 | Combat summary | n/a (fork-only) | Native | NowEnd CombatSummary |
-| Results view selector (Game Log, VP, Techs, Map Lapse, Timers) | ResultsPhase.tsx | Missing | |
+| Results view selector (Game Log, VP, Techs, Map Lapse, Timers) | ResultsPhase.tsx | Native | The sheet's Points / Technology / Map / Time picker |
 | Link to archived game / permanent results page | archive/[gameId] | Not needed | Group does not use Archive |
 
 ## 7. Whole-game features
@@ -278,7 +278,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Theme toggle (dark/light) | app/[locale]/ThemeToggle.tsx | Native | DeviceSheet theme choice |
 | Text size, shared-screen mode, dock | n/a (fork-only) | Native | DeviceSheet |
 | Languages (i18n, LangSelectHoverMenu) | src/components/LangSelectHoverMenu | Not needed | /play stays English, with no language picker (Shawn, 2026-10-20). Its strings are fork code, so upstream's message files stay untouched |
-| Download/export game data | Header / game page | Missing | |
+| Download/export game data | Header / game page | Native | "Download the game" on the Table tab: upstream's /api/<id>/download (setup, timers, full log) as a JSON file. Upstream's screens never linked it. Check: parity-results-check.cjs (run on `next dev --webpack`: Turbopack's dev server can't start the replay worker) |
 | Archive | app/[locale]/archive | Not needed | Dropped by Shawn |
 | Stats | app/[locale]/stats | Not needed | Dropped by Shawn |
 | Supporters, support links | app/[locale]/supporters, SupportSection.tsx | Not needed | Dropped by Shawn |
@@ -315,6 +315,6 @@ From the status phase to the whole game:
 
 1. Agenda special cases: post-resolve effects (Incentive Program, Colonial Redistribution, planet/relic/Drive the Debate, Dictate Policy) are missing or link out.
 2. Status phase abilities and Thunder's Edge steps (Oracle, Crown, Wormhole Generator, Mitosis, Entropic Scar, Radical Advancement) all send players to the table screen.
-3. The results timer view is missing (the timers themselves run in /play now).
-4. Results extras: VP graph, tech graph, map lapse, annotated log, and export/download.
+3. (Timers and the results timer view are native now.)
+4. Results extras: done (stage 4).
 5. Sharing and settings: no share link or QR, no game code display, no in-game settings.

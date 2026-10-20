@@ -2,14 +2,14 @@
 // The fork's phone-first player screen (/[locale]/play/[gameId]). See the
 // "Interface design" note in Trilium and prototype/play for the design.
 // Strings are English and live in fork code, so upstream's message files stay untouched.
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useActionLog, useAgenda, useCurrentTurn, useGameId, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useGameState } from "../../context/stateDataHooks";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, sentence, subjectOf, turnOwners } from "./logic";
+import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, roundsOf, sentence, subjectOf, turnOwners } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
@@ -26,6 +26,7 @@ import { GiftSheet, SwapSheet } from "./StrategyAbilities";
 import { LawSheet, LawsCard } from "./Laws";
 import { PlayerEditSheet } from "./PlayerEdit";
 import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
+import { ResultsSheet } from "./Results";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
@@ -288,6 +289,12 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <section className={kit.card} aria-label="The game so far">
+      <Rows flush>
+        <RowLink onClick={() => open({ kind: "results" })} title="How the game went" detail="Points and technology by round, the map by round, time per player" />
+        <RowLink href={`/api/${ctx.gameId}/download`} download={`ti-game-${ctx.gameId}.json`} title="Download the game" detail="The setup, timers and full log as a JSON file" />
+      </Rows>
+    </section>
     <LawsCard ctx={ctx} />
     <ClockCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
@@ -300,6 +307,7 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
   const order = useOrderedFactionIds("SPEAKER");
   const group = newestGroup(log);
   const rows = log.filter((e) => sentence(e, ctx.short, ctx.isFaction) && (who === "everyone" || ctx.subject(e) === who)).slice(0, 300);
+  const roundOf = useMemo(() => roundsOf(log), [log]);
   return (
     <section className={kit.card} aria-label="Game log">
       <p className={kit.eyebrow}><span>Game log</span><span>Newest first</span></p>
@@ -311,7 +319,16 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
       ) : null}
       <Choices label="Show" value={who} onChange={setWho}
         options={[{ value: "everyone", label: "Everyone" }, ...order.map((id) => ({ value: id as string, label: ctx.short(id) }))]} />
-      <ul className={styles.feed}>{rows.map((e, i) => <FeedRow key={`${e.timestampMillis}-${i}`} e={e} {...ctx} />)}</ul>
+      <ul className={styles.feed}>{rows.map((e, i) => {
+        const r = roundOf.get(e);
+        const head = r !== undefined && (i === 0 || roundOf.get(rows[i - 1]!) !== r);
+        return (
+          <Fragment key={`${e.timestampMillis}-${i}`}>
+            {head ? <li className={styles.feedHead}><h3>{r === 0 ? "Setup" : `Round ${r}`}</h3></li> : null}
+            <FeedRow e={e} {...ctx} />
+          </Fragment>
+        );
+      })}</ul>
     </section>
   );
 }
@@ -443,6 +460,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     }
     case "pass":
       return <PassSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "results":
+      return <ResultsSheet close={close} ctx={ctx} />;
     case "skip":
       return <SkipTurnSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "puppets":

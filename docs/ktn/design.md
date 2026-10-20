@@ -15,7 +15,7 @@ carries `kit.root` and its screen's `.root`.
 | Job | Look | Component | Examples |
 |---|---|---|---|
 | Act: does the step, or asks to confirm it | A rectangle with a verb. One primary (filled) per step; the rest are secondary. Dashed when acting for another player. | `Button` | Tactical, End turn, Pass, Confirm, Take it back, Do it for Sol |
-| Open: shows the next step's options or more about something | A full-width row with a chevron (›), or an arrow (↗) for another page | `RowLink` in `Rows` | Points changed?, Take a planet, Start a combat, a player in the race |
+| Open: shows the next step's options or more about something | A full-width row with a chevron (›), or an arrow (↗) for another page or a file to save (`download`) | `RowLink` in `Rows` | Points changed?, Take a planet, Start a combat, a player in the race |
 | Pick and act: a list where a tap acts at once | A row with an accent verb at the end | `RowAction` | planets to take, objectives to score, techs to research |
 | Choose: sets something on this screen; never writes to the game | Pills with a radio mark, under a question; the chosen one is filled. Rows with a radio mark for long lists. A switch for on or off. | `Choices`, `Switch` | Whose points changed?, Against whom?, the map overlay, theme |
 | Learn: a game thing's text | The name with a dotted underline; opens a popout (a bottom sheet on a phone, beside the name on a wider screen, a preview on mouse hover) | `Cite` | techs, relics, leaders and abilities in a player's sheet |
@@ -42,6 +42,16 @@ Inside a row or button it's drawn `still`, since a button can't hold another.
 - The accent is teal. Trade's turquoise is close to it, so `data-accent="neutral"`
   on the root (or `kit-accent=neutral` in localStorage) swaps in a neutral accent
   for comparison.
+
+## Charts
+
+The results views (`src/fork/play/Results.tsx`) draw plain SVG: 2px lines in
+each player's colour, a dot on the chosen round with a 2px ring in the panel
+colour, hairline gridlines, axis text in `--faint`. The player colours are the
+game's and some sit close together (blue and purple fail a colour-blind check),
+so a chart never relies on colour alone: the legend lists every player with
+their value, tapping one highlights their line and labels it by name, and each
+chart has a table view.
 
 ## Sheets
 
