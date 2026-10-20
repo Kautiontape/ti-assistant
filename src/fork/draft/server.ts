@@ -6,9 +6,10 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { POST as createGame } from "../../../app/api/create-game/route";
 import { BASE_OPTIONS } from "../../../server/data/options";
 import { getFactions } from "../../../server/data/factions";
-import { getDefaultMapString } from "../../util/map";
+import { getSystems } from "../../../server/data/systems";
 import { getFirestoreAdmin, getIntl } from "../../util/server";
-import { buildMapString, fromStored, holdings, pickProblem, toStored, wedges, type Draft, type Pick, type PickKind, type StoredDraft } from "./milty";
+import { layoutFor, needsPok } from "./layout";
+import { buildMapString, fromStored, holdings, MAX_SLICES, pickProblem, PLAYER_COUNTS, slicesProblems, toStored, type Draft, type DraftSystem, type Pick, type PickKind, type StoredDraft } from "./milty";
 
 export const DRAFTS = "forkDrafts";
 
@@ -20,28 +21,42 @@ const ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 const makeId = () => Array.from({ length: 6 }, () => ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)]).join("");
 
 function isSlices(x: unknown, players: number): x is string[][] {
-  return Array.isArray(x) && x.length >= players && x.length <= 12 && x.every((s) => Array.isArray(s) && s.length === 5 && s.every((t) => typeof t === "string" && /^\d+$/.test(t)));
+  return Array.isArray(x) && x.length >= players && x.length <= MAX_SLICES && x.every((s) => Array.isArray(s) && s.length === 5 && s.every((t) => typeof t === "string" && /^\d+$/.test(t)));
 }
 function isOrder(x: unknown, players: number): x is number[] {
   return Array.isArray(x) && x.length === players && [...x].sort((a, b) => a - b).every((v, i) => v === i);
 }
 
 // What a phone sends to make or reroll a draft. The phone generates the slices
-// from upstream's base data; the server checks their shape.
-export function checkSetup(body: Record<string, unknown>) {
+// from upstream's base data; the server checks their shape, and checks
+// hand-entered slices against upstream's systems.
+export function checkSetup(body: Record<string, unknown>, expansions: string[]) {
   const players = body.players;
-  if (!Array.isArray(players) || players.length !== 6 || !players.every((p) => typeof p === "string" && p.length <= 40)) throw new DraftError(400, "A draft needs 6 player names (they can be blank).");
-  if (!isSlices(body.slices, 6)) throw new DraftError(400, "The slices aren't valid.");
-  if (!isOrder(body.order, 6)) throw new DraftError(400, "The draft order isn't valid.");
+  if (!Array.isArray(players) || !PLAYER_COUNTS.includes(players.length) || !players.every((p) => typeof p === "string" && p.length <= 40)) throw new DraftError(400, "A draft needs 3 to 8 player names (they can be blank).");
+  const n = players.length;
+  if (needsPok(n) && !expansions.includes("POK")) throw new DraftError(400, `${n} players need Prophecy of Kings: the map uses its hyperlanes.`);
+  if (!isSlices(body.slices, n)) throw new DraftError(400, "The slices aren't valid.");
+  if (body.customSlices) {
+    const problems = slicesProblems(body.slices, getSystems() as unknown as Record<string, DraftSystem>, expansions, n);
+    if (problems.length) throw new DraftError(400, problems.slice(0, 3).join(" "));
+  }
+  if (!isOrder(body.order, n)) throw new DraftError(400, "The draft order isn't valid.");
   const factions = body.factions;
-  if (!Array.isArray(factions) || factions.length < 6 || factions.length > 20 || !factions.every((f) => typeof f === "string")) throw new DraftError(400, "The factions aren't valid.");
+  if (!Array.isArray(factions) || factions.length < n || factions.length > 60 || !factions.every((f) => typeof f === "string")) throw new DraftError(400, "The factions aren't valid.");
   if (new Set(factions).size !== factions.length || new Set((body.slices as string[][]).flat()).size !== (body.slices as string[][]).flat().length) throw new DraftError(400, "Something is listed twice.");
-  return { players: players as string[], slices: body.slices, order: body.order, factions: factions as string[] };
+  const pool = body.factionPool;
+  if (pool !== undefined && !(Array.isArray(pool) && pool.length <= 60 && pool.every((f) => typeof f === "string"))) throw new DraftError(400, "The chosen factions aren't valid.");
+  // Firestore refuses undefined, so the optional fields are only added when set.
+  return {
+    players: players as string[], slices: body.slices, order: body.order, factions: factions as string[],
+    ...(body.customSlices ? { customSlices: true } : {}),
+    ...(Array.isArray(pool) && pool.length ? { factionPool: pool as string[] } : {}),
+  };
 }
 
 export async function createDraft(body: Record<string, unknown>) {
-  const setup = checkSetup(body);
-  const expansions = Array.isArray(body.expansions) ? (body.expansions as string[]).filter((e) => (BASE_OPTIONS.expansions as string[]).includes(e)) : BASE_OPTIONS.expansions;
+  const expansions = (Array.isArray(body.expansions) ? (body.expansions as string[]).filter((e) => (BASE_OPTIONS.expansions as string[]).includes(e)) : BASE_OPTIONS.expansions) as string[];
+  const setup = checkSetup(body, expansions);
   const db = await getFirestoreAdmin();
   let id = makeId();
   while ((await db.collection(DRAFTS).doc(id).get()).exists) id = makeId();
@@ -54,7 +69,7 @@ export async function createDraft(body: Record<string, unknown>) {
     ...setup,
     seed: String(body.seed ?? "").slice(0, 40),
     limits: body.limits as Draft["limits"],
-    expansions: expansions as string[],
+    expansions,
     victoryPoints: body.victoryPoints === 14 ? 14 : 10,
     picks: [],
   };
@@ -91,7 +106,8 @@ export async function changeDraft(id: string, body: Record<string, unknown>) {
       }
       case "reroll": {
         if (d.picks.length) throw new DraftError(409, "Slices can only change before the first pick.");
-        const setup = checkSetup({ ...body, players: d.players });
+        const setup = checkSetup({ ...body, players: d.players, customSlices: d.customSlices, factionPool: d.factionPool }, d.expansions);
+        if (d.customSlices && JSON.stringify(setup.slices) !== JSON.stringify(d.slices)) throw new DraftError(409, "These slices were entered by hand; a reroll keeps them.");
         tx.update(ref, { slices: toStored(setup).slices, factions: setup.factions, order: setup.order, seed: String(body.seed ?? "").slice(0, 40) });
         return { picks: 0 };
       }
@@ -111,15 +127,13 @@ function pickColor(f: { color?: string; colorList?: string[] } | undefined, used
 
 export function gamePayload(d: Draft, baseFactions: Record<string, { color?: string; colorList?: string[] } | undefined>) {
   const n = d.players.length;
-  const te = d.expansions.includes("THUNDERS EDGE");
   const pok = d.expansions.includes("POK");
-  const template = getDefaultMapString(n, "standard", te);
-  const w = wedges(template);
+  const w = layoutFor(n, d.expansions);
   // Position 0 is the speaker and sits at P1; create-game seats factions in
   // array order (P1 first) and counts speaking order clockwise from `speaker`.
   const seated = Array.from({ length: n }, (_, pos) => d.players.findIndex((_, p) => holdings(d.picks, p).position === pos));
   if (seated.some((p) => p < 0)) throw new DraftError(409, "The draft isn't finished.");
-  const mapString = buildMapString(template, w, seated.map((p) => d.slices[holdings(d.picks, p).slice!]));
+  const mapString = buildMapString(w.template, w, seated.map((p) => d.slices[holdings(d.picks, p).slice!]));
   const used = new Set<string>();
   const factions = seated.map((p) => {
     const id = holdings(d.picks, p).faction!;
@@ -127,7 +141,7 @@ export function gamePayload(d: Draft, baseFactions: Record<string, { color?: str
     if (color) used.add(color);
     return { id, name: id, color, playerName: d.players[p] || undefined };
   });
-  const options = { ...BASE_OPTIONS, expansions: d.expansions, "map-style": "standard", "map-string": mapString, "processed-map-string": mapString, "victory-points": d.victoryPoints };
+  const options = { ...BASE_OPTIONS, expansions: d.expansions, "map-style": w.style, "map-string": mapString, "processed-map-string": mapString, "victory-points": d.victoryPoints };
   return { factions, speaker: 0, options, seated, mapString };
 }
 

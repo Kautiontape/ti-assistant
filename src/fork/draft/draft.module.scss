@@ -1,0 +1,12 @@
+// Draft-only styles (src/fork/draft). The shared slice and stepper styles stay
+// in play.module.scss; these are nested under .root like the rest, because
+// upstream's site.css unsets every button.
+.root {
+  .fieldEnd { display: flex; align-items: center; gap: 8px; }
+  .slicesInput { min-height: 10em; padding: 10px 14px; line-height: 1.5; font-family: var(--mono); resize: vertical; }
+  .guide { display: flex; align-items: center; gap: 16px; > :first-child { flex: none; } }
+  .advanced { display: grid; gap: 10px; padding-bottom: 6px; }
+  .factionGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); column-gap: 16px; }
+  .factionName { display: inline-flex; align-items: center; gap: 8px; }
+  .problems { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+}

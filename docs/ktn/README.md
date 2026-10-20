@@ -76,9 +76,14 @@ collection, `forkDrafts`, which browsers may read one document at a time
   calls in-process with `{factions, speaker, options}`. It relies on the
   `factions` array order becoming `mapPosition` (P1 first), `speaker` being an
   index into that array, and each faction needing `id`, `name` and `color`.
-- `getDefaultMapString` and `getFactionSystemNumber` (`src/util/map.ts`): the
-  6-player standard map with `P1`…`P6` homes at indices 19, 22, 25, 28, 31
-  and 34, which `wedges()` in `src/fork/draft/milty.ts` turns into slices.
+- `getDefaultMapString` and `getFactionSystemNumber` (`src/util/map.ts`). The
+  draft's maps are milty.shenanigans.be's, laid over upstream's templates:
+  the standard map for 6 players, the "warp" maps for 4, 5, 7 and 8 (whose
+  hyperlanes it keeps), and Milty's own map for 3. `miltyLayout()` in
+  `src/fork/draft/milty.ts` throws if upstream's template stops matching, and
+  `draft-gen-check.mjs` checks every count. The game gets `map-style` "warp"
+  for 4, 5, 7 and 8 players.
+- `getSystems` (`server/data/systems.ts`), to check slices entered by hand.
 - `BASE_OPTIONS` (`server/data/options.ts`), `getFactions`, base data through
   `DatabaseFnsContext.getBaseValue`, and `GameMap` for the preview.
 - Copied rather than imported: the hex spiral (`hexGrid.ts`), optimal value

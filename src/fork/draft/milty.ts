@@ -212,15 +212,83 @@ export function wedges(template: string): Wedges {
   return { homes, slots, canonical, adjacent };
 }
 
+// ---------- Layouts for 3 to 8 players ----------
+// milty.shenanigans.be's maps (MAP_3…MAP_8 in its js/generate-map.js) in
+// upstream's spiral order from index 1. "Hk" is seat k's home, "k.j" is tile j
+// of seat k's slice in Milty's slice order (MILTY_SLOTS), "L" is a hyperlane
+// taken from upstream's template, "-1" is no tile. Milty's 4, 5, 7 and 8-player
+// maps are upstream's "warp" maps (its 4-player one turned a sixth clockwise),
+// so those keep upstream's hyperlane tiles; Milty's own are stand-ins from a
+// shorter list. Upstream has no 3-player map with five tiles a seat, so the
+// 3-player map is Milty's, hyperlanes and all.
+
+export const PLAYER_COUNTS = [3, 4, 5, 6, 7, 8];
+export const MAP_STYLE: Record<number, "standard" | "warp"> = { 3: "standard", 4: "warp", 5: "warp", 6: "standard", 7: "warp", 8: "warp" };
+const LAYOUTS: Record<number, string> = {
+  3: "0.4 85A4 1.4 85A 2.4 85A2 0.1 87A 0.3 87A4 1.1 87A2 1.3 87A 2.1 87A4 2.3 87A2 H0 0.0 83A1 85A4 83A2 1.2 H1 1.0 83A 85A 83A1 2.2 H2 2.0 83A2 85A2 83A 0.2",
+  4: "L 0.4 1.4 L 2.4 3.4 3.3 L 0.1 0.3 1.1 L 1.3 L 2.1 2.3 3.1 L L L 0.2 H0 0.0 1.2 H1 1.0 L L L 2.2 H2 2.0 3.2 H3 3.0 L",
+  5: "0.4 1.4 2.4 L 3.4 4.4 0.1 0.3 1.1 1.3 2.1 L 2.3 L 3.1 3.3 4.1 4.3 H0 0.0 1.2 H1 1.0 2.2 H2 2.0 L L L 3.2 H3 3.0 4.2 H4 4.0 0.2",
+  6: "0.4 1.4 2.4 3.4 4.4 5.4 0.1 0.3 1.1 1.3 2.1 2.3 3.1 3.3 4.1 4.3 5.1 5.3 H0 0.0 1.2 H1 1.0 2.2 H2 2.0 3.2 H3 3.0 4.2 H4 4.0 5.2 H5 5.0 0.2",
+  7: "L 1.4 2.4 L L 5.4 0.4 0.3 1.1 1.3 2.1 2.3 3.4 4.4 4.3 5.1 5.3 6.4 0.1 L 1.2 H1 1.0 2.2 H2 2.0 L 3.1 3.3 4.1 4.0 5.2 L 6.2 6.1 6.3 H0 0.0 -1 -1 -1 -1 -1 -1 -1 -1 -1 3.2 H3 3.0 4.2 H4 -1 -1 H5 5.0 -1 H6 6.0 0.2",
+  8: "L L 2.4 L L 6.4 0.4 1.4 1.3 2.1 2.3 3.4 4.4 5.4 5.3 6.1 6.3 7.4 0.1 0.3 1.1 1.0 2.2 L 3.2 3.1 3.3 4.1 4.3 5.1 5.0 6.2 L 7.2 7.1 7.3 H0 0.0 1.2 H1 -1 -1 H2 2.0 -1 H3 3.0 4.2 H4 4.0 5.2 H5 -1 -1 H6 6.0 -1 H7 7.0 0.2",
+};
+
+// Milty's slice order, relative to the home with the home at the top of the
+// map (as P1 sits): 0 is left of the home as its player sees it, 1 in front of
+// it, 2 to its right, 3 further left and 4 furthest in, toward Mecatol.
+export const MILTY_SLOTS: Cube[] = [[1, 0, -1], [0, 1, -1], [-1, 1, 0], [1, 1, -2], [0, 2, -2]];
+
+export interface Layout extends Wedges {
+  players: number;
+  style: "standard" | "warp";
+  template: string; // P1…Pn homes and 0 for slice tiles, ready for buildMapString
+}
+
+// The map for this many players. `upstream` is getDefaultMapString(players,
+// MAP_STYLE[players], te); it gives Mecatol and the hyperlanes, and every other
+// place must agree with Milty's map, or this throws (an upstream change).
+export function miltyLayout(players: number, upstream: string): Layout {
+  const labels = LAYOUTS[players];
+  if (!labels) throw new Error(`No Milty map for ${players} players`);
+  const up = upstream.trim().split(/\s+/);
+  const own = players === 3;
+  const tokens = ["M", ...labels.split(" ")];
+  if (!own && up.length !== tokens.length) throw new Error(`Upstream's ${players}-player map has ${up.length} places, Milty's ${tokens.length}`);
+  const homes: number[] = [];
+  const slots: number[][] = Array.from({ length: players }, () => []);
+  const out = tokens.map((t, i) => {
+    const u = up[i];
+    const home = t.match(/^H(\d)$/), slot = t.match(/^(\d)\.(\d)$/);
+    let v = t;
+    if (i === 0) v = up[0]!;
+    else if (home) { homes[Number(home[1])] = i; v = `P${Number(home[1]) + 1}`; }
+    else if (slot) { slots[Number(slot[1])]![Number(slot[2])] = i; v = "0"; }
+    else if (t === "L") v = u ?? "";
+    if (!own && i > 0 && (v !== u || (t === "L" && !/^\d+[AB]\d?$/.test(v)))) throw new Error(`Upstream's ${players}-player map differs from Milty's at ${i}: ${u} for ${t}`);
+    return v;
+  });
+  if (homes.length !== players || slots.some((s) => s.filter((x) => x !== undefined).length !== MILTY_SLOTS.length)) throw new Error(`Milty's ${players}-player map is missing a home or slot`);
+  const adjacent: [number, number][] = [];
+  for (let a = 0; a < MILTY_SLOTS.length; a++) for (let b = a + 1; b < MILTY_SLOTS.length; b++) if (distance(MILTY_SLOTS[a]!, MILTY_SLOTS[b]!) === 1) adjacent.push([a, b]);
+  return { players, style: MAP_STYLE[players]!, template: out.join(" "), homes, slots, canonical: MILTY_SLOTS, adjacent };
+}
+
 // ---------- Slices ----------
+
+// The most slices a pool can make: one blue tile from each tier and two red.
+export function sliceLimit(pool: { blue: TileInfo[]; red: TileInfo[] }) {
+  return Math.min(...tiers(pool.blue).map((t) => t.length), Math.floor(pool.red.length / 2));
+}
 
 export type Generated = { slices: string[][]; seed: string } | { error: string };
 
-export function generateSlices(pool: { blue: TileInfo[]; red: TileInfo[] }, count: number, limits: DraftLimits, adjacent: [number, number][], seed: string, attempts = 4000): Generated {
+export function generateSlices(pool: { blue: TileInfo[]; red: TileInfo[] }, count: number, limits: DraftLimits, adjacent: [number, number][], seed: string, attempts = 20000): Generated {
   const [high, mid, low] = tiers(pool.blue) as [TileInfo[], TileInfo[], TileInfo[]];
   const short = [["high", high], ["middle", mid], ["low", low]].find(([, t]) => (t as TileInfo[]).length < count);
   if (short) return { error: `Only ${(short[1] as TileInfo[]).length} blue tiles in the ${short[0]} tier, fewer than ${count} slices. Add an expansion or make fewer slices.` };
   if (pool.red.length < count * 2) return { error: `Only ${pool.red.length} red tiles, fewer than 2 for each of ${count} slices.` };
+  const legendaries = [...pool.blue, ...pool.red].reduce((n, t) => n + t.legendary, 0);
+  if (legendaries < limits.minLegendaries) return { error: `These tiles have ${legendaries} legendary planet${legendaries === 1 ? "" : "s"}; lower "Legendary planets, at least".` };
   const rnd = rngFor(`${seed}:slices`);
   let reason = "";
   for (let attempt = 0; attempt < attempts; attempt++) {
@@ -264,6 +332,53 @@ function placeWithoutAdjacentAnomalies(tiles: TileInfo[], adjacent: [number, num
 export function pickFactions(available: string[], count: number, seed: string) {
   return shuffle([...available].sort(), rngFor(`${seed}:factions`)).slice(0, count);
 }
+// The host's chosen factions, as on milty.shenanigans.be: with more chosen than
+// the count, the count is drawn from them; with fewer, all of them are in and
+// the rest are drawn from the other available factions.
+export function drawFactions(available: string[], chosen: string[], count: number, seed: string) {
+  const pool = chosen.filter((f) => available.includes(f));
+  if (!pool.length) return pickFactions(available, count, seed);
+  if (pool.length >= count) return pickFactions(pool, count, seed);
+  const rest = pickFactions(available.filter((f) => !pool.includes(f)), count - pool.length, seed);
+  return shuffle([...pool, ...rest].sort(), rngFor(`${seed}:pool`));
+}
+
+// ---------- Slices entered by hand ----------
+
+// One slice per line, tile numbers separated by commas or spaces, in Milty's
+// slice order; leading zeros are dropped, as Milty does.
+export function parseSlices(text: string): string[][] {
+  return text.split(/\r?\n/).map((line) => line.split(/[,\s]+/).map((t) => t.trim().toUpperCase().replace(/^0+(?=.)/, "")).filter(Boolean)).filter((s) => s.length);
+}
+
+const EXPANSION_NAMES: Record<string, string> = { BASE: "the base game", POK: "Prophecy of Kings", "THUNDERS EDGE": "Thunder's Edge", "DISCORDANT STARS": "Discordant Stars", "CODEX THREE": "Codex III" };
+export const MAX_SLICES = 15;
+
+// What's wrong with hand-entered slices, in plain words; empty when they're fine.
+export function slicesProblems(slices: string[][], systems: Record<string, DraftSystem | undefined>, expansions: string[], players: number): string[] {
+  const out: string[] = [];
+  if (slices.length < players) out.push(`${slices.length} slice${slices.length === 1 ? "" : "s"} for ${players} players. Enter at least ${players}, one per line.`);
+  if (slices.length > MAX_SLICES) out.push(`${slices.length} slices; the most is ${MAX_SLICES}.`);
+  const seen = new Map<string, number>();
+  slices.forEach((tiles, i) => {
+    const name = `Slice ${i + 1}`;
+    if (tiles.length !== 5) out.push(`${name} has ${tiles.length} tile${tiles.length === 1 ? "" : "s"}; each needs 5.`);
+    for (const id of tiles) {
+      const s = systems[id];
+      if (!s || !/^\d+$/.test(id)) { out.push(`${name}: there's no system tile ${id}.`); continue; }
+      if (s.type === "HOME") out.push(`${name}: tile ${id} is a home system.`);
+      else if (s.type === "MECATOL" || id === "112") out.push(`${name}: tile ${id} is Mecatol Rex.`);
+      else if ((s.type !== "BLUE" && s.type !== "RED") || NOT_DRAFTABLE.has(id)) out.push(`${name}: tile ${id} can't go in a slice.`);
+      else if (s.expansion !== "BASE" && (!expansions.includes(s.expansion) || !TILE_EXPANSIONS.includes(s.expansion))) out.push(`${name}: tile ${id} is from ${EXPANSION_NAMES[s.expansion] ?? s.expansion}, which this draft doesn't use.`);
+      const first = seen.get(id);
+      if (first !== undefined && first !== i) out.push(`Tile ${id} is in slice ${first + 1} and slice ${i + 1}.`);
+      else if (first === i) out.push(`${name} has tile ${id} twice.`);
+      else seen.set(id, i);
+    }
+  });
+  return [...new Set(out)];
+}
+
 export function draftOrder(players: number, seed: string, keep: boolean) {
   const order = Array.from({ length: players }, (_, i) => i);
   return keep ? order : shuffle(order, rngFor(`${seed}:order`));
@@ -290,6 +405,8 @@ export interface Draft {
   picks: Pick[];
   gameId?: string;
   creating?: number;
+  customSlices?: boolean; // the host entered the slices; a reroll keeps them
+  factionPool?: string[]; // the host's chosen factions, drawn from on a reroll
 }
 
 // Firestore has no arrays of arrays, so each slice is stored as {tiles}.
