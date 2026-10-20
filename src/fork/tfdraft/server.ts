@@ -15,7 +15,9 @@ import {
   apply, cardsOf, deal, fromStored, holding, homeOptions, isTfDraft, kingOf, makePacks, maxPacks, secretFromStored, secretOptions, secretToStored, status, toStored,
   type Action, type SecretStep, type StoredTfDraft, type StoredTfSecret, type TfDraft, type TfRules, type TfSecret,
 } from "./draft";
-import { layoutFor, playerCounts, type Style } from "./layouts";
+import { ANOMALIES } from "../draft/milty";
+import { boardLayout } from "./board";
+import { arrangeFor, playerCounts, type Style } from "./layouts";
 
 const DRAFTS = "forkDrafts";
 const PRIVATE = "private";
@@ -43,7 +45,7 @@ function checkSetup(body: Record<string, unknown>) {
   const players = body.players;
   if (!Array.isArray(players) || !playerCounts(style).includes(players.length) || !players.every((p) => typeof p === "string" && p.length <= 40)) throw new TfDraftError(400, `This map style takes ${playerCounts(style).join(" or ")} players.`);
   const n = players.length;
-  const layout = layoutFor(style, n);
+  const layout = boardLayout(style, n);
   const k = layout.slots[0]!.length;
   const tile = (t: unknown) => typeof t === "string" && /^\d+$/.test(t);
   const slices = body.slices;
@@ -143,13 +145,13 @@ export function tfGamePayload(d: TfDraft, baseFactions: Record<string, { color?:
   const n = d.players.length;
   const s = status(d);
   if (s.step) throw new TfDraftError(409, "The draft isn't finished.");
-  const layout = layoutFor(d.style, n);
+  const layout = boardLayout(d.style, n);
   const tokens = [...layout.template];
   layout.fixed.forEach((at, i) => { tokens[at] = d.fixed[i]!; });
   const seated = Array.from({ length: n }, (_, seat) => s.playerAt[seat]!);
   seated.forEach((p, seat) => {
     const slice = d.slices[Number(holding(d.log, p, "slice"))];
-    slice?.forEach((tile, j) => { tokens[layout.slots[seat]![j]!] = tile; });
+    if (slice) arrangeFor(layout, seat, slice, d.fixed, (id) => ANOMALIES.has(id)).forEach((tile, j) => { tokens[layout.slots[seat]![j]!] = tile; });
   });
   const mapString = tokens.join(" ");
   const factions = seated.map((p) => {
@@ -158,7 +160,7 @@ export function tfGamePayload(d: TfDraft, baseFactions: Record<string, { color?:
   });
   const options = {
     ...BASE_OPTIONS, expansions: [...BASE_OPTIONS.expansions, "TWILIGHTS FALL"], events: [], hide: [],
-    "map-style": "standard", "map-string": mapString, "processed-map-string": mapString, "victory-points": d.victoryPoints,
+    "map-style": layout.mapStyle, "map-string": mapString, "processed-map-string": mapString, "victory-points": d.victoryPoints,
   };
   // Each King's home system and starting units, by upstream's CHOOSE_TF_FACTION.
   const choices = seated.flatMap((p) => {

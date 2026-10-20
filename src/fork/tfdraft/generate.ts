@@ -10,8 +10,8 @@
 // map the pre-dealt tiles next to each seat's slice stay within 3 optimal
 // value of each other's. About 40% of the map's systems are red, as in the
 // base game's 2 red to 3 blue per player.
-import { optimalTotal, rngFor, sliceStats, shuffle, type TileInfo } from "../draft/milty";
-import { touching, type Layout } from "./layouts";
+import { ANOMALIES, optimalTotal, rngFor, sliceStats, shuffle, type TileInfo } from "../draft/milty";
+import { arrangeFor, fixedRed as redOnMap, touching, type Layout } from "./layouts";
 
 export type Generated = { slices: string[][]; fixed: string[] } | { error: string };
 
@@ -22,8 +22,7 @@ export function limitsFor(k: number) {
 export function generate(pool: { blue: TileInfo[]; red: TileInfo[] }, layout: Layout, sliceCount: number, seed: string, rounds = 40): Generated {
   const k = layout.slots[0]!.length;
   const f = layout.fixed.length;
-  const n = layout.players;
-  const fixedRed = Math.max(0, Math.round(0.4 * (n * k + f)) - n * layout.sliceRed);
+  const fixedRed = redOnMap(layout);
   const needRed = sliceCount * layout.sliceRed + fixedRed;
   const needBlue = sliceCount * (k - layout.sliceRed) + (f - fixedRed);
   if (pool.red.length < needRed) return { error: `Only ${pool.red.length} red systems for ${needRed} places. Make fewer slices.` };
@@ -43,7 +42,7 @@ export function generate(pool: { blue: TileInfo[]; red: TileInfo[] }, layout: La
     for (let s = 0; s < sliceCount; s++) {
       const st = sliceStats(at.slice(s * k, s * k + k));
       p += Math.max(0, lim.minInfluence - st.optimal.influence) + Math.max(0, lim.minResources - st.optimal.resources);
-      p += 10 * (st.wormholes.length - new Set(st.wormholes).size);
+      p += 10 * (st.wormholes.length - new Set(st.wormholes).size) + 10 * Math.max(0, st.anomalies - layout.maxAnomalies);
       totals.push(st.optimal.influence + st.optimal.resources);
     }
     p += 3 * Math.max(0, Math.max(...totals) - Math.min(...totals) - lim.spread);
@@ -84,23 +83,9 @@ export function generate(pool: { blue: TileInfo[]; red: TileInfo[] }, layout: La
       }
     }
     if (score > 0) continue;
-    const pairs = touching(layout, layout.slots[0]!).map(([x, y]) => [layout.slots[0]!.indexOf(x), layout.slots[0]!.indexOf(y)] as const);
-    const slices: string[][] = [];
-    for (let s = 0; s < sliceCount; s++) {
-      const placed = arrange(at.slice(s * k, s * k + k), pairs, rnd);
-      if (!placed) break;
-      slices.push(placed.map((t) => t.id));
-    }
-    if (slices.length < sliceCount) continue;
+    // Drawn in seat 1's order; each seat re-orders its slice when it's placed.
+    const slices = Array.from({ length: sliceCount }, (_, s) => arrangeFor(layout, 0, at.slice(s * k, s * k + k).map((t) => t.id), [], (id) => ANOMALIES.has(id)));
     return { slices, fixed: at.slice(sliceCount * k).map((t) => t.id) };
   }
   return { error: "No map met every limit. Try again, or make fewer slices." };
-}
-
-// Orders a slice's tiles so no two anomalies touch.
-function arrange(tiles: TileInfo[], pairs: (readonly [number, number])[], rnd: () => number) {
-  for (let i = 0; i < 60; i++) {
-    const order = shuffle(tiles, rnd);
-    if (!pairs.some(([a, b]) => order[a]!.anomaly && order[b]!.anomaly)) return order;
-  }
 }

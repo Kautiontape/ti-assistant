@@ -9,13 +9,14 @@ import FactionIcon from "../../components/FactionIcon/FactionIcon";
 import GameMap from "../../components/Map/GameMap";
 import { getFactionSystemNumber } from "../../util/map";
 import { Optional } from "../../util/types/types";
-import { sliceStats, toPixel } from "../draft/milty";
+import { ANOMALIES, sliceStats, toPixel } from "../draft/milty";
 import { useBase } from "../draft/useDraft";
 import styles from "../play/play.module.scss";
 import { Button, Choices, cx, kit, RowAction, RowLink, Rows, Sheet, Swatch, Tag, rootAttrs, useDevicePrefs } from "../ui/kit";
 import { KELERES, PRIORITY } from "./cards";
 import { holding, kingOf, presetOf, status, type SecretStep, type SnakeKind, type TfDraft } from "./draft";
-import { layoutFor, STYLE_NAMES, type Layout } from "./layouts";
+import { boardLayout } from "./board";
+import { arrangeFor, STYLE_NAMES, type Layout } from "./layouts";
 import { KIND_NAMES, runThrough, stepName } from "./text";
 import tf from "./tfdraft.module.scss";
 import { useHand, useMe, useTfApi, useTfDraft, type Hand } from "./useTfDraft";
@@ -49,7 +50,7 @@ function Live({ d }: { d: TfDraft }) {
   const [view, setView] = useState<View>("slice");
   const [sheet, setSheet] = useState<Optional<SheetState>>();
   const n = d.players.length;
-  const layout = layoutFor(d.style, n);
+  const layout = boardLayout(d.style, n);
   const s = status(d);
   const step = s.step;
   const nameOf = (p: Optional<number>) => (p === undefined ? "Someone" : d.players[p] || `Player ${p + 1}`);
@@ -428,7 +429,7 @@ function Live({ d }: { d: TfDraft }) {
     for (let seat = 0; seat < n; seat++) {
       const p = s.playerAt[seat];
       const slice = p !== undefined ? holding(d.log, p, "slice") : undefined;
-      if (slice !== undefined) d.slices[Number(slice)]!.forEach((t, j) => { tokens[layout.slots[seat]![j]!] = t; });
+      if (slice !== undefined) arrangeFor(layout, seat, d.slices[Number(slice)]!, d.fixed, (id) => ANOMALIES.has(id)).forEach((t, j) => { tokens[layout.slots[seat]![j]!] = t; });
       const home = p !== undefined ? s.homes[p] : undefined;
       const homeFaction = home?.drawn ?? home?.card;
       tokens[layout.homes[seat]!] = homeFaction ? getFactionSystemNumber({ id: homeFaction as FactionId }) : "0";
@@ -437,7 +438,7 @@ function Live({ d }: { d: TfDraft }) {
       <section className={kit.card} aria-label="Map">
         <p className={kit.eyebrow}><span>Map so far</span><span>{d.style === "nucleus" ? "Seat 1 at the top" : s.speaker !== undefined ? "Speaker at the top" : "Slices go on when priority sets the seats"}</span></p>
         <div className={styles.board}><div className={styles.boardInner} style={{ cursor: "default" }}>
-          <GameMap mapString={tokens.join(" ")} mapStyle="standard" factions={[]} expansions={["POK", "THUNDERS EDGE", "TWILIGHTS FALL"] as Expansion[]} hideLegend hideFracture />
+          <GameMap mapString={tokens.join(" ")} mapStyle={layout.mapStyle} factions={[]} expansions={["POK", "THUNDERS EDGE", "TWILIGHTS FALL"] as Expansion[]} hideLegend hideFracture />
         </div></div>
       </section>
     );

@@ -10,7 +10,8 @@ import styles from "../play/play.module.scss";
 import { Button, Choices, cx, kit, rootAttrs, Stepper, Switch, useDevicePrefs } from "../ui/kit";
 import { maxPacks, PRESETS, presetOf, type TfRules } from "./draft";
 import { generate } from "./generate";
-import { layoutFor, playerCounts, STYLE_NAMES, type Style } from "./layouts";
+import { boardLayout } from "./board";
+import { maxSlices, playerCounts, STYLE_NAMES, type Style } from "./layouts";
 import { runThrough } from "./text";
 import tf from "./tfdraft.module.scss";
 
@@ -36,12 +37,16 @@ export default function NewTfDraft() {
   const [pending, setPending] = useState(false);
   const [code, setCode] = useState("");
   const preset = presetOf(rules);
+  const pool = tilePool(base.systems, base.planets, TF_TILES);
+  const layout = boardLayout(style, n);
+  const mostSlices = Math.max(n, Math.min(n + 3, maxSlices(layout, pool)));
+  const slices = Math.min(n + extra, mostSlices);
   const packCount = Math.min(maxPacks(rules.keleres), n + packs);
 
   async function make() {
     setError("");
     const s = seed.trim() || newSeed();
-    const g = generate(tilePool(base.systems, base.planets, TF_TILES), layoutFor(style, n), n + extra, s);
+    const g = generate(pool, layout, slices, s);
     if ("error" in g) { setError(g.error); return; }
     setPending(true);
     try {
@@ -79,7 +84,8 @@ export default function NewTfDraft() {
 
           <Choices label="Map" value={style} onChange={setStyle} options={(["nucleus", "milty", "eq"] as Style[]).map((v) => ({ value: v, label: STYLE_NAMES[v] }))} />
           <p className={kit.sub}>{style === "nucleus" ? "Slices are the 3 systems in front of each home. The centre of the map is dealt before the draft, and seats are drafted." : style === "eq" ? "Slices of 4 systems. The systems between homes are dealt before the draft." : "Slices of 5 systems; the whole map comes from the slices."}</p>
-          {counts.length > 1 ? <Choices label="Players" value={String(n)} onChange={(v) => setPlayers(Number(v))} options={counts.map((c) => ({ value: String(c), label: String(c) }))} /> : <p className={kit.sub}>{n} players. Other player counts come next.</p>}
+          <Choices label="Players" value={String(n)} onChange={(v) => setPlayers(Number(v))} options={counts.map((c) => ({ value: String(c), label: String(c) }))} />
+          {layout.mapStyle === "warp" || n === 3 ? <p className={kit.sub}>The {n}-player map uses hyperlanes, as on milty.shenanigans.be.</p> : null}
           <p className={kit.eyebrow}><span>Players</span><span>{keepOrder ? "Snake in this order" : "Snake order is random"}</span></p>
           <div className={styles.grid2}>
             {Array.from({ length: n }, (_, i) => (
@@ -103,7 +109,7 @@ export default function NewTfDraft() {
           </ol>
 
           <p className={kit.eyebrow}><span>Draft</span></p>
-          <label className={styles.field}><span>Slices</span><Stepper value={n + extra} onChange={(v) => setExtra(v - n)} min={n} max={n + 3} less="Fewer slices" more="More slices" /></label>
+          <label className={styles.field}><span>Slices</span><Stepper value={slices} onChange={(v) => setExtra(v - n)} min={n} max={mostSlices} less="Fewer slices" more="More slices" /></label>
           {rules.cards === "packs" ? <label className={styles.field}><span>Card packs</span><Stepper value={packCount} onChange={(v) => setPacks(v - n)} min={n} max={maxPacks(rules.keleres)} less="Fewer packs" more="More packs" /></label> : null}
           <Choices label="Victory points" value={String(vp)} onChange={(v) => setVp(Number(v))} options={[10, 14].map((v) => ({ value: String(v), label: `${v} points` }))} />
           <details className={styles.item}>
