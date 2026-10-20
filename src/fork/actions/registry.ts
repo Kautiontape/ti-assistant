@@ -1,9 +1,10 @@
 // Seam S4: upstream's action switches fall back to these for actions they don't
 // know (dataUpdate route, getHandler, getOppositeHandler, LogEntry). A new fork
 // action is added here and in types.d.ts, never in upstream's files.
+import { UnrevealSubAgendaHandler } from "./covert";
 import { EndCombatHandler, StartCombatHandler, UnendCombatHandler, UnstartCombatHandler } from "./combat";
 
-const FORK_ACTIONS = new Set<string>(["START_COMBAT", "UNSTART_COMBAT", "END_COMBAT", "UNEND_COMBAT"]);
+const FORK_ACTIONS = new Set<string>(["START_COMBAT", "UNSTART_COMBAT", "END_COMBAT", "UNEND_COMBAT", "UNREVEAL_SUB_AGENDA"]);
 
 export function isForkAction(action: string) {
   return FORK_ACTIONS.has(action);
@@ -16,6 +17,7 @@ export function getForkHandler(gameData: StoredGameData, data: GameUpdateData): 
     case "UNSTART_COMBAT": return new UnstartCombatHandler(gameData, d);
     case "END_COMBAT": return new EndCombatHandler(gameData, d);
     case "UNEND_COMBAT": return new UnendCombatHandler(gameData, d);
+    case "UNREVEAL_SUB_AGENDA": return new UnrevealSubAgendaHandler(gameData, d);
   }
   return undefined;
 }

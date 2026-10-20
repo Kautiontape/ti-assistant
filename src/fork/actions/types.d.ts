@@ -19,4 +19,11 @@ interface UnstartCombatData { action: "UNSTART_COMBAT"; event: StartCombatEvent 
 interface EndCombatData { action: "END_COMBAT"; event: EndCombatEvent }
 interface UnendCombatData { action: "UNEND_COMBAT"; event: EndCombatEvent }
 
-type ForkUpdateData = StartCombatData | UnstartCombatData | EndCombatData | UnendCombatData;
+// Sent by /play's undo only, never logged (src/fork/actions/covert.ts).
+interface UnrevealSubAgendaEvent {
+  subAgenda: AgendaId;
+  target: string; // the outcome Covert Legislation resolved with
+}
+interface UnrevealSubAgendaData { action: "UNREVEAL_SUB_AGENDA"; event: UnrevealSubAgendaEvent }
+
+type ForkUpdateData = StartCombatData | UnstartCombatData | EndCombatData | UnendCombatData | UnrevealSubAgendaData;

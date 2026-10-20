@@ -92,6 +92,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     }
     case "RESOLVE_AGENDA": return `${ev.agenda}: ${who(ev.target)}`;
     case "START_VOTING": return "Voting started";
+    case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;
+    case "SELECT_SUB_AGENDA": return ev.subAgenda && ev.subAgenda !== "None" ? `Covert Legislation was ${ev.subAgenda}` : null;
     case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;
     case "PLAY_PROMISSORY_NOTE": return `played ${ev.card}`;
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;

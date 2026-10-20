@@ -50,6 +50,11 @@ constructors and data hooks:
   (`src/util/api/actionLog.ts`); `sortStrategyCards`; `getStrategyCardsForFaction`.
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
+- `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork
+  action `UNREVEAL_SUB_AGENDA` (`src/fork/actions/covert.ts`) runs on Covert
+  Legislation's hidden agenda when /play undoes its resolve. Upstream's own undo
+  misses it because `RESOLVE_AGENDA` is a turn boundary; if upstream fixes that,
+  drop the fork action.
 - The Map tab draws upstream's `GameMap` (`src/components/Map/`) with the same
   inputs as the footer's map (`getMapString`, `getWormholeNexusSystemNumber`,
   `fracturePlanetsOwned`). It reads taps from the tile images' alt text

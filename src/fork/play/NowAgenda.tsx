@@ -10,9 +10,10 @@ import { useActionLog, useAgendas, useAttachments, useCurrentTurn, useLeaders, u
 import { useNumFactions } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useGameState, useSpeaker } from "../../context/stateDataHooks";
-import { getActiveAgenda, getAllVotes } from "../../util/actionLog";
+import { getActiveAgenda, getAllVotes, getSelectedEligibleOutcomes, getSelectedSubAgenda } from "../../util/actionLog";
 import { getCurrentPhasePreviousLogEntries } from "../../util/api/actionLog";
 import { Events } from "../../util/api/events";
+import { outcomeString } from "../../util/strings";
 import { Optional } from "../../util/types/types";
 import { votingOrder } from "./logic";
 import styles from "./play.module.scss";
@@ -41,7 +42,15 @@ function useAgendaData() {
   const agenda = activeId ? agendas[activeId] : undefined;
   const repGov = !!agendas["Representative Government"]?.passed;
   const votes = new Map(getAllVotes(currentTurn).filter((v) => v.target).map((v) => [v.faction, v]));
-  return { intl, state, agendas, currentTurn, actionLog, planets, strategyCards, objectives, options, attachments, leaders, techs, numFactions, speaker, agenda, repGov, votes };
+  // Covert Legislation: players vote on the outcomes of a hidden agenda, which
+  // the speaker reads out. Votes and labels use those outcomes (upstream's
+  // CastVotesSection swaps `elect` the same way).
+  const covert = agenda?.id === "Covert Legislation";
+  const eligible = covert ? getSelectedEligibleOutcomes(currentTurn) : undefined;
+  const outcomes: Optional<OutcomeType> = eligible && eligible !== "None" ? eligible : undefined;
+  const ballot = agenda && outcomes ? { ...agenda, elect: outcomes } : agenda;
+  const subAgenda = covert ? getSelectedSubAgenda(currentTurn) : undefined;
+  return { intl, state, agendas, currentTurn, actionLog, planets, strategyCards, objectives, options, attachments, leaders, techs, numFactions, speaker, agenda, repGov, votes, covert, outcomes, ballot, subAgenda };
 }
 type AgendaData = ReturnType<typeof useAgendaData>;
 
@@ -50,7 +59,7 @@ function outcomeLabel(d: AgendaData, ctx: Ctx, target: Optional<string>) {
   if (ctx.isFaction(target)) return ctx.short(target);
   if (target === "Abstain") return "Abstain";
   const factions = ctx.factions;
-  return translateOutcome(target, d.agenda?.elect, d.planets, factions, d.objectives, d.agendas, d.strategyCards, d.intl) ?? target;
+  return translateOutcome(target, d.ballot?.elect, d.planets, factions, d.objectives, d.agendas, d.strategyCards, d.intl) ?? target;
 }
 
 function available(d: AgendaData, ctx: Ctx, id: FactionId) {
@@ -110,12 +119,16 @@ export default function NowAgenda(ctx: Ctx) {
     <>
       <AgendaCard d={d} agendaNum={agendaNum} />
       {!state.votingStarted ? (
-        <section className={kit.card} aria-label="Before voting">
-          <p className={kit.sub}>Cards played when an agenda is revealed (Veto, riders, Hack Election, Political Secret) are on the table screen.</p>
-          <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
-          <Button kind="primary" size="tall" block disabled={w.pending}
-            onClick={() => w.write([Events.StartVotingEvent()], "Voting started")}>Start voting</Button>
-        </section>
+        <>
+          {d.covert ? <CovertOutcomes d={d} ctx={ctx} /> : null}
+          <section className={kit.card} aria-label="Before voting">
+            <p className={kit.sub}>Cards played when an agenda is revealed (Veto, riders, Hack Election, Political Secret) are on the table screen.</p>
+            <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
+            {d.covert && !d.outcomes ? <p className={kit.sub}>Voting starts once the speaker has read out the hidden agenda's outcomes.</p> : null}
+            <Button kind="primary" size="tall" block disabled={w.pending || (d.covert && !d.outcomes)}
+              onClick={() => w.write([Events.StartVotingEvent()], "Voting started")}>Start voting</Button>
+          </section>
+        </>
       ) : (
         <>
           {who && !d.votes.has(who) && canVote(d, ctx, who) ? (
@@ -131,9 +144,13 @@ export default function NowAgenda(ctx: Ctx) {
   );
 }
 
+function electText(elect: OutcomeType) {
+  return elect === "For/Against" ? "For or against" : `Elect a ${elect.toLowerCase()}`;
+}
+
 function AgendaCard({ d, agendaNum }: { d: AgendaData; agendaNum: number }) {
   const a = d.agenda!;
-  const elect = a.elect === "For/Against" ? "For or against" : `Elect a ${a.elect.toLowerCase()}`;
+  const elect = !d.covert ? electText(a.elect) : d.outcomes ? `Hidden agenda: ${electText(d.outcomes).toLowerCase()}` : "The speaker reads out the hidden agenda's outcomes";
   return (
     <section className={kit.card} aria-label="Agenda">
       <p className={kit.eyebrow}><span>Agenda {agendaNum} of 2 · {a.type === "LAW" ? "Law" : "Directive"}</span></p>
@@ -143,11 +160,36 @@ function AgendaCard({ d, agendaNum }: { d: AgendaData; agendaNum: number }) {
   );
 }
 
+// Covert Legislation, before voting: the speaker draws the next agenda in secret
+// and reads out what kind of outcome it has. Upstream's RevealOutcomes offers
+// every outcome type that some agenda in the game elects.
+function CovertOutcomes({ d, ctx }: { d: AgendaData; ctx: Ctx }) {
+  const { w, short, seat } = ctx;
+  const types = [...new Set(Object.values(d.agendas).filter((a): a is Agenda => !!a && !a.target && a.elect !== "???").map((a) => a.elect))];
+  const [pick, setPick] = useState<Optional<OutcomeType>>(d.outcomes);
+  const helpSpeaker = d.speaker !== seat;
+  const name = (t: OutcomeType) => (t === "For/Against" ? "For or against" : outcomeString(t, d.intl));
+  return (
+    <section className={kit.card} aria-label="Covert Legislation">
+      <p className={kit.eyebrow}><span>Covert Legislation</span></p>
+      <p className={kit.sub}>{helpSpeaker ? `${short(d.speaker)} draws the next agenda without showing anyone, then reads out its outcomes.` : "Draw the next agenda without showing anyone, then read out its outcomes."} Everyone votes on those. The hidden agenda is shown when this one resolves.</p>
+      <Choices label="The hidden agenda's outcomes" value={pick} onChange={setPick} options={types.map((t) => ({ value: t, label: name(t) }))} />
+      {pick && pick !== d.outcomes ? (
+        <>
+          <p className={kit.confirm}>The hidden agenda is {pick === "For/Against" ? "voted for or against" : `an election: ${name(pick).toLowerCase()}`}?</p>
+          <Button kind="primary" block forOther={helpSpeaker} disabled={w.pending}
+            onClick={() => w.write([Events.SelectEligibleOutcomesEvent(pick)], `Covert Legislation's outcomes: ${name(pick)}`, d.speaker)}>Confirm</Button>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 // The vote itself: outcome, then how many, capped at what's available.
 function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; faction: FactionId; onDone?: () => void }) {
   const { short, w, seat, factions } = ctx;
   const max = available(d, ctx, faction);
-  const targets = getTargets(d.agenda, factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).filter((t) => t.id !== "Abstain");
+  const targets = getTargets(d.ballot, factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).filter((t) => t.id !== "Abstain");
   const [target, setTarget] = useState<Optional<string>>();
   const [n, setN] = useState(max);
   const [q, setQ] = useState("");
@@ -273,26 +315,46 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
   const leaders = leadersOf(tally);
   // A clear winner resolves as is; a tie (or no votes) is the speaker's choice.
   const choices = leaders.length ? leaders
-    : getTargets(d.agenda, ctx.factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).map((t) => t.id).filter((t) => t !== "Abstain");
+    : getTargets(d.ballot, ctx.factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).map((t) => t.id).filter((t) => t !== "Abstain");
   const [pick, setPick] = useState<Optional<string>>(leaders.length === 1 ? leaders[0] : undefined);
+  // Covert Legislation: the speaker shows the hidden agenda, and it resolves with the vote.
+  const [hidden, setHidden] = useState<Optional<AgendaId>>(d.subAgenda);
+  const [q, setQ] = useState("");
   if (!d.agenda) return null;
   const agenda = d.agenda;
   const tie = leaders.length !== 1;
+  const hiddenList = Object.values(d.agendas).filter((a): a is Agenda => !!a && a.id !== agenda.id && a.elect === d.outcomes)
+    .sort((a, b) => Number(!!a.resolved) - Number(!!b.resolved) || a.name.localeCompare(b.name));
+  const hiddenName = hidden ? d.agendas[hidden]?.name ?? hidden : undefined;
+  const ready = !!pick && (!d.covert || !!hidden);
   const resolve = async () => {
-    if (!pick) return;
-    const events: GameUpdateData[] = tie ? [Events.SpeakerTieBreakEvent(pick), Events.ResolveAgendaEvent(agenda.id, pick)] : [Events.ResolveAgendaEvent(agenda.id, pick)];
-    if (await w.write(events, `${agenda.name}: ${outcomeLabel(d, ctx, pick)}`, as)) close();
+    if (!pick || !ready) return;
+    const events: GameUpdateData[] = [
+      ...(tie ? [Events.SpeakerTieBreakEvent(pick)] : []),
+      ...(d.covert && hidden && hidden !== d.subAgenda ? [Events.SelectSubAgendaEvent(hidden)] : []),
+      Events.ResolveAgendaEvent(agenda.id, pick),
+    ];
+    const label = d.covert ? `${agenda.name} (${hiddenName}): ${outcomeLabel(d, ctx, pick)}` : `${agenda.name}: ${outcomeLabel(d, ctx, pick)}`;
+    if (await w.write(events, label, as)) close();
   };
+  const passes = (name: string) => d.ballot?.elect !== "For/Against"
+    ? `${outcomeLabel(d, ctx, pick)} is elected: ${name}?` : pick === "For" ? `${name} passes?` : `${name} is voted down?`;
   return (
     <KitSheet title={`Resolve ${agenda.name}`} close={close}>
       {tie ? <p className={kit.sub}>{leaders.length ? "The vote is tied." : "Nobody voted."} The speaker chooses the outcome.</p> : null}
       <Choices label="Outcome" hideLabel={!tie} value={pick} onChange={setPick}
         options={choices.map((t) => ({ value: t, label: outcomeLabel(d, ctx, t), note: tally[t] ? `${tally[t]} votes` : undefined }))} />
-      {pick ? (
+      {d.covert ? (
+        <div className={kit.section}>
+          <p className={kit.sub}>Show the hidden agenda. It resolves with this outcome.</p>
+          {hiddenList.length > 8 ? <input className={kit.search} type="search" placeholder="Find the hidden agenda" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find the hidden agenda" /> : null}
+          <Choices list label="Which agenda was it?" value={hidden} onChange={(v) => setHidden(v as AgendaId)}
+            options={hiddenList.filter((a) => !q || a.name.toLowerCase().includes(q.toLowerCase()) || a.id === hidden).map((a) => ({ value: a.id as string, label: a.name, note: a.resolved ? "already resolved" : a.type === "LAW" ? "Law" : "Directive" }))} />
+        </div>
+      ) : null}
+      {pick && ready ? (
         <>
-          <p className={kit.confirm}>
-            {agenda.elect !== "For/Against" ? `${outcomeLabel(d, ctx, pick)} is elected: ${agenda.name}?` : pick === "For" ? `${agenda.name} passes?` : `${agenda.name} is voted down?`}
-          </p>
+          <p className={kit.confirm}>{passes(d.covert ? hiddenName ?? agenda.name : agenda.name)}</p>
           <Button kind="primary" size="tall" block disabled={w.pending} onClick={resolve}>Confirm</Button>
         </>
       ) : null}

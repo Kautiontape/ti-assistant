@@ -19,6 +19,15 @@ function withActor(e: GameUpdateData, actor: Actor) {
   return (EVENT_ONLY.has(d.action) ? { ...d, actor, event: { ...d.event, actor } } : { ...d, actor }) as unknown as GameUpdateData;
 }
 
+// Where /play undoes an entry with something other than upstream's UNDO: the
+// hidden agenda of a resolved Covert Legislation (src/fork/actions/covert.ts).
+function undoInstead(e: ActionLogEntry<GameUpdateData>, group: ActionLog): Optional<GameUpdateData> {
+  if (e.data.action !== "SELECT_SUB_AGENDA" || e.data.event.subAgenda === "None") return undefined;
+  const resolve = group.find((x) => x.data.action === "RESOLVE_AGENDA" && x.data.event.agenda === "Covert Legislation");
+  if (!resolve || resolve.data.action !== "RESOLVE_AGENDA") return undefined;
+  return { action: "UNREVEAL_SUB_AGENDA", event: { subAgenda: e.data.event.subAgenda, target: resolve.data.event.target } } as unknown as GameUpdateData;
+}
+
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
 // `locked` runs instead of a write while the game is view-only (it has a password
@@ -99,7 +108,11 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
         show({ text: `Someone acted since. Newest: ${describe(group)}` });
         return "someone-else" as const;
       }
-      for (let i = 0; i < group.length; i++) await undo(gameId);
+      for (const e of group) {
+        const instead = undoInstead(e, group);
+        if (instead) await dataUpdate(instead);
+        else await undo(gameId);
+      }
       if (target === lastId.current) lastId.current = undefined;
       show({ text: `Undid: ${describe(group)}` });
     } finally {
