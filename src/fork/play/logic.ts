@@ -1,8 +1,8 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
 import { getClaimedPlanets } from "../../util/actionLog";
-import { tfSentence } from "../tfplay/tf";
 import { ActionLog, Optional } from "../../util/types/types";
+import { tfSentence } from "../tfplay/tf";
 
 export type NameOf = (id: Optional<string>) => string;
 type Entry = ActionLogEntry<GameUpdateData>;
