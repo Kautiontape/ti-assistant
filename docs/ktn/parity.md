@@ -4,11 +4,11 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 137 | Works in `/play`. |
+| Native | 140 | Works in `/play`. |
 | Partial | 31 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 9 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 10 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
-| Missing | 22 | No way to do it from `/play`. |
+| Via More controls | 8 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Missing | 21 | No way to do it from `/play`. |
 | Not needed | 13 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 are left for that branch, and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
@@ -92,8 +92,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Planet attachments on newly taken planets | ClaimPlanetsSection l.141; PlanetRow l.502 | Native | AttachButton in NowAction and Attachments in MapTab SystemSheet. |
 | Mecatol Rex / Custodians token +1 VP | TacticalAction l.119 | Partial | Claiming Mecatol records the point (data layer); /play shows no "+1 VP for Custodians" text (counted in PlayerSheet points). |
 | Space / ground combat (fork-only feature) | src/fork/actions/combat.ts | Native | Combat.tsx (start, banner clock, end). Not in upstream. |
-| Score action-phase objectives (up to 4) | TacticalAction l.125-190 | Missing | `score` sheet exists but pickers are for status phase/Imperial; no action-phase objective list. Via More controls. |
-| Become a Martyr (score on losing home) | TacticalAction l.395 | Via More controls | Not in fork. |
+| Score action-phase objectives (up to 4) | TacticalAction l.125-190 | Native | Every action-phase objective is a secret: "Scored a secret?" in the tactical action's rows opens the action-phase secrets (and "Points changed?" in any turn). Check: parity-player-check.cjs |
+| Become a Martyr (score on losing home) | TacticalAction l.395 | Native | An action-phase secret: "Points changed?" → scored a secret (upstream also keeps it out of the tactical list) |
 | Gain relic from frontier exploration | TacticalAction l.193; GainRelic | Native | RelicSheet, from a component action or the frontier sheet after a tactical action (Frontier.tsx) |
 | Frontier exploration (explore token) | src/components/FrontierExploration | Native | Frontier.tsx: "Explored a frontier?" after a tactical action: gain a relic or find Mirage. Check: parity-player-check.cjs |
 | Mirage claim (Mirage planet from frontier) | FrontierExploration l.52 | Native | Frontier sheet: take control of Mirage, with take back |
@@ -143,7 +143,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Diplomacy primary/secondary (ready planets, refresh) | AP l.647 | Partial | Text only. |
 | Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all. The Leadership card itself is native (select, text, secondaries) |
 | Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Partial | Select + text + secondaries; no trade-goods or commodity counters anywhere in fork. |
-| Warfare primary objective scoring | StrategicActions/Warfare.tsx | Via More controls | Not in fork. |
+| Warfare primary objective scoring | StrategicActions/Warfare.tsx | Native | With Thunder's Edge, Warfare's primary gets the tactical rows: take a planet, frontier, scored a secret |
 | Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Missing | TF has no /play support. |
 | Cards on table (who picked, played/ready) | AP StrategyCardColumn | Native | CardBoard. |
 

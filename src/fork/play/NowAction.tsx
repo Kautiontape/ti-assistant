@@ -1,6 +1,6 @@
 "use client";
 // Now, action phase.
-import { useActionLog, useCurrentTurn, usePlanets, useStrategyCards } from "../../context/dataHooks";
+import { useActionLog, useCurrentTurn, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOnDeckFactionId } from "../../context/gameDataHooks";
 import { getClaimedPlanets } from "../../util/actionLog";
@@ -29,6 +29,7 @@ export default function NowAction(ctx: Ctx) {
   const now = useNow();
   const combat = openCombat(log);
   const planets = usePlanets();
+  const te = useOptions().expansions.includes("THUNDERS EDGE");
   // Hooks stay above the early return below.
   const endBlock = useEndTurnBlock(getSelectedActionFromLog(currentTurn));
   if (!active) {
@@ -50,6 +51,8 @@ export default function NowAction(ctx: Ctx) {
   const cards = getStrategyCardsForFaction(strategyCards, active);
   const canPass = !passed.includes(active) && cards.every((c) => c.used);
   const isCard = selected && strategyCards[selected as StrategyCardId];
+  // Thunder's Edge's Warfare primary is a tactical action of its own (StrategicActions/Warfare.tsx).
+  const tactical = selected === "Tactical" || (selected === "Warfare" && te);
   const started = turnStartedAt(log);
   const steps = [...currentTurn].reverse()
     .filter((e) => e.data.action !== "SELECT_ACTION" && !(mine && e.data.action === "PLAY_COMPONENT"))
@@ -93,10 +96,11 @@ export default function NowAction(ctx: Ctx) {
               {isCard ? <CardControls card={selected as StrategyCardId} active={active} ctx={ctx} /> : null}
               {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
               <Rows label="Record">
-                {selected === "Tactical" ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
+                {tactical ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
                 {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
-                {selected === "Tactical" ? <FrontierRow active={active} ctx={ctx} /> : null}
+                {tactical ? <FrontierRow active={active} ctx={ctx} /> : null}
+                {tactical ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" detail="Action-phase secrets, up to 4 a turn" /> : null}
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
               </Rows>
