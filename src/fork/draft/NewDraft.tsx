@@ -63,6 +63,9 @@ export default function NewDraft() {
   const fname = (f: string) => base.factions[f]?.name ?? f;
   const byName = (a: string, b: string) => fname(a).localeCompare(fname(b));
   const pool = tilePool(base.systems, base.planets, expansions);
+  // The base game alone has no legendary planets, so the minimum can't be more than the tiles have.
+  const legendaryMax = [...pool.blue, ...pool.red].reduce((n, t) => n + t.legendary, 0);
+  const used: DraftLimits = { ...limits, minLegendaries: Math.min(limits.minLegendaries, legendaryMax) };
   const sliceMax = clamp(sliceLimit(pool), players, Math.min(12, MAX_SLICES));
   const sliceCount = clamp(slices, players, sliceMax);
   const factionMax = Math.max(players, available.length);
@@ -91,7 +94,7 @@ export default function NewDraft() {
       if (problems.length) { setError(problems[0]!); return; }
       made = entered;
     } else {
-      const g = makeSlices(base, expansions, players, sliceCount, limits, s);
+      const g = makeSlices(base, expansions, players, sliceCount, used, s);
       if ("error" in g) { setError(g.error); return; }
       made = g.slices;
     }
@@ -103,7 +106,7 @@ export default function NewDraft() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, players: names.slice(0, players).map((n) => n.trim()), slices: made, factions: drawFactions(available, factionPool ?? [], factions, s),
-          order: draftOrder(players, s, keepOrder), seed: s, limits, expansions, victoryPoints: vp, customSlices: custom || undefined, factionPool,
+          order: draftOrder(players, s, keepOrder), seed: s, limits: used, expansions, victoryPoints: vp, customSlices: custom || undefined, factionPool,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -181,7 +184,7 @@ export default function NewDraft() {
             {num("Minimum optimal resources", limits.minResources, (v) => setLimits({ ...limits, minResources: v }), 0, 10, 0.5)}
             {num("Minimum optimal total", limits.minTotal, (v) => setLimits({ ...limits, minTotal: v }), 0, 20, 0.5)}
             {num("Maximum optimal total", limits.maxTotal, (v) => setLimits({ ...limits, maxTotal: v }), 5, 25, 0.5)}
-            {num("Legendary planets, at least", limits.minLegendaries, (v) => setLimits({ ...limits, minLegendaries: v }), 0, 7)}
+            {num("Legendary planets, at least", used.minLegendaries, (v) => setLimits({ ...limits, minLegendaries: v }), 0, Math.min(7, legendaryMax))}
             {toggle("At least 2 alpha and 2 beta wormholes", limits.wormholePairs, (b) => setLimits({ ...limits, wormholePairs: b }))}
             {toggle("At most 1 wormhole per slice", limits.oneWormhole, (b) => setLimits({ ...limits, oneWormhole: b }))}
             <p className={kit.eyebrow}><span>Order</span></p>

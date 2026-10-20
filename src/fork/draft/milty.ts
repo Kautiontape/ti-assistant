@@ -287,6 +287,8 @@ export function generateSlices(pool: { blue: TileInfo[]; red: TileInfo[] }, coun
   const short = [["high", high], ["middle", mid], ["low", low]].find(([, t]) => (t as TileInfo[]).length < count);
   if (short) return { error: `Only ${(short[1] as TileInfo[]).length} blue tiles in the ${short[0]} tier, fewer than ${count} slices. Add an expansion or make fewer slices.` };
   if (pool.red.length < count * 2) return { error: `Only ${pool.red.length} red tiles, fewer than 2 for each of ${count} slices.` };
+  const legendaries = [...pool.blue, ...pool.red].reduce((n, t) => n + t.legendary, 0);
+  if (legendaries < limits.minLegendaries) return { error: `These tiles have ${legendaries} legendary planet${legendaries === 1 ? "" : "s"}; lower "Legendary planets, at least".` };
   const rnd = rngFor(`${seed}:slices`);
   let reason = "";
   for (let attempt = 0; attempt < attempts; attempt++) {
