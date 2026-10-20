@@ -36,6 +36,8 @@ export type Sheet =
   // peace: Xxcha's Peace Accords after Diplomacy (no Mecatol Rex, as upstream's Diplomacy.tsx).
   | { kind: "claim"; faction: FactionId; peace?: boolean }
   | { kind: "pass"; faction: FactionId }
+  | { kind: "singularity" }
+  | { kind: "baal" }
   | { kind: "player"; faction: FactionId }
   | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }
   | { kind: "score"; faction: FactionId; which: "public" | "secret"; anyPhase?: boolean; phase?: string }

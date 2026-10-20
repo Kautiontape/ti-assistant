@@ -4,10 +4,10 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 175 | Works in `/play`. |
+| Native | 177 | Works in `/play`. |
 | Partial | 23 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
-| Via More controls | 3 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
+| Via More controls | 1 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
 | Not needed | 16 | Left out on purpose; the reason is in Notes. |
 | Twilight's Fall branch | 5 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
@@ -98,8 +98,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Gain relic from frontier exploration | TacticalAction l.193; GainRelic | Native | RelicSheet, from a component action or the frontier sheet after a tactical action (Frontier.tsx) |
 | Frontier exploration (explore token) | src/components/FrontierExploration | Native | Frontier.tsx: "Explored a frontier?" after a tactical action: gain a relic or find Mirage. Check: parity-player-check.cjs |
 | Mirage claim (Mirage planet from frontier) | FrontierExploration l.52 | Native | Frontier sheet: take control of Mirage, with take back |
-| Nekro Technological Singularity (copy 4 techs) | TacticalAction l.195 | Via More controls | Not in fork. |
-| Embers of Muaat: Adjudicator Ba'al (replace system) | TacticalAction l.245 | Via More controls | Not in fork. |
+| Nekro Technological Singularity (copy 4 techs) | TacticalAction l.195 | Native | TacticalExtras.tsx: on Nekro's tactical action, a sheet of the technologies other players own and Nekro doesn't; gain up to 4, take back. Hidden when the game doesn't track technologies. Check: parity-rare-check.cjs |
+| Embers of Muaat: Adjudicator Ba'al (replace system) | TacticalAction l.245 | Native | TacticalExtras.tsx: on Muaat's tactical action with Ba'al readied and a map string, pick a system (upstream's tile rule), confirm, and upstream's event makes it the supernova and purges its planets; take back on the row. Check: parity-rare-check.cjs |
 | Thunder's Edge expedition (6 slots, tie-break owner) | src/components/Expedition | Native | NowExpedition.tsx (commit, take back, tie-break). |
 | Breakthrough readied on first expedition | commitToExpedition handler | Native | Done in data layer; sheet text says so. |
 
@@ -307,7 +307,7 @@ Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS 
 What's left, by the rows above that aren't Native or Not needed:
 
 1. Map tile placement: Star Chart, Azdel's Key and Age of Exploration add a system to the map; /play has no way to place a tile, so they go through "More controls".
-2. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel, Nekro's Technological Singularity and Adjudicator Ba'al.
+2. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
 3. Strategy cards shown as text only: Diplomacy (readying planets), Imperial's secondary, Construction, Trade and Warfare details. Trade goods and commodities aren't tracked anywhere.
 4. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
 5. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.

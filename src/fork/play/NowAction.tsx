@@ -13,6 +13,7 @@ import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import { ExpeditionButton } from "./NowExpedition";
 import { FrontierRow } from "./Frontier";
+import { BaalRow, SingularityRow } from "./TacticalExtras";
 import { OtherEndings, UnpassButton, useEndTurnBlock } from "./TurnControls";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
@@ -100,6 +101,8 @@ export default function NowAction(ctx: Ctx) {
                 {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
                 {tactical ? <FrontierRow active={active} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <SingularityRow active={active} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <BaalRow active={active} ctx={ctx} /> : null}
                 {tactical && ctx.tracks("OBJECTIVES") ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" detail="Action-phase secrets, up to 4 a turn" /> : null}
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />

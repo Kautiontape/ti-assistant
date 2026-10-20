@@ -41,6 +41,7 @@ import NowSetup, { SetupChoiceSheet } from "./NowSetup";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
 import { LockedBanner, UnlockSheet } from "./NowLocked";
+import { BaalSheet, SingularitySheet } from "./TacticalExtras";
 import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, TextSizeChoice, rootAttrs, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
@@ -427,6 +428,10 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       return <TechTreeSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "frontier":
       return <FrontierSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "singularity":
+      return <SingularitySheet close={close} ctx={ctx} />;
+    case "baal":
+      return <BaalSheet close={close} ctx={ctx} />;
     case "law":
       return <LawSheet agenda={sheet.agenda} close={close} ctx={ctx} />;
     case "gift":
