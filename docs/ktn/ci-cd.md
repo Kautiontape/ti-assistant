@@ -23,7 +23,11 @@ come from the repo's Actions **variables** (`NEXT_PUBLIC_FIREBASE_*`,
 
 In `/opt/services/ti-assistant/`, next to the synced compose file:
 
-- `.env`: `GOOGLE_CLOUD_PROJECT=<project-id>`
+- `.env`: `GOOGLE_CLOUD_PROJECT=<project-id>`, and for photos, exports and
+  Discord (see [storage-and-discord.md](storage-and-discord.md)):
+  `FORK_STORAGE_BUCKET=<project-id>.firebasestorage.app` and
+  `FORK_DISCORD_WEBHOOK=<the forum channel's webhook>`. Leaving either out
+  turns that feature off.
 - `firebase-sa.json`: the service account key, mode 0600, owned by shawn
   (uid 1000, the same as the container's `node` user). It comes from the vault:
 
@@ -76,7 +80,8 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <pr
 - **Index:** the `actionLog` query the server uses to find the current turn.
 - **Auto-delete (TTL):** live games, timers, passwords and log entries go after
   30 days, sessions after 14, same as upstream. Drafts go after 30 days once
-  `setup-ttl.sh` has been run again for `forkDrafts`. The daily cron copies finished
+  `setup-ttl.sh` has been run again for `forkDrafts`; the same goes for
+  `forkPrivate` (each game's Discord settings and export time). The daily cron copies finished
   games to `archive` first.
 - **Plan:** Blaze with a budget alert. Every phone re-downloads the action log
   when it connects, and the free Spark quota (50k reads a day) can run out mid
@@ -86,5 +91,5 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <pr
 
 - `https://ti.kautiontape.com` loads. A game opened on two phones stays in sync.
 - `curl -H 'X-Appengine-Cron: 1' https://ti.kautiontape.com/api/process-games`
-  returns 404.
+  and `…/api/fork/export` return 404.
 - `ssh ktn docker stats --no-stream ti-assistant` shows memory well under the cap.

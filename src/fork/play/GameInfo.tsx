@@ -11,6 +11,7 @@ import { useChangeOption } from "../../util/api/changeOption";
 import { useUpdateFaction } from "../../util/api/updateFaction";
 import type { Ctx } from "./ui";
 import { Button, Chip, Choices, kit, pcolor, RowLink, Rows, Sheet as KitSheet, Stepper } from "../ui/kit";
+import { DiscordSection } from "./DiscordSettings";
 
 // The address to join this game's /play screen. NEXT_PUBLIC_BASE_URL (seam S3)
 // wins over the page's own origin, as for upstream's QR codes.
@@ -53,7 +54,7 @@ export function GameCard({ ctx }: { ctx: Ctx }) {
           <span className={kit.sub} style={{ wordBreak: "break-all", textAlign: "center" }}>{url}</span>
         </div>
       ) : null}
-      <Rows><RowLink onClick={() => open({ kind: "gameSettings" })} title="Game settings" detail="Victory points, player names and colours" /></Rows>
+      <Rows><RowLink onClick={() => open({ kind: "gameSettings" })} title="Game settings" detail="Victory points, player names and colours, Discord" /></Rows>
     </section>
   );
 }
@@ -112,6 +113,8 @@ export function GameSettingsSheet({ close, ctx }: { close: () => void; ctx: Ctx 
           </>
         ) : null}
       </div>
+      <DiscordSection gameId={gameId} onLocked={() => open({ kind: "unlock" })}
+        onSaved={(text) => ctx.w.setToast({ id: Date.now(), text })} onError={(text) => ctx.w.setToast({ id: Date.now(), text, tone: "error" })} />
       <Button block onClick={close}>Done</Button>
     </KitSheet>
   );

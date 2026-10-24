@@ -14,6 +14,10 @@ services:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:?set in /opt/services/ti-assistant/.env}
       # Same heap cap upstream runs with on App Engine; ktn is short on RAM.
       NODE_OPTIONS: --max-old-space-size=256
+      # Board photos and game exports (docs/ktn/storage.md). Unset: both off.
+      FORK_STORAGE_BUCKET: ${FORK_STORAGE_BUCKET:-}
+      # The Discord webhook games post to unless they set their own; unset: none.
+      FORK_DISCORD_WEBHOOK: ${FORK_DISCORD_WEBHOOK:-}
     secrets:
       - firebase_sa
     mem_limit: 384m
@@ -33,6 +37,9 @@ services:
           sleep 86400
           curl -fsS -H "X-Appengine-Cron: true" http://app:3000/api/process-games \
             || echo "process-games failed"
+          # Saves every game changed since its last export, before Firestore expires it.
+          curl -fsS -H "X-Appengine-Cron: true" http://app:3000/api/fork/export \
+            || echo "fork export failed"
         done
     mem_limit: 32m
 

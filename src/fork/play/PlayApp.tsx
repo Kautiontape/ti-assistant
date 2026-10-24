@@ -30,6 +30,7 @@ import { PlayerEditSheet } from "./PlayerEdit";
 import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
 import { ResultsSheet } from "./Results";
 import { GameCard, GameSettingsSheet } from "./GameInfo";
+import { PhotoReminder, PhotosCard, PhotoSheet } from "./Photos";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
@@ -145,6 +146,7 @@ export default function PlayApp() {
             {phase === "SETUP" ? <TfSetupCard ctx={ctx} /> : null}
             <CombatBanner ctx={ctx} />
             {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : phase === "EDICT" ? <NowEdict {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "STATUS" ? <PhotoReminder ctx={ctx} /> : null}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
                 <p className={kit.eyebrow}><span>Anything else?</span></p>
@@ -309,6 +311,7 @@ function TableTab(ctx: Ctx) {
         <RowLink href={`/api/${ctx.gameId}/download`} download={`ti-game-${ctx.gameId}.json`} title="Download the game" detail="The setup, timers and full log as a JSON file" />
       </Rows>
     </section>
+    <PhotosCard ctx={ctx} />
     <LawsCard ctx={ctx} />
     <ClockCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
@@ -485,6 +488,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       return <PassSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "gameSettings":
       return <GameSettingsSheet close={close} ctx={ctx} />;
+    case "photo":
+      return <PhotoSheet id={sheet.id} close={close} ctx={ctx} />;
     case "results":
       return <ResultsSheet close={close} ctx={ctx} />;
     case "skip":

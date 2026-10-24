@@ -97,6 +97,15 @@
   .boardZoom { width: 200%; height: 200%; }
   // Above the map, and on a wide screen at the left, so a docked sheet never covers them.
   .mapButtons { display: flex; gap: 8px; > * { flex: 1; } }
+  // Board photos (Photos.tsx): thumbnails with their round, and one photo whole.
+  .photoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .photoThumb {
+    display: grid; gap: 4px; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; text-align: left;
+    img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+    span { padding: 0 8px 8px; font-size: calc(var(--fs) * 0.8); color: var(--muted); }
+    &:hover, &:focus-visible { border-color: var(--accent); }
+  }
+  .photoFull { display: block; img { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 10px; background: var(--bg); } }
   @media (min-width: 1180px) { .mapButtons > button { flex: none; width: auto; padding-inline: 18px; } }
 
   // ---------- Draft (src/fork/draft): labelled steppers, slice cards and their tile art ----------

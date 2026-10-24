@@ -1,4 +1,5 @@
 import { getForkHandler } from "../../../../src/fork/actions/registry"; // ktn seam S4
+import { forkAfterUpdate } from "../../../../src/fork/server/afterUpdate"; // ktn seam S9
 import {
   DocumentData,
   DocumentReference,
@@ -7,7 +8,7 @@ import {
   Timestamp,
   Transaction,
 } from "firebase-admin/firestore";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server"; // ktn seam S9: after
 import {
   canEditGame,
   getCurrentTurnLogEntriesInTransaction,
@@ -229,6 +230,7 @@ export async function POST(
     return NextResponse.error();
   }
 
+  after(() => forkAfterUpdate(gameId)); // ktn seam S9
   // TODO: Consider returning something else.
   return NextResponse.json({ success: true });
 }

@@ -31,6 +31,7 @@ export type Sheet =
   | { kind: "skip"; faction: FactionId }
   | { kind: "results" }
   | { kind: "gameSettings" }
+  | { kind: "photo"; id: string }
   | { kind: "puppets"; faction: FactionId }
   | ({ kind: "strategySwap" } & StrategySwap)
   // peace: Xxcha's Peace Accords after Diplomacy (no Mecatol Rex, as upstream's Diplomacy.tsx).

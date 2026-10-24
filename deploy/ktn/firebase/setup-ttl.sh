@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Enables the auto-delete policies upstream relies on, plus the fork's drafts.
+# Enables the auto-delete policies upstream relies on, plus the fork's drafts
+# and its server-only game state (forkPrivate: Discord settings, export times).
 # Each document stores its own expiry time in `deleteAt` (30 days for games
 # and drafts, 14 for sessions), so no offset is needed. Archived log entries
 # have deleteAt stripped (app/[locale]/stats/processor.ts), so the actionLog
@@ -7,7 +8,7 @@
 #   ./setup-ttl.sh <project-id>
 set -euo pipefail
 project="${1:?usage: $0 <project-id>}"
-for group in games timers passwords sessions actionLog forkDrafts; do
+for group in games timers passwords sessions actionLog forkDrafts forkPrivate; do
   gcloud firestore fields ttls update deleteAt \
     --project="$project" --collection-group="$group" --enable-ttl --async
 done

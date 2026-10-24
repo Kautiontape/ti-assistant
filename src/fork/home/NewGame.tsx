@@ -2,7 +2,8 @@
 // /start/new: a new game, the fork's copy of upstream's setup page
 // (app/[locale]/setup/setup-page.tsx). The rules for seats, colours,
 // expansions, variants and map types are upstream's, copied; the game is made
-// by upstream's /api/create-game and opens on /play. Twilight's Fall isn't
+// by upstream's /api/create-game and opens on /play, with the game's Discord
+// choice saved right after (/api/fork/discord). Twilight's Fall isn't
 // offered here: /play doesn't run it yet (the tfall branch owns that).
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
@@ -12,6 +13,7 @@ import { extractFactionIds, processMapString } from "../../util/map";
 import { Optional } from "../../util/types/types";
 import styles from "../play/play.module.scss";
 import { Button, Choices, cx, kit, pcolor, RowLink, Rows, rootAttrs, Sheet, Stepper, Swatch, Switch, useDevicePrefs } from "../ui/kit";
+import { DiscordChoice, DiscordFields, saveDiscord, useDiscordStatus, WEBHOOK } from "../play/DiscordSettings";
 
 type Seat = { id?: FactionId; color?: FactionColor; playerName?: string; alliancePartner?: number };
 type Hidden = "TECHS" | "PLANETS" | "OBJECTIVES" | "RELICS";
@@ -56,6 +58,9 @@ export default function NewGame() {
   const [sheet, setSheet] = useState<"events" | number>();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [discordStatus] = useDiscordStatus();
+  const [discord, setDiscord] = useState<DiscordChoice>();
+  const discordChoice = discord ?? (discordStatus ? { on: discordStatus.on, events: discordStatus.events } : undefined);
 
   const has = (e: Expansion) => expansions.has(e);
   const max = has("POK") ? 8 : 6;
@@ -156,7 +161,9 @@ export default function NewGame() {
   const mapOk = !mapString.trim() || MAP_STRING.test(mapString.trim());
   const blocker = missing >= 0
     ? `${seatName(missing)} needs ${!active[missing]?.id ? "a faction" : !active[missing]?.color ? "a colour" : "an alliance partner"}.`
-    : !mapOk ? "The map string isn't valid." : "";
+    : !mapOk ? "The map string isn't valid."
+    : discord?.on && (discord.webhook?.trim() ? !WEBHOOK.test(discord.webhook.trim()) : !discordStatus?.serverWebhook) ? "Discord needs a webhook address, or turn its posts off."
+    : "";
 
   async function start() {
     setError("");
@@ -174,6 +181,8 @@ export default function NewGame() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.gameid) { setError("The game wasn't made. Check the connection and try again."); setPending(false); return; }
+      // The game exists either way; if this doesn't save, game settings can change it.
+      if (discord) await saveDiscord(json.gameid, discord).catch(() => {});
       router.push(`/play/${json.gameid}`);
     } catch {
       setError("The game wasn't made. Check the connection and try again.");
@@ -269,6 +278,13 @@ export default function NewGame() {
               onChange={(on) => setHide((prev) => { const n = new Set(prev); if (on) n.delete(id); else n.add(id); return n; })} />
           ))}
         </section>
+
+        {discordStatus && discordChoice ? (
+          <section className={kit.card} aria-label="Discord">
+            <p className={kit.eyebrow}><span>Discord</span></p>
+            <DiscordFields value={discordChoice} onChange={setDiscord} serverWebhook={discordStatus.serverWebhook} />
+          </section>
+        ) : null}
 
         <section className={kit.card} aria-label="Password">
           <p className={kit.eyebrow}><span>Password</span></p>
