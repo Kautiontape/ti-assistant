@@ -5,6 +5,7 @@ import {
   connectFirestoreEmulator,
   Firestore,
   getFirestore,
+  initializeFirestore,
 } from "firebase/firestore";
 import { Optional } from "../util/types/types";
 
@@ -44,6 +45,18 @@ export default class DBConnection {
     }
 
     const app = initializeApp(firebaseConfig);
+
+    // A page opened through a dev tunnel can't reach the visitor's own
+    // 127.0.0.1, so it uses the emulator's HTTPS tunnel instead.
+    const emulatorTunnel = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_TUNNEL;
+    const onLocalhost =
+      typeof window === "undefined" ||
+      ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    if (isDev && emulatorTunnel && !onLocalhost) {
+      this.db = initializeFirestore(app, { host: emulatorTunnel, ssl: true });
+      return this.db;
+    }
+
     this.db = getFirestore(app);
 
     // Dev defaults to the local emulator; "off" talks to the real project.
