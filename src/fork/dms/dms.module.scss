@@ -1,0 +1,9 @@
+// Direct messages (DmSheets.tsx). Colours come from the kit's tokens, so both themes work.
+.thread { display: grid; gap: 8px; max-height: 50vh; overflow-y: auto; padding: 4px 2px; }
+.msg { display: grid; gap: 2px; max-width: 85%; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); overflow-wrap: anywhere; white-space: pre-wrap; font-size: max(16px, var(--fs)); line-height: 1.35; }
+.mine { justify-self: end; background: var(--bg); border-color: var(--line-strong); }
+.theirs { justify-self: start; }
+.when { font-size: calc(var(--fs) * 0.8); color: var(--muted); white-space: normal; }
+.text { width: 100%; min-height: 88px; resize: vertical; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); padding: 12px 14px; font: inherit; font-size: max(16px, var(--fs)); line-height: 1.4; }
+.count { margin: 0; font-size: calc(var(--fs) * 0.85); color: var(--muted); text-align: right; }
+.bad { margin: 0; color: var(--p-red); font-size: calc(var(--fs) * 0.9); }

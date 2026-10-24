@@ -33,6 +33,7 @@ import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
 import { ResultsSheet } from "./Results";
 import { GameCard, GameSettingsSheet } from "./GameInfo";
 import { PhotoReminder, PhotosCard, PhotoSheet } from "./Photos";
+import { MessagesCard, MessagesSheet } from "../dms/DmSheets";
 import { NotesCard, NotesSheet } from "../notes/NotesSheet";
 import { SeatPanel } from "../notes/SeatPanel";
 import { useSeatKey } from "../notes/seatClient";
@@ -312,6 +313,7 @@ function TableTab(ctx: Ctx) {
     <TurnOrderCard ctx={ctx} />
     <ObjectivesCard ctx={ctx} />
     <NotesCard ctx={ctx} />
+    <MessagesCard ctx={ctx} />
     <GameCard ctx={ctx} />
     <section className={kit.card} aria-label="The game so far">
       <Rows flush>
@@ -475,6 +477,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       return <UnlockSheet close={close} ctx={ctx} />;
     case "notes":
       return <NotesSheet close={close} ctx={ctx} />;
+    case "messages":
+      return <MessagesSheet close={close} ctx={ctx} />;
     case "seat":
       return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {

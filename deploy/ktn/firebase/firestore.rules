@@ -28,7 +28,7 @@ service cloud.firestore {
       allow get: if true;
     }
     // Everything else (passwords, sessions, processed, and the fork's
-    // private collections: forkPrivate, with seat keys, and forkNotes, with
-    // players' notes) is denied by default. Don't add rules for those.
+    // private collections: forkPrivate, with seat keys, forkNotes and forkMessages, with
+    // players' notes and messages) is denied by default. Don't add rules for those.
   }
 }

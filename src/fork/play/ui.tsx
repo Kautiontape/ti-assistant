@@ -21,6 +21,7 @@ export type Sheet =
   | { kind: "seat" }
   | { kind: "unlock" }
   | { kind: "notes" }
+  | { kind: "messages" }
   | { kind: "setupChoice"; faction: FactionId }
   | { kind: "agendaCard"; card: AgendaCardKind }
   | { kind: "statusAbility"; ability: StatusAbility }

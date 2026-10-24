@@ -6,6 +6,7 @@ import "server-only";
 // before its expiry.
 import { Timestamp } from "firebase-admin/firestore";
 import { getFirestoreAdmin } from "../../util/server";
+import { readAll } from "./messages";
 import { readPrivate, writePrivate } from "./private";
 import { exportPath, getBucket, listPhotos, photoPath, storageReady } from "./storage";
 
@@ -22,6 +23,8 @@ export async function exportGame(gameId: string) {
     listPhotos(gameId),
   ]);
   if (!game.exists) return false;
+  // Direct messages are private until the game ends (docs/ktn/seats-and-notes.md), so only a finished game's go in.
+  const messages = game.get("state.phase") === "END" ? await readAll(gameId) : undefined;
   const body = {
     format: "ktn-ti-export",
     version: 1,
@@ -30,6 +33,7 @@ export async function exportGame(gameId: string) {
     game: game.data(),
     timers: timers.data() ?? null,
     actionLog: log.docs.map((d) => ({ id: d.id, ...d.data() })),
+    ...(messages ? { messages } : {}),
     photos: photos.map((p) => ({ ...p, path: photoPath(gameId, p.id), thumbPath: photoPath(gameId, p.id, true) })),
   };
   await getBucket().file(exportPath(gameId)).save(JSON.stringify(body, toJson), {

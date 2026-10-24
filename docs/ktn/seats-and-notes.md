@@ -1,4 +1,4 @@
-# Seats and private notes
+# Seats, private notes and direct messages
 
 `/play` has two kinds of "who is this phone". They are kept apart on purpose.
 
@@ -6,7 +6,7 @@
   leads with: whose turn it highlights, who "You" is. It never limits where anyone can act.
   Anyone can still do anything for anyone, on any phone, or on the shared screen.
 - **The seat key** (this page) proves to the server that a phone holds a seat. It only
-  gates reading *private* things: the player's notes today, direct messages later.
+  gates reading *private* things: the player's notes and direct messages.
 
 A phone with no key (watching, a shared screen, a server that can't be reached) plays
 exactly the same. It just has no notes.
@@ -27,12 +27,12 @@ exactly the same. It just has no notes.
 4. Wrong PINs: 5 per 10 minutes per game and seat, counted in memory (a restart resets it).
    After that the server answers 429 until the window passes.
 5. A phone that changes seat gives its key up. The server frees the old seat unless it has
-   notes, in which case the seat stays claimed and the PIN still opens it.
+   notes or messages, in which case the seat stays claimed and the PIN still opens it.
 
 The server code is `src/fork/server/seats.ts`; state is `forkPrivate/<gameId>.seats`
 (`{ [factionId]: { keyHash, pinHash, claimedAt, moreKeyHashes? } }`). Routes read the key
 from the `X-Seat-Key` header with `seatFromRequest(gameId, req)`, which returns the faction
-or `undefined`. Later features (DMs) should use that and never take a seat from a URL or body.
+or `undefined`. Features that read private things (notes, DMs) use that and never take a seat from a URL or body.
 
 ## Notes
 
@@ -51,15 +51,53 @@ or `undefined`. Later features (DMs) should use that and never take a seat from 
   retried every 5 seconds and when the phone is back online. If two phones of one seat
   edit at once, the later save wins.
 
+## Direct messages
+
+One-to-one messages between two seats. There is no table channel and no group chat: players
+talk over the table in public, and only secrets go to a DM.
+
+- **Who can send:** a phone with a seat key, to any other seat in the game (even one nobody
+  has claimed yet; they see it when they take the seat). The sender is the seat the key opens,
+  never anything in the URL or body. Up to 1000 characters a message, 20 messages a minute
+  per seat and game (in memory, like the PIN limit), 300 messages or 120,000 characters per
+  conversation. No sending once the game is over.
+- **Stored in** `forkMessages/<gameId>__<a>__<b>` (the two factions, sorted), one document per
+  pair holding the conversation as an array `{f, t, at}`. Capped as above so it stays far
+  under Firestore's 1 MB limit. Like `forkNotes`, `firestore.rules` has no rule for it, and
+  `deleteAt` is copied from the game; `setup-ttl.sh` turns on its TTL policy (**run it once**).
+- `GET`/`POST /api/fork/messages/<gameId>`: GET returns the caller's own conversations (one
+  read per other seat); POST `{to, text}` sends. No key, or a key that opens no seat, is a 403.
+- **Live updates:** phones can't listen to server-only documents, so they poll: every 6 s
+  while the Messages sheet is open, every 30 s otherwise (the unread count on the Table tab),
+  not at all while the page is hidden. What a phone has read is kept in localStorage
+  (`play-dm-seen-<gameId>-<seat>`), so the unread count is per phone.
+- **A seat with messages is kept** when its phone gives it up (like a seat with notes), so
+  whoever claims it next can't read them.
+
+### When messages open
+
+- **During the game:** only the two seats in a conversation can read it. Not the other
+  players, not the game document, the log, the replay, the download or Discord.
+- **When the game ends** (phase END): every conversation is readable by any phone that holds
+  a seat key for the game (any seat, claimed on that phone), in the sheet's "All messages"
+  view in time order. A person with only the game code and no key still can't; but at that
+  point a free seat can be claimed, which is how the code alone has always worked. This is
+  deliberate: Shawn wanted them open at the end and will decide later if that is too
+  invasive. To close them again, change `readSeat`/`readAll` use in
+  `app/api/fork/messages/[gameId]/route.ts`.
+- **The export:** the permanent copy (`exportGame.ts`) includes a `messages` list only when
+  the game is in END, so a game exported mid-way never carries DMs. A finished game exports
+  when it ends and again if it changes, so its DMs are in the permanent file from then on.
+
 ## What is private, and what is not
 
-Private: a seat's notes and sketches, and the seat's key and PIN hashes. They are not in
+Private: a seat's notes and sketches, its direct messages (until the game ends), and the seat's key and PIN hashes. They are not in
 the game document, the log, the replay, the download (`/api/<id>/download`) or the Discord
-posts. The daily export (`src/fork/server/exportGame.ts`) copies the game and its log only.
+posts. The daily export (`src/fork/server/exportGame.ts`) copies the game and its log, plus the direct messages of a finished game.
 
 Not private:
 
-- Anyone with the PIN can read the seat's notes, and the PIN is shown on screen.
+- Anyone with the PIN can read the seat's notes and messages, and the PIN is shown on screen.
 - A seat's notes can be read by anyone who can read the Firestore project or the server
   (they are not encrypted).
 - Acting: anyone can still act for anyone. Seats never restrict that.
