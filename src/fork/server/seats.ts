@@ -5,7 +5,7 @@ import "server-only";
 // things. See docs/ktn/seats-and-notes.md.
 import { Timestamp } from "firebase-admin/firestore";
 import { getFirestoreAdmin } from "../../util/server";
-import { hasKey, hashKey, hashPin, MAX_KEYS_PER_SEAT, newPin, newSeatKey, PinLimiter, type SeatRecord } from "../notes/model";
+import { hasKey, hashKey, hashPin, MAX_KEYS_PER_SEAT, newPin, newSeatKey, PinLimiter, type SeatRecord } from "../notes/keys";
 import { privateRef, readPrivate } from "./private";
 
 export const pinLimiter = new PinLimiter();
