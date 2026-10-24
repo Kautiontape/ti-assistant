@@ -3,7 +3,8 @@
 // and the faction page's objectives tab (src/components/ObjectiveModal). Stage I
 // and II with who scored each, reveal and hide, scoring for any player; each
 // player's secrets; and the other point sources. Upstream's own events throughout.
-import { useState } from "react";
+import { use, useState } from "react";
+import { DatabaseFnsContext } from "../../context/contexts";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
@@ -42,6 +43,7 @@ export function ObjectivesSheet({ close, ctx }: { close: () => void; ctx: Ctx })
   const [open, setOpen] = useState<Optional<ObjectiveId>>();
   const [revealing, setRevealing] = useState(false);
   const [player, setPlayer] = useState<Optional<FactionId>>();
+  const baseObjectives: Partial<Record<ObjectiveId, Objective>> = use(DatabaseFnsContext).getBaseValue("objectives") ?? {};
   const all = Object.values(objectives).filter((o): o is Objective => !!o);
   const ids = Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => a.mapPosition - b.mapPosition).map((f) => f.id);
   const reset = () => { setOpen(undefined); setRevealing(false); setPlayer(undefined); };
@@ -52,7 +54,9 @@ export function ObjectivesSheet({ close, ctx }: { close: () => void; ctx: Ctx })
   else if (revealing) body = <Reveal stage={tab as "STAGE ONE" | "STAGE TWO" | "SECRET"} all={all} ctx={ctx} back={() => setRevealing(false)} />;
   else if (tab === "SECRET" && player) body = <Secrets who={player} all={all} ctx={ctx} back={() => setPlayer(undefined)} />;
   else if (tab === "SECRET") {
-    const asPublic = all.filter((x) => x.type === "SECRET" && x.selected);
+    // Upstream turns a revealed secret into a stage I objective, so its own type
+    // no longer says secret: the base data does.
+    const asPublic = all.filter((x) => baseObjectives[x.id]?.type === "SECRET" && x.type !== "SECRET" && x.selected);
     body = (
       <>
       <Rows label="Secrets by player">
