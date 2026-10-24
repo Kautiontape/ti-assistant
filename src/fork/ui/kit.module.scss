@@ -257,7 +257,7 @@
   // ---------- Players ----------
   .chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
   .chipName { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .chipPlayer { color: var(--muted); white-space: nowrap; }
+  .chipPlayer { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .sw {
     flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
     background: oklch(0.14 0.01 252); box-shadow: inset 0 0 0 3px var(--c, var(--line));

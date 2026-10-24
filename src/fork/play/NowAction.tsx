@@ -126,7 +126,7 @@ export default function NowAction(ctx: Ctx) {
           <p className={kit.title} style={{ fontWeight: 400 }}>{actionName ?? "Choosing an action"}{steps.length ? ":" : ""}</p>
           {steps.length ? <ul className={styles.list}>{steps.map((s, i) => <li key={i}>{s}</li>)}</ul> : null}
           <div className={kit.line} style={{ flexWrap: "wrap", gap: "8px 14px" }}>
-            {onDeck ? <span className={kit.line} style={{ gap: 6 }}><span className={kit.sub}>Next</span><Chip faction={onDeck} factions={factions} short={short} small /></span> : null}
+            {onDeck && onDeck !== active ? <span className={kit.line} style={{ gap: 6 }}><span className={kit.sub}>Next</span><Chip faction={onDeck} factions={factions} short={short} small /></span> : null}
             {passed.length ? <span className={kit.line} style={{ gap: 4 }}><span className={kit.sub}>Passed</span>{passed.map((id) => <Swatch key={id} faction={id} color={factions[id]?.color} small />)}</span> : null}
           </div>
           <Button forOther block onClick={() => setHelping(active)}>Do it for {short(active)}</Button>

@@ -11,6 +11,7 @@ import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
+import { useOpenCombat } from "./Combat";
 import type { Ctx } from "./ui";
 import { Button, Chip, Choices, kit, RowAction, RowLink, Rows, Sheet as KitSheet, Switch } from "../ui/kit";
 
@@ -27,6 +28,8 @@ export function OtherEndings({ active, selected, ctx }: { active: FactionId; sel
   const passed = usePassedFactionIds().filter((id) => id !== active);
   const puppets = useActionCard("Puppets on a String");
   const block = useEndTurnBlock(selected);
+  // Like End turn: an open combat gets its result first.
+  const combat = useOpenCombat();
   return (
     <Rows label="Other ways to end the turn">
       {selected !== "Pass" ? (
@@ -35,7 +38,7 @@ export function OtherEndings({ active, selected, ctx }: { active: FactionId; sel
       ) : null}
       {selected !== "Pass" ? (
         <RowAction verb="Go again" disabled={w.pending || !!block} title="Take another action" detail="This action is done; they take another before the next player"
-          onClick={() => w.write([Events.EndTurnEvent({ samePlayer: true })], `${short(active)} took another action`, active)} />
+          onClick={() => (combat ? open({ kind: "endCombat", before: "they go again" }) : w.write([Events.EndTurnEvent({ samePlayer: true })], `${short(active)} took another action`, active))} />
       ) : null}
       {puppets && passed.length ? <RowLink onClick={() => open({ kind: "puppets", faction: active })} title="Puppets on a String" detail="A passed player takes the next turn" /> : null}
     </Rows>
@@ -99,7 +102,9 @@ export function PassSheet({ faction: id, close, ctx }: { faction: FactionId; clo
   const hasFaunus = ctx.tracks("PLANETS") && planets["Faunus"]?.owner === id;
   const faunusTargets = hasFaunus ? Object.values(planets).filter((p): p is Planet => !!p && !p.home && !p.attributes.includes("legendary") && !(p.attachments ?? []).length && p.owner !== id)
     .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const combat = useOpenCombat();
   const pass = async () => {
+    if (combat) { ctx.open({ kind: "endCombat", before: "they pass" }); return; }
     const events: GameUpdateData[] = [Events.SelectActionEvent("Pass")];
     if (faunus) events.push(Events.ClaimPlanetEvent(id, faunus as PlanetId));
     if (prove) events.push(Events.ScoreObjectiveEvent(id, "Prove Endurance"));
