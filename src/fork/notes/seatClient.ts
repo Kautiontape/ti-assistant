@@ -18,7 +18,17 @@ const url = (gameId: string) => `/api/fork/seat/${encodeURIComponent(gameId)}`;
 type Claim = { ok: true; pin?: string } | { ok: false; taken?: boolean; offline?: boolean; error: string };
 
 // Claims a free seat, or joins a taken one with its PIN. Stores the key it gets.
-export async function claimSeat(gameId: string, faction: string, opts: { pin?: string; newPin?: boolean } = {}): Promise<Claim> {
+// A plain claim already in flight is shared, so an effect that runs twice (React's
+// dev double-run) doesn't claim twice and lose the PIN to the second 409.
+const claiming = new Map<string, Promise<Claim>>();
+export function claimSeat(gameId: string, faction: string, opts: { pin?: string; newPin?: boolean } = {}): Promise<Claim> {
+  if (opts.pin || opts.newPin) return postClaim(gameId, faction, opts);
+  const id = `${gameId}\n${faction}`;
+  const p = claiming.get(id) ?? postClaim(gameId, faction, opts).finally(() => claiming.delete(id));
+  claiming.set(id, p);
+  return p;
+}
+async function postClaim(gameId: string, faction: string, opts: { pin?: string; newPin?: boolean } = {}): Promise<Claim> {
   try {
     const r = await fetch(url(gameId), { method: "POST", headers: { "Content-Type": "application/json", ...seatHeaders(gameId) }, body: JSON.stringify({ faction, ...opts }) });
     const j = await r.json().catch(() => ({}));
