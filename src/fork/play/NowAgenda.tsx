@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { computeVotes } from "../../../app/[locale]/game/[gameId]/main/phase/agenda/AgendaPhase";
 import { getTargets } from "../../components/VoteBlock/VoteBlock";
-import { getActionCardTargets } from "../../util/actionLog";
+import { getActionCardTargets, getPlayedRiders } from "../../util/actionLog";
 import { hasTech } from "../../util/api/techs";
 import { Events } from "../../util/api/events";
 import { outcomeString } from "../../util/strings";
@@ -339,6 +339,10 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
     .sort((a, b) => Number(!!a.resolved) - Number(!!b.resolved) || a.name.localeCompare(b.name));
   const hiddenName = hidden ? d.agendas[hidden]?.name ?? hidden : undefined;
   const ready = !!pick && (!d.covert || !!hidden);
+  // A Politics Rider on the winning outcome makes its player speaker; upstream does
+  // it on resolve, so say so before and after (it changes who reveals next).
+  const newSpeaker = pick ? getPlayedRiders(d.currentTurn).find((r) => r.rider === "Politics Rider" && r.outcome === pick)?.faction : undefined;
+  const speakerNote = newSpeaker ? `; ${ctx.short(newSpeaker)} becomes speaker (Politics Rider)` : "";
   const resolve = async () => {
     if (!pick || !ready) return;
     const events: GameUpdateData[] = [
@@ -346,7 +350,7 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
       ...(d.covert && hidden && hidden !== d.subAgenda ? [Events.SelectSubAgendaEvent(hidden)] : []),
       Events.ResolveAgendaEvent(agenda.id, pick),
     ];
-    const label = d.covert ? `${agenda.name} (${hiddenName}): ${outcomeLabel(d, ctx, pick)}` : `${agenda.name}: ${outcomeLabel(d, ctx, pick)}`;
+    const label = (d.covert ? `${agenda.name} (${hiddenName}): ${outcomeLabel(d, ctx, pick)}` : `${agenda.name}: ${outcomeLabel(d, ctx, pick)}`) + speakerNote;
     if (await w.write(events, label, as)) close();
   };
   const passes = (name: string) => d.ballot?.elect !== "For/Against"
@@ -367,7 +371,7 @@ function ResolveSheet({ d, as, close, ctx }: { d: AgendaData; as?: FactionId; cl
       {pick && ready ? <ResolveFollowUps d={d} ctx={ctx} agendaId={d.covert ? hidden : agenda.id} outcome={pick} /> : null}
       {pick && ready ? (
         <>
-          <p className={kit.confirm}>{passes(d.covert ? hiddenName ?? agenda.name : agenda.name)}</p>
+          <p className={kit.confirm}>{passes(d.covert ? hiddenName ?? agenda.name : agenda.name)}{newSpeaker ? ` ${ctx.short(newSpeaker)} becomes speaker (Politics Rider).` : ""}</p>
           <Button kind="primary" size="tall" block disabled={w.pending} onClick={resolve}>Confirm</Button>
         </>
       ) : null}
