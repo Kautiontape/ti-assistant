@@ -3,8 +3,9 @@
 // (app/[locale]/setup/setup-page.tsx). The rules for seats, colours,
 // expansions, variants and map types are upstream's, copied; the game is made
 // by upstream's /api/create-game and opens on /play, with the game's Discord
-// choice saved right after (/api/fork/discord). Twilight's Fall isn't
-// offered here: /play doesn't run it yet (the tfall branch owns that).
+// choice saved right after (/api/fork/discord). Twilight's Fall games are
+// made here as on upstream's page (Kings for factions, no events); the
+// Twilight's Fall draft (/draft/tf) makes them with a drafted map.
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import GameMap from "../../components/Map/GameMap";
@@ -32,7 +33,7 @@ const TRACK: [Hidden, string, string][] = [
 const MAP_STYLES: Record<number, MapStyle[]> = { 3: ["standard"], 4: ["standard", "warp", "skinny"], 5: ["standard", "warp", "skinny"], 6: ["standard", "large"], 7: ["standard", "warp"], 8: ["standard", "warp"] };
 const STYLE_NAMES: Record<MapStyle, string> = { standard: "Standard", warp: "Warp", skinny: "Skinny", large: "Large" };
 const VARIANTS: [GameVariant, string, number][] = [["normal", "Normal", 10], ["alliance-separate", "Alliance, separate points", 14], ["alliance-combined", "Alliance, combined points", 22]];
-const EXPANSION_NAMES: Partial<Record<Expansion, string>> = { POK: "Prophecy of Kings", "CODEX ONE": "Codex I", "CODEX TWO": "Codex II", "CODEX THREE": "Codex III", "CODEX FOUR": "Codex IV", "THUNDERS EDGE": "Thunder's Edge", "DISCORDANT STARS": "Discordant Stars" };
+const EXPANSION_NAMES: Partial<Record<Expansion, string>> = { POK: "Prophecy of Kings", "CODEX ONE": "Codex I", "CODEX TWO": "Codex II", "CODEX THREE": "Codex III", "CODEX FOUR": "Codex IV", "THUNDERS EDGE": "Thunder's Edge", "TWILIGHTS FALL": "Twilight's Fall", "DISCORDANT STARS": "Discordant Stars" };
 const MAP_STRING = /^((([0-9]{1,4}((A|B)[0-5]?)?)|(P[1-8])|(-1))(\s+|$))+$/;
 
 export default function NewGame() {
@@ -70,7 +71,7 @@ export default function NewGame() {
   const allowed = (set: Set<Expansion>) => (f: Optional<BaseFaction>): f is BaseFaction =>
     !!f && !f.locked && !(f.removedIn && set.has(f.removedIn)) && (f.expansion === "BASE" || set.has(f.expansion));
   const pickable = Object.values(baseFactions).filter(allowed(expansions)).sort((a, b) => a.name.localeCompare(b.name));
-  const eventList = Object.values(baseEvents).filter((e): e is TIEvent => !!e && has(e.expansion)).sort((a, b) => a.name.localeCompare(b.name));
+  const eventList = has("TWILIGHTS FALL") ? [] : Object.values(baseEvents).filter((e): e is TIEvent => !!e && has(e.expansion)).sort((a, b) => a.name.localeCompare(b.name));
   const variants = count % 2 === 0 ? VARIANTS : VARIANTS.slice(0, 1);
   const alliance = variant.startsWith("alliance");
   const seatName = (i: number) => {
@@ -129,9 +130,14 @@ export default function NewGame() {
       next.add(e);
       // Thunder's Edge brings the codices; some of its components need them.
       if (e === "THUNDERS EDGE") CODICES.forEach((c) => next.add(c));
-    } else next.delete(e);
+    } else {
+      next.delete(e);
+      // Twilight's Fall can't be played without Thunder's Edge.
+      if (e === "THUNDERS EDGE") next.delete("TWILIGHTS FALL");
+    }
     setExpansions(next);
-    setEvents((prev) => new Set([...prev].filter((id) => { const ev = baseEvents[id]; return ev && next.has(ev.expansion); })));
+    // Twilight's Fall has no events, as upstream's setup.
+    setEvents((prev) => new Set(next.has("TWILIGHTS FALL") ? [] : [...prev].filter((id) => { const ev = baseEvents[id]; return ev && next.has(ev.expansion); })));
     const ok = allowed(next);
     setSeats((prev) => prev.map((s) => {
       let out = s;
@@ -228,6 +234,9 @@ export default function NewGame() {
           {!has("THUNDERS EDGE") ? CODICES.map((c) => (
             <Switch key={c} label={EXPANSION_NAMES[c]} checked={has(c)} onChange={(on) => toggleExpansion(c, on)} />
           )) : null}
+          {has("THUNDERS EDGE") ? (
+            <Switch label="Twilight's Fall" detail="Players are Kings; each picks their faction's planets and units in setup. For a drafted map, use the Twilight's Fall draft." checked={has("TWILIGHTS FALL")} onChange={(on) => toggleExpansion("TWILIGHTS FALL", on)} />
+          ) : null}
           <Switch label="Discordant Stars" detail="Homebrew factions" checked={has("DISCORDANT STARS")} onChange={(on) => toggleExpansion("DISCORDANT STARS", on)} />
           {variants.length > 1 ? (
             <Choices label="Variant" value={variant} onChange={(v) => { const x = VARIANTS.find(([id]) => id === v)!; setVariant(x[0]); setVp(x[2]); setVp2(10); }}
@@ -274,7 +283,8 @@ export default function NewGame() {
         <section className={kit.card} aria-label="Track">
           <p className={kit.eyebrow}><span>Track</span></p>
           {TRACK.map(([id, label, detail]) => (
-            <Switch key={id} label={label} detail={detail} checked={!hide.has(id)}
+            // Twilight's Fall has cards (abilities) where other games have technologies.
+            <Switch key={id} label={id === "TECHS" && has("TWILIGHTS FALL") ? "Cards" : label} detail={id === "TECHS" && has("TWILIGHTS FALL") ? "Who holds which ability cards" : detail} checked={!hide.has(id)}
               onChange={(on) => setHide((prev) => { const n = new Set(prev); if (on) n.delete(id); else n.add(id); return n; })} />
           ))}
         </section>
