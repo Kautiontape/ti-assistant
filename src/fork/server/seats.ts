@@ -51,7 +51,7 @@ export async function claimSeat(gameId: string, faction: string, opts: { pin?: s
       return { ok: true, key: opts.key, pin };
     }
     if (!opts.pin) return { ok: false, status: 409, taken: true, error: "Someone has already taken this seat. Enter its PIN to use it here." };
-    if (pinLimiter.blocked(limitKey)) return { ok: false, status: 429, error: `Too many wrong PINs. Try again in ${pinLimiter.waitMinutes(limitKey)} minutes.` };
+    if (pinLimiter.blocked(limitKey)) return { ok: false, status: 429, error: `Too many wrong PINs. Try again in ${pinLimiter.waitMinutes(limitKey)} minutes, or have the seat's phone show a new PIN.` };
     if (hashPin(gameId, faction, opts.pin) !== cur.pinHash) {
       wrong = true;
       return { ok: false, status: 403, taken: true, error: "That PIN isn't right." };
@@ -62,7 +62,8 @@ export async function claimSeat(gameId: string, faction: string, opts: { pin?: s
     return { ok: true, key, joined: true };
   });
   if (wrong) pinLimiter.miss(limitKey);
-  else if (result.ok && result.joined) pinLimiter.clear(limitKey);
+  // A new PIN from the seat's owner also lifts a lockout someone else's guesses caused.
+  else if (result.ok && (result.joined || opts.newPin)) pinLimiter.clear(limitKey);
   return result;
 }
 

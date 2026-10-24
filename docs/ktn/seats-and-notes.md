@@ -25,9 +25,13 @@ exactly the same. It just has no notes.
    first one can't be handed out again). Both phones keep working. A seat holds at most 8
    keys; the oldest ones drop off after that.
 4. Wrong PINs: 5 per 10 minutes per game and seat, counted in memory (a restart resets it).
-   After that the server answers 429 until the window passes.
-5. A phone that changes seat gives its key up. The server frees the old seat unless it has
-   notes or messages, in which case the seat stays claimed and the PIN still opens it.
+   After that the server answers 429 until the window passes, or until the seat's own
+   phone shows a new PIN, which lifts the lockout (so a player guessing someone else's PIN
+   can't keep the owner's second phone out).
+5. A phone that changes seat keeps the old one: the old key is set aside on the phone
+   (`play-seat-key-<gameId>-<faction>`) and comes back if it switches back, so a mis-tap
+   never costs the seat or its PIN. Seats aren't freed by switching; `DELETE` on the seat
+   route still frees one that has no notes or messages.
 
 The server code is `src/fork/server/seats.ts`; state is `forkPrivate/<gameId>.seats`
 (`{ [factionId]: { keyHash, pinHash, claimedAt, moreKeyHashes? } }`). Routes read the key

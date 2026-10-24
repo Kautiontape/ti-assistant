@@ -49,11 +49,24 @@ async function whoseKey(gameId: string): Promise<string | null | undefined> {
   } catch { return undefined; }
 }
 
-// Leaves a seat on this phone. The server frees it when it has no notes.
-async function dropKey(gameId: string) {
-  if (!getSeatKey(gameId)) return;
-  await fetch(url(gameId), { method: "DELETE", headers: seatHeaders(gameId) }).catch(() => {});
+// Switching seats keeps the old seat: its key is set aside on this phone
+// (`play-seat-key-<gameId>-<faction>`) and comes back if the phone switches back,
+// so a mis-tap never costs the seat, its PIN or another phone's access.
+const asideKey = (gameId: string, faction: string) => `play-seat-key-${gameId}-${faction}`;
+async function setAside(gameId: string, who?: string | null) {
+  const k = getSeatKey(gameId);
+  if (!k) return;
+  if (who) try { localStorage.setItem(asideKey(gameId, who), k); } catch { /* private mode */ }
   setSeatKey(gameId);
+}
+function takeBack(gameId: string, faction: string) {
+  try {
+    const k = localStorage.getItem(asideKey(gameId, faction));
+    if (!k) return false;
+    localStorage.removeItem(asideKey(gameId, faction));
+    setSeatKey(gameId, k);
+    return true;
+  } catch { return false; }
 }
 
 export type SeatKeyState = {
@@ -72,13 +85,21 @@ export function useSeatKey(gameId: string, seat: Optional<string>) {
     let dead = false;
     const done = (s: SeatKeyState) => { if (!dead) setSt(s); };
     (async () => {
-      if (!seat) { await dropKey(gameId); return done({ status: "none", busy: false }); }
+      if (!seat) {
+        if (getSeatKey(gameId)) { const who = await whoseKey(gameId); if (who !== undefined) await setAside(gameId, who); }
+        return done({ status: "none", busy: false });
+      }
       done({ status: "checking", busy: true });
       if (getSeatKey(gameId)) {
         const who = await whoseKey(gameId);
         if (who === undefined) return done({ status: "offline", busy: false, error: "Couldn't reach the server." });
         if (who === seat) return done({ status: "ready", busy: false });
-        await dropKey(gameId); // the key is for another seat
+        await setAside(gameId, who); // the key is for another seat
+      }
+      if (takeBack(gameId, seat)) {
+        const who = await whoseKey(gameId);
+        if (who === seat) return done({ status: "ready", busy: false });
+        setSeatKey(gameId); // that seat was reset since
       }
       if (dead) return;
       const r = await claimSeat(gameId, seat);
