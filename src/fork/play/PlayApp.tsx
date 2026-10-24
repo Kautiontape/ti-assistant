@@ -39,6 +39,7 @@ import { SeatPanel } from "../notes/SeatPanel";
 import { useSeatKey } from "../notes/seatClient";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
+import { OfflineBanner } from "./Offline";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
@@ -146,6 +147,7 @@ export default function PlayApp() {
       {tab === "now" ? (
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
+            <OfflineBanner gameId={gameId} />
             <LockedBanner open={setSheet} />
             <PausedBanner ctx={ctx} />
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
