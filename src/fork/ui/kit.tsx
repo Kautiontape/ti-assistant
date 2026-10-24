@@ -20,10 +20,10 @@ export const pcolor = (c?: string) => `var(--p-${(c ?? "black").toLowerCase()})`
 // ---------- device settings ----------
 // Per device, not per game: a shared iPad stays a shared iPad.
 
-const PREF_KEYS = { always: "play-always-actions", dock: "kit-dock", accent: "kit-accent", text: "kit-text" } as const;
+const PREF_KEYS = { always: "play-always-actions", dock: "kit-dock", text: "kit-text" } as const;
 export type TextSize = "auto" | "small" | "normal" | "large";
-export type Prefs = { always: boolean; dock: "beside" | "over"; accent: "teal" | "neutral"; text: TextSize };
-const DEFAULT_PREFS: Prefs = { always: false, dock: "beside", accent: "teal", text: "auto" };
+export type Prefs = { always: boolean; dock: "beside" | "over"; text: TextSize };
+const DEFAULT_PREFS: Prefs = { always: false, dock: "beside", text: "auto" };
 const TEXT_SIZES: TextSize[] = ["auto", "small", "normal", "large"];
 
 function readPrefs(): Prefs {
@@ -31,7 +31,6 @@ function readPrefs(): Prefs {
     return {
       always: localStorage.getItem(PREF_KEYS.always) === "1",
       dock: localStorage.getItem(PREF_KEYS.dock) === "over" ? "over" : "beside",
-      accent: localStorage.getItem(PREF_KEYS.accent) === "neutral" ? "neutral" : "teal",
       text: (TEXT_SIZES as string[]).includes(localStorage.getItem(PREF_KEYS.text) ?? "") ? localStorage.getItem(PREF_KEYS.text) as TextSize : "auto",
     };
   } catch {
@@ -49,7 +48,6 @@ export function useDevicePrefs() {
     try {
       next.always ? localStorage.setItem(PREF_KEYS.always, "1") : localStorage.removeItem(PREF_KEYS.always);
       next.dock === "over" ? localStorage.setItem(PREF_KEYS.dock, "over") : localStorage.removeItem(PREF_KEYS.dock);
-      next.accent === "neutral" ? localStorage.setItem(PREF_KEYS.accent, "neutral") : localStorage.removeItem(PREF_KEYS.accent);
       next.text !== "auto" ? localStorage.setItem(PREF_KEYS.text, next.text) : localStorage.removeItem(PREF_KEYS.text);
     } catch { /* private mode: the setting lasts until reload */ }
   };
@@ -72,7 +70,6 @@ export const WIDE = "(min-width: 1180px)";
 
 // Attributes for a root element (kit.root) that carry the device's look settings.
 export const rootAttrs = (prefs: Prefs) => ({
-  "data-accent": prefs.accent === "neutral" ? "neutral" : undefined,
   "data-text": prefs.text === "auto" ? undefined : prefs.text,
 });
 

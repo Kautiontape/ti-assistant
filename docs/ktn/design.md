@@ -39,9 +39,10 @@ Inside a row or button it's drawn `still`, since a button can't hold another.
 - Strategy cards are `--sc-<card.color>`, with `-ink` (text on the fill) and
   `-line` (outline). Fills carry their text at 4.5:1 or more; lines sit on the
   panel at 6:1 or more.
-- The accent is teal. Trade's turquoise is close to it, so `data-accent="neutral"`
-  on the root (or `kit-accent=neutral` in localStorage) swaps in a neutral accent
-  for comparison.
+- The accent is a neutral tinted blue (Shawn's pick, 2026-10-24): light on the
+  dark theme, slate on the light one. The tint keeps it apart from the black
+  player's near-white, and it's far from Trade's turquoise, which the earlier
+  teal wasn't. Its text and fills hold 8:1 or more in both themes.
 
 ## Charts
 
@@ -72,4 +73,3 @@ bar's seat button:
 - `kit-text`: text size. Upstream's `site.css` sets the root font size to
   `clamp(16px, 1.25vw, 32px)`, so the kit sizes text from its own `--fs`
   (16px; 15px on a desktop window; 14, 16 or 18px by the setting).
-- `kit-accent`: the accent comparison above (no setting in the UI).

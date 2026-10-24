@@ -14,9 +14,11 @@
   --ink: oklch(0.955 0.008 252);
   --muted: oklch(0.74 0.02 252);
   --faint: oklch(0.6 0.02 252);
-  --accent: oklch(0.8 0.115 195);
-  --accent-ink: oklch(0.2 0.04 215);
-  --accent-soft: oklch(0.31 0.055 200);
+  // The accent is a neutral tinted blue, so it reads apart from the black
+  // player's near-white (and from Trade's turquoise, which an earlier teal didn't).
+  --accent: oklch(0.85 0.05 245);
+  --accent-ink: oklch(0.2 0.03 250);
+  --accent-soft: oklch(0.32 0.045 248);
   --scrim: oklch(0.08 0.01 252 / 0.62);
   --shadow: 0 18px 44px -20px oklch(0 0 0 / 0.85);
   // Player colours. TI has no white pieces, so black is drawn near-white here
@@ -50,7 +52,7 @@
   --bg: oklch(0.965 0.006 252); --panel: oklch(0.995 0.003 252); --raise: oklch(0.93 0.01 252); --line: oklch(0.86 0.012 252);
   --line-strong: oklch(0.62 0.02 252);
   --ink: oklch(0.22 0.025 252); --muted: oklch(0.45 0.025 252); --faint: oklch(0.58 0.02 252);
-  --accent: oklch(0.52 0.1 205); --accent-ink: oklch(0.99 0.01 200); --accent-soft: oklch(0.9 0.04 200);
+  --accent: oklch(0.4 0.08 252); --accent-ink: oklch(0.98 0.005 252); --accent-soft: oklch(0.9 0.03 250);
   --scrim: oklch(0.2 0.02 252 / 0.4); --shadow: 0 18px 44px -24px oklch(0.2 0.03 252 / 0.45);
   --p-red: oklch(0.55 0.19 29); --p-orange: oklch(0.62 0.15 62); --p-yellow: oklch(0.72 0.15 95); --p-green: oklch(0.56 0.17 145);
   --p-blue: oklch(0.52 0.16 262); --p-purple: oklch(0.52 0.18 300); --p-magenta: oklch(0.56 0.21 350);
@@ -60,10 +62,6 @@
   --sc-darkblue-line: oklch(0.42 0.17 266); --sc-purple-line: oklch(0.45 0.2 305); --sc-magenta-line: oklch(0.5 0.2 350);
   color-scheme: light;
 }
-
-// A neutral accent, for comparing against the teal (the Trade card is turquoise).
-@mixin neutral-accent-dark { --accent: oklch(0.93 0.008 252); --accent-ink: oklch(0.2 0.025 252); --accent-soft: oklch(0.32 0.02 252); }
-@mixin neutral-accent-light { --accent: oklch(0.26 0.025 252); --accent-ink: oklch(0.98 0.005 252); --accent-soft: oklch(0.9 0.01 252); }
 
 .root {
   @include dark;
@@ -93,16 +91,15 @@
   *, *::before, *::after { box-sizing: border-box; }
   button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
   button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  &[data-accent="neutral"] { @include neutral-accent-dark; }
   @media (min-width: 1024px) and (pointer: fine) { --fs: 15px; }
   &[data-text="small"] { --fs: 14px; }
   &[data-text="normal"] { --fs: 16px; }
   &[data-text="large"] { --fs: 18px; }
 }
 @media (prefers-color-scheme: light) {
-  :global(:root:not([data-theme="dark"])) .root { @include light; &[data-accent="neutral"] { @include neutral-accent-light; } }
+  :global(:root:not([data-theme="dark"])) .root { @include light; }
 }
-:global(:root[data-theme="light"]) .root { @include light; &[data-accent="neutral"] { @include neutral-accent-light; } }
+:global(:root[data-theme="light"]) .root { @include light; }
 
 .root {
   // ---------- Text ----------
