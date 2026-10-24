@@ -120,11 +120,18 @@ export default function NowStatus(ctx: Ctx) {
           </div>
         )}
         <details>
-          <summary className={kit.sub} style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer" }}>Then on the board (not tracked)</summary>
-          <p className={kit.sub}>
-            Draw action cards (1 each; 2 with Neural Motivator; Yssaril draws 3 and discards 1). Remove command tokens from the board.
-            Gain 2 command tokens (Sol 3; 1 more with Hyper Metabolism) and redistribute. Ready cards, repair units, return strategy cards.
-          </p>
+          <summary className={kit.sub} style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer" }}>The steps of the phase</summary>
+          {/* Upstream's numbered steps, in its order; the first two are tracked above, the rest happen on the board. */}
+          <ol className={kit.sub} style={{ margin: 0, paddingLeft: 22, display: "grid", gap: 4 }}>
+            <li>Score objectives, in initiative order.</li>
+            <li>The speaker reveals an objective.</li>
+            <li>Draw action cards: 1 each, 2 with Neural Motivator; Yssaril draws 3 and discards 1.</li>
+            <li>Remove command tokens from the board.</li>
+            <li>Gain 2 command tokens (Sol 3; 1 more with Hyper Metabolism) and redistribute.</li>
+            <li>Ready cards.</li>
+            <li>Repair units.</li>
+            <li>Return strategy cards.</li>
+          </ol>
         </details>
         <StatusAbilities ctx={ctx} />
       </section>

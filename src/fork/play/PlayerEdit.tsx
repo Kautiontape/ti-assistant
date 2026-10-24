@@ -99,7 +99,7 @@ export function PlayerEditSheet({ faction: id, close, ctx }: { faction: FactionI
 
       {part === "planets" ? (
         <>
-          <Rows><RowLink onClick={() => open({ kind: "claim", faction: id })} title="Take control of a planet" /></Rows>
+          <Rows><RowLink onClick={() => open({ kind: "claim", faction: id, free: true })} title="Take control of a planet" detail="Any planet, from the board or from another player" /></Rows>
           <Rows label="Planets">
             {myPlanets.map((p) => (
               <RowAction key={p.id} verb="Lose" disabled={w.pending} title={p.name} end={<span className={kit.num}>{p.resources}/{p.influence}</span>}

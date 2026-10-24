@@ -36,7 +36,7 @@ export type Sheet =
   | { kind: "puppets"; faction: FactionId }
   | ({ kind: "strategySwap" } & StrategySwap)
   // peace: Xxcha's Peace Accords after Diplomacy (no Mecatol Rex, as upstream's Diplomacy.tsx).
-  | { kind: "claim"; faction: FactionId; peace?: boolean }
+  | { kind: "claim"; faction: FactionId; peace?: boolean; free?: boolean }
   | { kind: "pass"; faction: FactionId }
   | { kind: "singularity" }
   | { kind: "mapTile"; component: string; faction: FactionId }

@@ -470,7 +470,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "seat":
       return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {
-      const list = claimablePlanets(planets, sheet.faction, currentTurn)
+      // free: a hand edit from the player's sheet, outside a tactical action, so no one-system limit (upstream's planet modal has none).
+      const list = claimablePlanets(planets, sheet.faction, sheet.free ? [] : currentTurn)
         .filter((p) => !sheet.peace || p.id !== "Mecatol Rex")
         .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(!!a.owner) - Number(!!b.owner) || a.name.localeCompare(b.name));

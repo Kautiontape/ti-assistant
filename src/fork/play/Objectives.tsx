@@ -49,16 +49,25 @@ export function ObjectivesSheet({ close, ctx }: { close: () => void; ctx: Ctx })
 
   let body: React.ReactNode;
   if (o) body = <ObjectiveScorers o={o} ids={ids} ctx={ctx} back={() => setOpen(undefined)} />;
-  else if (revealing) body = <Reveal stage={tab as "STAGE ONE" | "STAGE TWO"} all={all} ctx={ctx} back={() => setRevealing(false)} />;
+  else if (revealing) body = <Reveal stage={tab as "STAGE ONE" | "STAGE TWO" | "SECRET"} all={all} ctx={ctx} back={() => setRevealing(false)} />;
   else if (tab === "SECRET" && player) body = <Secrets who={player} all={all} ctx={ctx} back={() => setPlayer(undefined)} />;
   else if (tab === "SECRET") {
+    const asPublic = all.filter((x) => x.type === "SECRET" && x.selected);
     body = (
+      <>
       <Rows label="Secrets by player">
         {ids.map((id) => {
           const n = all.filter((x) => x.type === "SECRET" && (x.scorers ?? []).includes(id)).length;
           return <RowLink key={id} onClick={() => setPlayer(id)} title={short(id)} detail={`${n} secret${n === 1 ? "" : "s"} scored`} />;
         })}
       </Rows>
+      {asPublic.length ? (
+        <Rows label="Revealed as public">
+          {asPublic.map((x) => <RowLink key={x.id} onClick={() => setOpen(x.id)} title={x.name} detail={scorerNames(x, short) ? `Scored by ${scorerNames(x, short)}` : "Nobody has scored it"} />)}
+        </Rows>
+      ) : null}
+      <Rows><RowLink onClick={() => setRevealing(true)} title="Reveal a secret as public" detail="When a card turns one face up" /></Rows>
+      </>
     );
   } else if (tab === "OTHER") {
     const other = all.filter((x) => x.type === "OTHER" && x.id !== SFTT).sort((a, b) => Number(!(b.scorers ?? []).length) - Number(!(a.scorers ?? []).length) || a.name.localeCompare(b.name));
@@ -127,7 +136,14 @@ function ObjectiveScorers({ o, ids, ctx, back }: { o: Objective; ids: FactionId[
           <Button block onClick={() => setAsk(undefined)}>Never mind</Button>
         </>
       ) : null}
-      {(o.type === "STAGE ONE" || o.type === "STAGE TWO") && !scorers.length ? (
+      {o.id === "Mutiny" ? (
+        <Rows label="Mutiny">
+          <RowAction verb="Switch" disabled={w.pending} title={o.points === 1 ? "Passed: 1 point" : "Voted down: -1 point"}
+            detail={o.points === 1 ? "Change it to voted down" : "Change it to passed"}
+            onClick={() => w.write([Events.SetObjectivePointsEvent("Mutiny", o.points === 1 ? -1 : 1)], `Mutiny now counts ${o.points === 1 ? "-1" : "1"} point`)} />
+        </Rows>
+      ) : null}
+      {(o.type === "STAGE ONE" || o.type === "STAGE TWO" || (o.type === "SECRET" && o.selected)) && !scorers.length ? (
         <Rows><RowAction verb="Hide" disabled={w.pending} title="Put it back" detail="Revealed by mistake; nobody has scored it"
           onClick={async () => { if (await w.write([Events.HideObjectiveEvent(o.id)], `${o.name} went back to the deck`)) back(); }} /></Rows>
       ) : null}
@@ -136,13 +152,13 @@ function ObjectiveScorers({ o, ids, ctx, back }: { o: Objective; ids: FactionId[
   );
 }
 
-function Reveal({ stage, all, ctx, back }: { stage: "STAGE ONE" | "STAGE TWO"; all: Objective[]; ctx: Ctx; back: () => void }) {
+function Reveal({ stage, all, ctx, back }: { stage: "STAGE ONE" | "STAGE TWO" | "SECRET"; all: Objective[]; ctx: Ctx; back: () => void }) {
   const { w } = ctx;
   const [q, setQ] = useState("");
   const left = all.filter((x) => x.type === stage && !x.selected && (!q || x.name.toLowerCase().includes(q.toLowerCase()))).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <>
-      <p className={kit.sub}>Usually the speaker reveals one in each status phase. Reveal another here when a card says so, or to fix a mistake.</p>
+      <p className={kit.sub}>{stage === "SECRET" ? "A secret objective that a card turns face up becomes a public one. Find it here." : "Usually the speaker reveals one in each status phase. Reveal another here when a card says so, or to fix a mistake."}</p>
       <input className={kit.search} type="search" placeholder="Find an objective" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an objective" />
       <Rows label="Not revealed">
         {left.map((x) => <RowAction key={x.id} verb="Reveal" disabled={w.pending} title={x.name} detail={x.description}

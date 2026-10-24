@@ -22,11 +22,14 @@ export function StartOfStrategy({ ctx }: { ctx: Ctx }) {
   const aiRevolution = useAgenda("Anti-Intellectual Revolution");
   const armsReduction = useAgenda("Arms Reduction");
   const newConstitution = useAgenda("New Constitution");
+  const repGov = useAgenda("Representative Government");
   const items: { who?: FactionId; name: string; text: string }[] = [];
   const thisRound = (a: Optional<Agenda>, target: string) => !!a?.resolved && a.target === target && a.activeRound === round;
   if (thisRound(aiRevolution, "Against")) items.push({ name: `${aiRevolution!.name} (against)`, text: aiRevolution!.failedText ?? aiRevolution!.description });
   if (thisRound(armsReduction, "Against")) items.push({ name: `${armsReduction!.name} (against)`, text: armsReduction!.failedText ?? armsReduction!.description });
   if (thisRound(newConstitution, "For")) items.push({ name: `${newConstitution!.name} (for)`, text: newConstitution!.passedText ?? newConstitution!.description });
+  // Upstream's strategy screen doesn't list this one, but the card says it: a reminder only.
+  if (thisRound(repGov, "Against")) items.push({ name: `${repGov!.name} (against)`, text: repGov!.failedText ?? "Each player who voted against exhausts all of their cultural planets." });
   if (factions["Council Keleres"]) items.push({ who: "Council Keleres", name: "Council Patronage", text: "Replenish commodities, then gain 1 trade good." });
   if (!items.length) return null;
   return (

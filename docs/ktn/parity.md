@@ -4,12 +4,12 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 201 | Works in `/play`. |
-| Partial | 4 | Works in `/play`, with the gap named in Notes. |
+| Native | 204 | Works in `/play`. |
+| Partial | 0 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
-| Not needed | 17 | Left out on purpose; the reason is in Notes. |
+| Not needed | 18 | Left out on purpose; the reason is in Notes. |
 
 `/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall rows in sections 1 to 7 point to section 8, which covers what a Twilight's Fall game does in `/play` in detail. The totals above count sections 1 to 7 only. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
@@ -169,7 +169,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Score a public objective per faction (any faction, helping) | main/phase/status/StatusPhase.tsx (MiddleColumn) | Native | NowStatus.tsx ScoreSheet; picks seat or "score for" another player; search; undo via "Take it back" |
 | Score a secret objective | StatusPhase.tsx | Native | ScoreSheet which="secret"; lists all unscored secrets (hands not tracked, same as upstream) |
 | Change/replace a scored objective | StatusPhase.tsx (Selector) | Native | Take it back, then score another |
-| "Cannot score public objectives" when home planets are missing | StatusPhase.tsx (canScoreObjectives) | Partial | Sheet shows a warning (missingHomePlanets) but does not block scoring |
+| "Cannot score public objectives" when home planets are missing | StatusPhase.tsx (canScoreObjectives) | Not needed | Upstream hides the scoring list for that player. /play shows a warning in the score sheet and lets the table decide (Shawn: flag, don't block), so a house rule or a mistaken planet owner never traps a score |
 | Per-round scoring overview by initiative order | StatusPhase.tsx | Native | NowStatus "This round" list with Public/Secret tags |
 | Scoring only objectives valid for the phase (phase-restricted secrets) | StatusPhase.tsx | Native | logic.ts scorablePublics / scorableSecrets |
 | Reveal the stage I/II public objective (speaker) | StatusPhase.tsx (ObjectiveSelectHoverMenu) | Native | RevealSheet; stage picked by round; hidden when OBJECTIVES hidden |
@@ -186,7 +186,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Draw action cards per faction (Neural Motivator, Yssaril 3, etc.) | StatusPhase.tsx ActionCardDraws | Not needed | Counts shown upstream are reminders; /play prints the rule text under "Then on the board (not tracked)" |
 | Remove command tokens / gain and redistribute (Sol, Hyper Metabolism) | StatusPhase.tsx CommandTokenGains | Not needed | Reminder text only in /play; nothing is recorded upstream beyond a log note |
 | Ready cards, repair units, return strategy cards | StatusPhase.tsx steps | Not needed | Text reminder only |
-| Step checklist with numbered steps | StatusPhase.tsx | Partial | /play has a three-card layout without upstream's numbered steps |
+| Step checklist with numbered steps | StatusPhase.tsx | Native | NowStatus.tsx "The steps of the phase": a short numbered list in upstream's order (score, reveal, draw action cards, remove and gain command tokens, ready cards, repair units, return strategy cards). Check: laws-check.cjs |
 | Lock the phase until an objective is revealed | StatusPhase.tsx (LockedButtons, statusPhaseComplete) | Native | The next-phase buttons wait for the reveal; "Go on without one" opens the lock, as upstream's lock does on a tap |
 | End phase: go to agenda or skip to next round when Mecatol is unclaimed | StatusPhase.tsx nextPhaseButtons | Native | AdvancePhaseEvent(skip) in NowStatus |
 | Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Native | Section 8: NowStatus finishes into the edict phase, NowEdict runs it. Check: tf-play-check.cjs |
@@ -221,7 +221,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Ancient Burial Sites, Maw of Worlds (start of agenda phase) | AgendaPhase.tsx AgendaSteps | Native | AgendaCards.tsx before the first agenda. Ancient Burial Sites also lowers that player's available votes, which upstream's tally never does (it reads a state field nothing sets) |
 | Agenda timers per agenda | src/components/AgendaTimer | Native | The agenda card shows game time on this agenda, and the end of the phase shows both (upstream's AgendaTimer rule, Clock.tsx useAgendaTimes) |
 | Laws in effect list + repeal | src/components/Header/Header.tsx PassedLaws, RepealAgendaEvent | Native | Laws.tsx: "Laws in effect" on the Table tab, each with its text, who was elected, and a confirmed Repeal (undoable). Check: parity-laws-check.cjs |
-| Laws' effects on gameplay (e.g. Representative Government, Checks and Balances, Minister of Policy) | various | Partial | Applied where built (RepGov, Checks and Balances at pick); others not surfaced |
+| Laws' effects on gameplay (e.g. Representative Government, Checks and Balances, Minister of Policy) | various | Native | Everything upstream's screens do for a law is in /play: Representative Government (one vote each), Checks and Balances (3 planets ready; the picker gives a card), Public Execution (no vote), Minister of Policy (status reminder), Imperial Arbiter, and the start-of-strategy results of Anti-Intellectual Revolution, Arms Reduction and New Constitution. Upstream does nothing for the other laws (their effects are table-only or recorded when the agenda resolves), so they show only in Laws in effect; /play adds one reminder upstream lacks, Representative Government voted down. Check: laws-check.cjs |
 | Ready planets, then start next round | AgendaPhase.tsx | Native | "Both agendas are resolved" card, AdvancePhaseEvent |
 
 ## 6. End of game and results
@@ -259,7 +259,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Native | TurnOrder.tsx: a "Turn order" card on the Table tab, opening on the phase's order (speaker, initiative or voting) with the others a tap away. Voting order uses logic.ts votingOrder, Hack Election included. Check: views-check.cjs |
 | Change speaker | Footer.tsx | Native | NowCards (Politics) SetSpeaker; no free-form change otherwise |
 | Tyrant (Twilight's Fall) | Footer.tsx | Native | A card on the Table tab (section 8). |
-| Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Partial | Planet claim, research, relic, expedition in sheets; no free-edit modal for objectives or planets |
+| Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Native | Technology, planets, relics, alliances and expedition are on a player's "Change something" sheet; "Take control of a planet" there is free (any planet, from the board or another player, no one-system limit). The Objectives sheet reveals or hides stage I and II objectives, reveals a secret as public, scores or takes back for any player, and flips Mutiny's direction. Check: laws-check.cjs |
 | Thunder's Edge expedition | OtherPanel.tsx | Native | NowExpedition.tsx |
 | Relics (gain/purge, Crown) | OtherPanel.tsx | Native | Gain, purge and lose by hand (PlayerEdit.tsx); the Crown in the status phase |
 | Promissory notes and alliances (Fleet pool, Alliances) | OtherPanel.tsx | Native | PlayerEdit.tsx "Alliance": who holds a player's Alliance, confirmed; Mahact's fleet pool tokens. Check: parity-player-check.cjs |
@@ -323,5 +323,5 @@ Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones agains
 What's left, by the rows above that aren't Native or Not needed:
 
 1. Component actions still recorded without their effect: the Twilight's Fall splice cards (Coerce, Elevate and the like, see the Twilight's Fall row), and Riftwalker Meian's Mallice tile.
-2. Read-only views: no free edit of objectives.
+2. Read-only views: none left (objectives, planets and technologies can be edited by hand).
 3. Twilight's Fall: none left (Thieve, Research Genome and genome use are done; section 8).
