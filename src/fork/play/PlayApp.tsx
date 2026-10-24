@@ -90,6 +90,7 @@ export default function PlayApp() {
   const w = useWrite(seat, describe, table, () => setSheet({ kind: "unlock" }));
   const wide = useMedia(WIDE);
   const dockInfo = wide && prefs.dock === "beside";
+  const [mapBig, setMapBig] = useState(false);
 
   useEffect(() => {
     if (!w.toast) return;
@@ -159,7 +160,11 @@ export default function PlayApp() {
         </main>
       ) : null}
       {tab === "table" ? <main className={styles.main}><TableTab {...ctx} /></main> : null}
-      {tab === "map" ? <main className={styles.main}><MapTab {...ctx} /></main> : null}
+      {tab === "map" ? (
+        <main className={cx(styles.main, dockInfo && mapBig && styles.mainFull)}>
+          <MapTab {...ctx} big={dockInfo ? { on: mapBig, set: setMapBig } : undefined} />
+        </main>
+      ) : null}
       {tab === "log" ? <main className={styles.main}><LogTab {...ctx} log={log} /></main> : null}
 
       {w.toast ? (

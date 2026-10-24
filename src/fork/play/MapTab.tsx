@@ -32,7 +32,8 @@ function systemAt(target: EventTarget, stop: Element): Optional<string> {
   }
 }
 
-export default function MapTab(ctx: Ctx) {
+// On a wide screen with details beside it, the map can span both columns.
+export default function MapTab({ big, ...ctx }: Ctx & { big?: { on: boolean; set: (on: boolean) => void } }) {
   const { factions, open } = ctx;
   const options = useOptions();
   const allPlanets = useAllPlanets();
@@ -67,6 +68,10 @@ export default function MapTab(ctx: Ctx) {
       <section className={kit.card} aria-label="Map">
         <p className={kit.eyebrow}><span>Map</span><span>Tap a system</span></p>
         <Choices label="Show on the map" hideLabel value={overlay} onChange={setOverlay} options={OVERLAYS.map(([id, label]) => ({ value: id, label }))} />
+        <div className={styles.mapButtons}>
+          <Button block onClick={() => setZoom(!zoom)}>{zoom ? "Fit the map" : "Zoom in"}</Button>
+          {big ? <Button block onClick={() => big.set(!big.on)}>{big.on ? "Back to one column" : "Expand the map"}</Button> : null}
+        </div>
         <div ref={box} className={styles.board}>
           <div className={cx(styles.boardInner, zoom && styles.boardZoom)}
             onClick={(e) => { const s = systemAt(e.target, e.currentTarget); if (s) open({ kind: "system", system: s }); }}>
@@ -84,7 +89,6 @@ export default function MapTab(ctx: Ctx) {
             />
           </div>
         </div>
-        <Button block onClick={() => setZoom(!zoom)}>{zoom ? "Fit the map" : "Zoom in"}</Button>
       </section>
       <section className={kit.card} aria-label="Find a planet">
         <input className={kit.search} type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />

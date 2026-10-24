@@ -34,6 +34,8 @@
   }
   // A sheet docked beside the screen (kit .dock) takes the right-hand column.
   &[data-docked] .main { max-width: none; margin: 0; padding-right: calc(var(--dock-w) + var(--gutter)); }
+  // The expanded map spans both columns; a docked sheet sits over its right edge.
+  .main.mainFull { max-width: none; margin: 0; padding-right: var(--gutter); .board { max-width: none; } }
 
   .tabs {
     position: fixed; z-index: 6; left: 0; right: 0; bottom: 0;
@@ -93,6 +95,9 @@
   .board { width: 100%; max-width: 640px; aspect-ratio: 1; margin: 0 auto; overflow: auto; border-radius: 12px; background: var(--bg); overscroll-behavior: contain; }
   .boardInner { position: relative; width: 100%; height: 100%; cursor: pointer; }
   .boardZoom { width: 200%; height: 200%; }
+  // Above the map, and on a wide screen at the left, so a docked sheet never covers them.
+  .mapButtons { display: flex; gap: 8px; > * { flex: 1; } }
+  @media (min-width: 1180px) { .mapButtons > button { flex: none; width: auto; padding-inline: 18px; } }
 
   // ---------- Draft (src/fork/draft): labelled steppers, slice cards and their tile art ----------
   .field {

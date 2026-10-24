@@ -61,6 +61,11 @@ screen 1180px or wider, a sheet about a thing (`dock`: a player, a system)
 opens as a column beside the screen, unless the device setting says "Over the
 screen". Escape closes it; focus returns to what opened it.
 
+With details beside the screen, the Map tab has "Expand the map" (Shawn's ask,
+2026-10-24): the map spans both columns, and a system's sheet opens over its
+right edge. The map's Zoom and Expand buttons sit above it, at the left on a
+wide screen, so the docked sheet never covers them.
+
 ## Device settings
 
 Kept in localStorage per device, not per game, in the sheet behind the top
