@@ -4,15 +4,14 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 189 | Works in `/play`. |
-| Partial | 11 | Works in `/play`, with the gap named in Notes. |
+| Native | 193 | Works in `/play`. |
+| Partial | 12 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
 | Not needed | 17 | Left out on purpose; the reason is in Notes. |
-| Twilight's Fall branch | 5 | Twilight's Fall only; left for the branch `draft/twilights-fall`, which owns that mode. |
 
-`/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall belongs to the Twilight's Fall work (branch `draft/twilights-fall`): its rows in sections 1 to 7 have the status "Twilight's Fall branch", and the last section covers what a Twilight's Fall game does in `/play`. The totals above leave that section out. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
+`/play` hides upstream's header (`HideOnPlay.tsx`), so everything upstream's header, footer and sidebars offer needs its own path in `/play`. Twilight's Fall rows in sections 1 to 7 point to section 8, which covers what a Twilight's Fall game does in `/play` in detail. The totals above count sections 1 to 7 only. Paths: SETUP is `app/[locale]/setup/setup-page.tsx`, AP is `app/[locale]/game/[gameId]/main/phase/action`, SP is `.../main/phase/strategy/StrategyPhase.tsx`; other upstream paths are under `app/[locale]/game/[gameId]/` unless they start with `src/`.
 
 ## 1. Game setup
 
@@ -20,7 +19,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 |---|---|---|---|
 | Entry to new game | SETUP page.tsx | Native | The start page's "New game" opens /start/new (NewGame.tsx), the fork's setup page; the game it makes opens on /play. Check: parity-newgame-check.cjs |
 | Player count (3-8 chips) | SETUP (PlayerCount, ~l.182) | Native | NewGame.tsx: 3 to 8, or 3 to 6 without Prophecy of Kings; changing it resets the map type and, for odd counts, the variant (upstream's rules). Check: parity-newgame-check.cjs |
-| Expansions: PoK, Thunder's Edge, Codex I-IV, Twilight's Fall | SETUP l.235-325 | Native | NewGame.tsx: Prophecy of Kings, Thunder's Edge (which brings the codices) and each codex when Thunder's Edge is off; turning one off clears factions and colours it allowed. Twilight's Fall is left for its branch (/play doesn't run it yet). |
+| Expansions: PoK, Thunder's Edge, Codex I-IV, Twilight's Fall | SETUP l.235-325 | Native | NewGame.tsx: Prophecy of Kings, Thunder's Edge (which brings the codices) and each codex when Thunder's Edge is off; turning one off clears factions and colours it allowed. Twilight's Fall isn't offered here yet: its games come from the Twilight's Fall draft or upstream's /setup. |
 | Homebrew: Discordant Stars | SETUP l.359 | Native | NewGame.tsx switch; adds its factions to the faction list. |
 | Events (shown when TF is off) | SETUP l.387 | Native | NewGame.tsx: an Events sheet lists the events of the chosen expansions with their text. |
 | Game variant: normal / alliance-separate / alliance-combined (4, 6, 8 players only) | SETUP l.213, 539 | Native | NewGame.tsx: offered for 4, 6 and 8 players; picking one sets upstream's starting points (10, 14, 22). How /play runs an alliance game is not checked. |
@@ -39,7 +38,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Password (optional) | SETUP l.2307 | Native | NewGame.tsx; create-game stores it hashed. Check: parity-newgame-check.cjs |
 | Start Game button | SETUP l.2343 | Native | NewGame.tsx calls upstream's /api/create-game and opens /play/<id>; the Milty draft makes its games too. Check: parity-newgame-check.cjs |
 | Language selector, theme | setup header | Not needed | Device settings sheet in /play covers theme/text size. |
-| Game-phase SETUP (starting techs, speaker actions, reveal 2 stage I) | main/phase/setup | Native | NowSetup.tsx: starting technology choices (Winnu, Argent, Keleres, Deepwrought and the rest), Keleres' home system, the speaker's two stage I objectives (with take back), the map string, then Start the game once upstream's setupPhaseComplete allows. Twilight's Fall choices link to the table screen. Check: parity-setup-check.cjs |
+| Game-phase SETUP (starting techs, speaker actions, reveal 2 stage I) | main/phase/setup | Native | NowSetup.tsx: starting technology choices (Winnu, Argent, Keleres, Deepwrought and the rest), Keleres' home system, the speaker's two stage I objectives (with take back), the map string, then Start the game once upstream's setupPhaseComplete allows. Twilight's Fall: the inaugural splice card shows above it (section 8); home systems and starting units link to the table screen. Check: parity-setup-check.cjs |
 
 ## 2. Strategy phase
 
@@ -111,13 +110,13 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Take back the played component | ComponentAction | Native | "Take it back" (`UNPLAY_COMPONENT`). |
 | Component description | ComponentDetails l.545 | Native | Shown under component name. |
 | Research a tech (Plagiarize, Focused Research, Enigmatic Device, Flayesh) | ComponentAction l.28-41, 185 | Native | "Record the technology" -> ResearchSheet. |
-| Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Native | Gain Relic, Black Market Forgery, Hesh and Prit and Fabrication offer "Record the relic" (RelicSheet). Create and Forge Legend are Twilight's Fall cards, left for that branch. Check: parity-components-check.cjs |
+| Gain relic (Gain Relic, Black Market Forgery, Hesh and Prit, Create/Fabrication/Forge Legend) | ComponentAction l.79 | Native | Gain Relic, Black Market Forgery, Hesh and Prit and Fabrication offer "Record the relic" (RelicSheet). Create and Forge Legend are Twilight's Fall cards: they appear with other components, without their effect (section 8). Check: parity-components-check.cjs |
 | Exploration Probe / Circlet of the Void (frontier) | ComponentAction l.58 | Native | The component's card offers the frontier sheet |
 | Share Knowledge, Divert Funding, Dynamis Core, Visionaria Select | ComponentActions/*.tsx | Native | ComponentFollowUps.tsx: Share Knowledge (a Deepwrought technology), Divert Funding (return, then research, with take back), Visionaria Select (a technology for each player who takes it), Dynamis Core (trade goods shown). Check: parity-components-check.cjs |
 | Stellar Converter, Conventions of War Abandoned (purge planet) | ComponentActions/PurgePlanet.tsx | Native | Purge a planet (upstream's targets), with take back. Check: parity-components-check.cjs |
 | Nano-Forge, Terraform (attach to planet) | ComponentActions/AttachToPlanet.tsx | Native | Attach to one of the player's planets (upstream's targets), with take back |
-| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Native | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's, left for that branch. Check: parity-components-check.cjs |
-| Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Partial | Native: Overrule and Mathis Mathinus (pick a card, run its primary with /play's card controls), Strategize (its secondary), Vaults of the Heir (purge a technology, gain a relic), Ta Zern (purge for everyone, replacements), The Silver Flame (point or purge the home system). Left: Planetary Rigs (Discordant Stars), Executive Order (a whole agenda inside the action), Sins of the Father (Twilight's Fall). Check: parity-components-check.cjs |
+| Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Z'eu, Transpose | ComponentActions/*.tsx | Native | Z'eu is native (pick who takes the tactical action, then their planets and secrets). Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways and Transpose are Twilight's Fall's: they appear with other components, without their effect (section 8). Check: parity-components-check.cjs |
+| Planetary Rigs, Overrule, Sins of the Father, Mathis Mathinus, Strategize, Vaults of the Heir, Ta Zern, Silver Flame, Executive Order | ComponentActions/*.tsx | Partial | Native: Overrule and Mathis Mathinus (pick a card, run its primary with /play's card controls), Strategize (its secondary), Vaults of the Heir (purge a technology, gain a relic), Ta Zern (purge for everyone, replacements), The Silver Flame (point or purge the home system). Left: Planetary Rigs (Discordant Stars), Executive Order (a whole agenda inside the action), Sins of the Father (Twilight's Fall, recorded without its effect). Check: parity-components-check.cjs |
 | Industrial / Mining Initiative, Total War, Book of Latvinia, Age of Exploration | ComponentActions/*.tsx | Native | Industrial and Mining Initiative show the trade goods, Total War and Book of Latvinia show what the component recorded (ComponentFollowUps.tsx). Age of Exploration adds a system next to two non-home systems (MapTiles.tsx). Check: parity-components-check.cjs |
 | Star Chart / Azdel's Key (add system to map) | ComponentActions/AddSystemToMap.tsx | Native | MapTiles.tsx: pick an unused tile, then an open spot next to at least 2 systems (named by its neighbours), see the map with it, confirm. Upstream drags the tile onto its map builder, which needs a mouse; the write is the same SWAP_MAP_TILES, with take back. Check: parity-components-check.cjs |
 | Action cards that are ACTIONS | ComponentAction | Native | Listed under "Action cards" in the component sheet. |
@@ -125,8 +124,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Native | Notes with component actions appear in the component sheet; Support for the Throne moves in any phase from "Points changed?" on Now; alliances change in PlayerEdit.tsx and show on the player sheet. Checks: points-check.cjs, parity-player-check.cjs |
 | Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Native | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play. Check: parity-player-check.cjs |
 | Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Native | PlayerEdit.tsx: lock and unlock, as upstream's faction panel |
-| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Twilight's Fall branch | TF not supported in /play (expedition hidden when TF on). |
-| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Native | Repeal in Laws.tsx, relic purge in PlayerEdit.tsx. Unravel is a Twilight's Fall card, left for that branch. Check: parity-laws-check.cjs |
+| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Partial | Section 8: the cards appear with other components and splices are native; using a genome isn't recorded. |
+| Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Native | Repeal in Laws.tsx, relic purge in PlayerEdit.tsx. Unravel is a Twilight's Fall card, recorded without its effect. Check: parity-laws-check.cjs |
 
 ### 3d. Strategic actions
 
@@ -145,7 +144,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Leadership (gain N command tokens, shown only with command-token tracking) | StrategicActions/Leadership.tsx | Not needed | Command token pools aren't tracked (Shawn, 2026-10-18); upstream tracks them only behind its advanced option and doesn't track trade goods or commodities at all. The Leadership card itself is native (select, text, secondaries) |
 | Construction / Trade / Warfare (Warfare: score action-phase obj; Trade: commodities, Hacan etc.) | AP l.1080, 1155 | Native | Upstream has no Construction or Trade screen and doesn't track trade goods or commodities. Warfare with Thunder's Edge gets the tactical rows (take a planet, score an action-phase objective), as upstream's Warfare.tsx does. Check: parity-rare-check.cjs |
 | Warfare primary objective scoring | StrategicActions/Warfare.tsx | Native | With Thunder's Edge, Warfare's primary gets the tactical rows: take a planet, frontier, scored a secret |
-| Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Twilight's Fall branch | TF has no /play support. |
+| Twilight's Fall cards (Noctis, Tyrannus, Calamitas, Magus, Aeterna, Lux, Civitas, Amicus): splice join/leave, new tyrant | StrategicActions/*.tsx | Native | Section 8 (`src/fork/tfplay/`). Lux, Civitas and Amicus need nothing recorded. Check: tf-play-check.cjs |
 | Cards on table (who picked, played/ready) | AP StrategyCardColumn | Native | CardBoard. |
 
 ### 3e. Faction panels and sidebars
@@ -154,7 +153,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 |---|---|---|---|
 | Faction panel: leaders (agent/commander/hero) with ready/exhaust/purge | src/components/FactionPanel.tsx l.566-740 | Native | PlayerEdit.tsx "Leaders": exhaust and ready agents, unlock commanders and heroes, purge and unpurge heroes. Check: parity-player-check.cjs |
 | Faction techs, unit upgrades, unit stats | FactionPanel l.756, 1023, 1097 | Partial | PlayerSheet lists techs by colour (cite popouts). Tech add/remove: ResearchSheet / Undo only. No unit stat blocks. |
-| Faction abilities, promissory notes, genomes, paradigms | FactionPanel l.794-977 | Partial | Abilities listed in PlayerSheet (popout text); notes and TF cards not shown. |
+| Faction abilities, promissory notes, genomes, paradigms | FactionPanel l.794-977 | Partial | Abilities listed in PlayerSheet (popout text), and Twilight's Fall genomes and paradigms (section 8); promissory notes not shown. |
 | Planets owned with resources/influence totals, attachments, exhaust | Sidebars; PlanetRow; PlanetTab | Native | PlayerSheet lists planets and totals; the map tab shows owners and attachments. Exhausting planets and structures is not tracked (Shawn, 2026-10-18) |
 | Add / remove tech manually | TechTab l.73, 104 | Native | PlayerEdit.tsx "Technology": add (research sheet) and remove. Check: parity-player-check.cjs |
 | Claim/unclaim planet manually | PlanetTab l.51, 80; PlanetPanel | Native | Take from the claim sheet or map; lose in PlayerEdit.tsx "Planets". Check: parity-player-check.cjs |
@@ -190,7 +189,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Step checklist with numbered steps | StatusPhase.tsx | Partial | /play has a three-card layout without upstream's numbered steps |
 | Lock the phase until an objective is revealed | StatusPhase.tsx (LockedButtons, statusPhaseComplete) | Native | The next-phase buttons wait for the reveal; "Go on without one" opens the lock, as upstream's lock does on a tap |
 | End phase: go to agenda or skip to next round when Mecatol is unclaimed | StatusPhase.tsx nextPhaseButtons | Native | AdvancePhaseEvent(skip) in NowStatus |
-| Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Twilight's Fall branch | Finish-phase link-out; Edict phase itself (Arbitrate, Convene, Splice, Legacy of Ixth) is NotNativeYet |
+| Twilight's Fall: tyrant, edict phase | StatusPhase.tsx (TWILIGHTS FALL) | Native | Section 8: NowStatus finishes into the edict phase, NowEdict runs it. Check: tf-play-check.cjs |
 | Hide objectives option (OBJECTIVES section hidden) | Conditional appSection | Native | NowStatus respects options.hide |
 
 ## 5. Agenda phase
@@ -259,7 +258,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Summary column (speaker order, scores, faction summaries) | main/summary-column/SummaryColumn.tsx | Native | Race card, Table tab |
 | Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Partial | Speaker tag in Table tab; no separate initiative/voting order views |
 | Change speaker | Footer.tsx | Native | NowCards (Politics) SetSpeaker; no free-form change otherwise |
-| Tyrant (Twilight's Fall) | Footer.tsx | Twilight's Fall branch | |
+| Tyrant (Twilight's Fall) | Footer.tsx | Native | A card on the Table tab (section 8). |
 | Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Partial | Planet claim, research, relic, expedition in sheets; no free-edit modal for objectives or planets |
 | Thunder's Edge expedition | OtherPanel.tsx | Native | NowExpedition.tsx |
 | Relics (gain/purge, Crown) | OtherPanel.tsx | Native | Gain, purge and lose by hand (PlayerEdit.tsx); the Crown in the status phase |
@@ -290,17 +289,34 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Home page: join by code, recent games | app/[locale]/page.tsx, JoinGame.tsx | Native | StartPage.tsx (game code, back to game, games on device) |
 | PWA / service worker | app/[locale]/ServiceWorkerWrapper.tsx, `public/service-worker.js` | Not needed | Upstream doesn't run one: `ServiceWorkerWrapper` is never mounted and there's no web manifest, so upstream has no offline mode or install prompt either |
 | Setup phase (starting techs, map string) | main/phase/setup | Native | See the game-phase setup row in Game setup |
-| Fallback link to upstream faction page | (faction)/[factionId] | Twilight's Fall branch | NotNativeYet links to /game/<id>/<faction>. Every phase but the edict phase is native now, and only Twilight's Fall has an edict phase |
+| Fallback link to upstream faction page | (faction)/[factionId] | Native | Every phase is native now, the edict phase included, so NotNativeYet (a link to /game/<id>/<faction>) only shows for a phase upstream adds later |
 | Hidden app sections (TECHS, PLANETS, OBJECTIVES) | src/components/Conditional | Native | Ctx.tracks() in PlayApp. With a section off, /play leaves out what upstream's Conditional hides: research (Technology card, secondaries, components, player edit), planet claims (tactical, map, Faunus, follow-ups), objective scoring (Imperial, tactical secrets, Prove Endurance, points sheet), relic rows, the player sheet's sections and the results' Technology view. Status, setup and agenda screens already checked it. Check: parity-hidden-check.cjs |
 
 ## 8. Twilight's Fall in /play
 
-From reading the code; no live Twilight's Fall game was run. Upstream supports the mode broadly (it needs Thunder's Edge): 8 Kings, 8 replacement strategy cards, splicing of abilities, genomes and unit upgrades, paradigms, and an edict phase in place of the agenda phase.
-
-Phase switch: `src/fork/play/PlayApp.tsx:123`. END / ACTION / STRATEGY / STATUS / AGENDA are native; **every other phase (SETUP, EDICT) falls into `NotNativeYet`** (line 165-182), which tells the user "This phase isn't on the new screen yet" and gives links to upstream's `/game/<id>/<faction>` and `/game/<id>/main`. Only `NowStatus.tsx:139` and `NowExpedition.tsx:25` mention TF explicitly. Nothing in `src/fork/play` contains "EDICT" or tyrant handling.
+Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones against a scripted 6-King game (`tf-play-check.cjs`, from the `tfall-snap-tf-*` snapshots). The code is in `src/fork/tfplay/`, hooked into `/play` with one or two lines in `PlayApp.tsx`, `ui.tsx`, `NowCards.tsx`, `NowAction.tsx`, `NowStatus.tsx`, `PlayerSheet.tsx` and `things.tsx`. Merged into `play/design-language` on 2026-10-24; the Twilight's Fall rows in sections 1 to 7 take their status from here.
 
 | Feature | Upstream | /play status | Notes |
-|
+|---|---|---|---|
+| Creating a Twilight's Fall game | SETUP page | Native | The Twilight's Fall draft (`/draft/tf`, `src/fork/tfdraft/`) creates it with the Kings seated, the map built, and each King's home system and starting units set. |
+| Planet and unit factions (home system, starting units) | `StartingComponents.tsx` (TFFactionSelect) | Native | Set by the draft. Changing them afterwards is on the table screen. |
+| Inaugural splice | `SetupPhase.tsx`, `SetupSteps.tsx` | Native | Setup card with each player's 3 abilities, 2 unit upgrades and 2 genomes (`TfTable.tsx`). NowSetup's own note now covers only home systems and starting units. |
+| Strategy picks with the 8 cards | SP | Native | Lux to Aeterna in their colours (checked: Magus purple, Aeterna magenta). |
+| Noctis, Calamitas, Magus: the splice | `StrategicActions/{Noctis,Calamitas,Magus}.tsx`, `src/components/Splice/SpliceModal.tsx` | Native | Splice sheet (`NowSplice.tsx`): who joins, Magus' extra card, Engineer and Reverse, the cards turned face up, picks in order, a King technology instead. Pick order copied from SpliceModal. |
+| Joining a splice from the secondary | `AllSecondaries` in the same files | Native | Follow on Noctis, Calamitas or Magus also joins the splice. Players pick on their own phones from a splice card on the Now tab. |
+| Thieve and Research Genome in a splice | `SpliceModal.tsx` | Partial | Counted when played on the table screen; no buttons in /play. |
+| Tyrannus | `StrategicActions/Tyrannus.tsx` | Native | New speaker and new tyrant, each with a confirm sentence. |
+| Aeterna | `StrategicActions/Aeterna.tsx` | Native | Score a public objective, or draw a paradigm. Upstream adds the point for holding Mecatol Rex when Aeterna is chosen. |
+| Lux, Civitas, Amicus | None | Not needed | Their effects happen on the board. |
+| Abilities, genomes, unit upgrades and paradigms owned | `TFTechSummary` (`FactionSummary.tsx`) | Native | On the player sheet, each name opens its text; "Change cards" records gains and discards. |
+| Status phase into the edict phase | `StatusPhase.tsx` | Native | With a tyrant, "Start the edict phase"; without one, the next round starts. |
+| Edict phase: the tyrant's edict | `phase/edict/EdictPhase.tsx` | Native | `NowEdict.tsx`. The next round stays locked until the tyrant has chosen. |
+| Radiant Aur's extra edict | `EdictPhase.tsx` | Native | |
+| Splice, Arbitrate, Convene, Artifice, Legacy of Ixth | `phase/edict/*.tsx` | Native | Splice opens the splice sheet for every player; the others record cards gained (and discarded, for Arbitrate); Artifice also records a relic. |
+| Arise, Bless, Censure, Execute, Foretell | None | Not needed | Text only, as upstream. |
+| The tyrant | `Footer.tsx` | Native | A card on the Table tab. |
+| Thunder's Edge expeditions | Disabled in Twilight's Fall | Native | Hidden, as upstream. |
+| Using a genome, and component actions from cards | `GenomeRow`, components | Partial | Component-action cards appear with other components; genome use isn't recorded in /play. Not run on a phone. |
 
 ## Biggest gaps
 
@@ -308,4 +324,4 @@ What's left, by the rows above that aren't Native or Not needed:
 
 1. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
 2. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
-3. Twilight's Fall (splices, its strategy cards, Lux, Civitas and Amicus, the tyrant and edict phase) belongs to the Twilight's Fall branch.
+3. Twilight's Fall: Thieve and Research Genome in a splice, and recording a genome's use.

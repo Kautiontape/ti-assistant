@@ -13,6 +13,8 @@ import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGr
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
+import NowEdict from "../tfplay/NowEdict"; // Twilight's Fall (tfall)
+import { TfSetupCard, TyrantCard } from "../tfplay/TfTable";
 import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
@@ -139,8 +141,9 @@ export default function PlayApp() {
             <LockedBanner open={setSheet} />
             <PausedBanner ctx={ctx} />
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
+            {phase === "SETUP" ? <TfSetupCard ctx={ctx} /> : null}
             <CombatBanner ctx={ctx} />
-            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : phase === "EDICT" ? <NowEdict {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
                 <p className={kit.eyebrow}><span>Anything else?</span></p>
@@ -304,6 +307,7 @@ function TableTab(ctx: Ctx) {
     <LawsCard ctx={ctx} />
     <ClockCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
+    <TyrantCard ctx={ctx} />
     </>
   );
 }

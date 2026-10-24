@@ -3,6 +3,7 @@
 import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPlayedRiders, getPromissoryTargets } from "../../util/actionLog";
 import { canResearchTech, getFactionPreReqs } from "../../util/techs";
 import { ActionLog, Optional } from "../../util/types/types";
+import { tfSentence } from "../tfplay/tf";
 
 export type NameOf = (id: Optional<string>) => string;
 type Entry = ActionLogEntry<GameUpdateData>;
@@ -123,7 +124,7 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       return ev.winner === "None" ? `ended the combat with ${name(ev.defender)} with no winner`
         : ev.winner === ev.faction ? `won the combat against ${name(ev.defender)}` : `lost the combat to ${name(ev.defender)}`;
     case "CONTINUE_GAME": return "The game continued";
-    default: return null;
+    default: return tfSentence(e.data, who); // Twilight's Fall (src/fork/tfplay/tf.ts)
   }
 }
 

@@ -18,6 +18,8 @@ import { OtherEndings, UnpassButton, useEndTurnBlock } from "./TurnControls";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
+import { followEvents } from "../tfplay/tf";
+import { SpliceStatus } from "../tfplay/NowSplice";
 
 export default function NowAction(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open } = ctx;
@@ -138,11 +140,12 @@ export default function NowAction(ctx: Ctx) {
           <div className={kit.buttons}>
             <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology" && ctx.tracks("TECHS")
               ? open({ kind: "research", faction: seat!, follow: true })
-              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" && ctx.tracks("TECHS") ? "Follow and research" : "Follow"}</Button>
+              : w.write(followEvents(selected, seat!), `${short(seat)} followed the secondary`)}>{selected === "Technology" && ctx.tracks("TECHS") ? "Follow and research" : "Follow"}</Button>
             <Button disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</Button>
           </div>
         </section>
       ) : null}
+      {isCard ? <SpliceStatus card={selected} active={active} ctx={ctx} /> : null}
       {isCard ? <SecondariesCard card={isCard as StrategyCard} active={active} ctx={ctx} /> : null}
     </>
   );

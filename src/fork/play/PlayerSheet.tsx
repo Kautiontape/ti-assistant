@@ -7,6 +7,7 @@ import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
 import { combats, pointsBySource, SFTT } from "./logic";
+import { TfOwnedCards } from "../tfplay/TfCards";
 import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
@@ -105,6 +106,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         {f.breakthrough?.name ? <Items items={[{ thing: { kind: "breakthrough", id }, name: `${f.breakthrough.name} (breakthrough)`, state: f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked" }]} /> : null}
         <Rows><RowLink onClick={() => ctx.open({ kind: "techTree", faction: id })} title="Technology tree" detail="What they own and can research next" /></Rows>
       </Section> : null}
+
+      <TfOwnedCards faction={id} ctx={ctx} />
 
       {myRelics.length && ctx.tracks("RELICS") ? (
         <Section title="Relics" count={myRelics.length}>

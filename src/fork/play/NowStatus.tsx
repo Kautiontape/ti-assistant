@@ -18,6 +18,7 @@ import styles from "./play.module.scss";
 import { StatusAbilities } from "./StatusAbilities";
 import { HelpBanner, type Ctx, type Sheet } from "./ui";
 import { Button, Chip, Choices, cx, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
+import { TfStatusFinish } from "../tfplay/TfTable";
 
 // Scoring goes in initiative order: by strategy card, then anyone without one.
 function useScoringOrder() {
@@ -137,7 +138,7 @@ export default function NowStatus(ctx: Ctx) {
           </div>
         ) : null}
         {options.expansions.includes("TWILIGHTS FALL") ? (
-          <Rows><RowLink href={`/game/${gameId}/main`} external title="Finish the phase on the table screen" /></Rows>
+          <TfStatusFinish ctx={ctx} />
         ) : agendaUnlocked ? (
           <Button kind="primary" size="tall" block disabled={w.pending || locked}
             onClick={() => w.write([Events.AdvancePhaseEvent()], "The agenda phase started")}>Start the agenda phase</Button>

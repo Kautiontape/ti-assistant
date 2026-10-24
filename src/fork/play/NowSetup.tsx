@@ -2,7 +2,7 @@
 // Now, setup phase: starting choices (technologies, Council Keleres' home
 // system), the speaker reveals two stage I objectives, then the game starts.
 // When the game can start comes from upstream's setupPhaseComplete; the rest of
-// setup happens on the board. Twilight's Fall choices stay on the table screen.
+// setup happens on the board. Twilight's Fall home systems and starting units stay on the table screen.
 import { useState } from "react";
 import { setupPhaseComplete } from "../../../app/[locale]/game/[gameId]/main/phase/setup/SetupPhase";
 import { useLogEntries, useOptions, useTechs, useViewOnly } from "../../context/dataHooks";
@@ -113,7 +113,7 @@ export default function NowSetup(ctx: Ctx) {
 
       {tf ? (
         <section className={kit.card} aria-label="Twilight's Fall">
-          <p className={kit.sub}>Twilight's Fall choices (planet and unit factions, the inaugural splice) are on the table screen.</p>
+          <p className={kit.sub}>Each King's home system and starting units are chosen on the table screen. A Twilight's Fall draft sets them for you.</p>
           <Rows><RowLink href={`/game/${gameId}/main`} external title="Open the table screen" /></Rows>
         </section>
       ) : null}

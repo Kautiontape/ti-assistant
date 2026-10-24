@@ -112,6 +112,30 @@ collection, `forkDrafts`, which browsers may read one document at a time
   choice (`setup-page.tsx`). The anomaly list in `milty.ts` comes from the
   tile art, since upstream's data has none.
 
+## Upstream internals `/draft/tf` uses
+
+The Twilight's Fall draft (`src/fork/tfdraft/`, routes `app/[locale]/draft/tf/`
+and `app/api/fork/tfdraft/`) adds no seam. Its drafts are `forkDrafts`
+documents with `format: "twilightsFall"`, so the existing read rule and TTL
+cover them. Dealt hands and secret picks sit in `forkDrafts/{id}/private/hands`,
+which no rule lets a browser read; the API hands each player their own cards
+and deletes the document when the game is created. If an upstream merge
+breaks it, look at:
+
+- Upstream's `create-game` route, called in-process as the Milty draft does,
+  with the Kings as factions and `"TWILIGHTS FALL"` added to the expansions.
+- Upstream's `dataUpdate` route, called in-process with `CHOOSE_TF_FACTION`
+  (Planet, then Unit) for each King. The Planet choice gives the King that
+  faction's home planets, and `getFactionSystemNumber` draws its home tile in
+  the King's P# spot.
+- `getDefaultMapString` for each player count (standard at 3 and 6, warp at
+  4, 5, 7 and 8), through the Milty draft's `miltyLayout` in
+  `src/fork/draft/milty.ts`, which throws if upstream's template stops matching
+  Milty's map. The game gets the same map style.
+- Not from upstream: the reference-card priority numbers (`cards.ts`, from the
+  rulebook's list) and the Nucleus and Milty EQ layouts (`layouts.ts`, which
+  drop places from Milty's slices and deal them before the draft).
+
 ## Things that need no seam
 
 - **Cron.** `/api/process-games` only checks that an `X-Appengine-Cron` header

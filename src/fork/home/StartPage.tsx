@@ -61,6 +61,7 @@ export default function StartPage() {
           <p className={kit.eyebrow}><span>Start</span></p>
           <Rows>
             <RowLink href="/draft" title="Milty draft" detail="Draft slices, factions and seats, then the game is set up from them" />
+            <RowLink href="/draft/tf" title="Twilight's Fall draft" detail="Nucleus, Milty or Milty EQ maps, reference cards and Kings, by the rulebook or tidraft" />
             <RowLink href="/start/new" title="New game" detail="Choose factions, colours, the map and options" />
             <RowLink href="/map-builder" external title="Map builder" detail="Upstream's map builder" />
             <RowLink href="/FAQ" external title="FAQ" detail="Upstream's answers to common questions about the app" />

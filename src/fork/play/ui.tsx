@@ -15,7 +15,7 @@ export { Chip, cx, pcolor, Swatch } from "../ui/kit";
 // Older name for the kit's Sheet.
 export const SheetFrame = KitSheet;
 
-export const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strategy", ACTION: "Action", STATUS: "Status", AGENDA: "Agenda", END: "Game over" };
+export const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strategy", ACTION: "Action", STATUS: "Status", AGENDA: "Agenda", EDICT: "Edict", END: "Game over" };
 
 export type Sheet =
   | { kind: "seat" }
