@@ -122,7 +122,7 @@ function AgendaCard({ d, agendaNum, ctx }: { d: AgendaData; agendaNum: number; c
 // Covert Legislation, before voting: the speaker draws the next agenda in secret
 // and reads out what kind of outcome it has. Upstream's RevealOutcomes offers
 // every outcome type that some agenda in the game elects.
-function CovertOutcomes({ d, ctx }: { d: AgendaData; ctx: Ctx }) {
+export function CovertOutcomes({ d, ctx }: { d: AgendaData; ctx: Ctx }) {
   const { w, short, seat } = ctx;
   const types = [...new Set(Object.values(d.agendas).filter((a): a is Agenda => !!a && !a.target && a.elect !== "???").map((a) => a.elect))];
   const [pick, setPick] = useState<Optional<OutcomeType>>(d.outcomes);
@@ -145,19 +145,22 @@ function CovertOutcomes({ d, ctx }: { d: AgendaData; ctx: Ctx }) {
 }
 
 // The vote itself: outcome, then how many, capped at what's available.
-function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; faction: FactionId; onDone?: () => void }) {
+export function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; faction: FactionId; onDone?: () => void }) {
   const { short, w, seat, factions } = ctx;
-  const max = available(d, ctx, faction);
+  const avail = available(d, ctx, faction);
+  // Executive Order votes in the action phase; upstream always asks for the votes each player has there (VotingColumn's manualVotes), and doesn't save them.
+  const eo = d.state.phase !== "AGENDA";
   const targets = getTargets(d.ballot, factions, d.strategyCards, d.planets, d.agendas, d.objectives, d.options, d.intl).filter((t) => t.id !== "Abstain");
   // Changing a vote starts from the one cast.
   const before = d.votes.get(faction);
   const [target, setTarget] = useState<Optional<string>>(before?.votes && before.target !== "Abstain" ? before.target : undefined);
-  const [n, setN] = useState(before?.votes ? Math.min(before.votes, max) : max);
   // Without planets tracked, players set the votes they have (upstream's ManualVoteCount).
-  const manual = !ctx.tracks("PLANETS") && !d.repGov;
-  const [have, setHave] = useState(max);
+  const manual = eo || (!ctx.tracks("PLANETS") && !d.repGov);
+  const [have, setHave] = useState(avail);
+  const max = eo ? have : avail;
+  const [n, setN] = useState(before?.votes ? Math.min(before.votes, max) : max);
   // Once a new count is saved, the vote starts from all of it.
-  useEffect(() => { if (manual) { setHave(max); setN(max); } }, [manual, max]);
+  useEffect(() => { if (manual && !eo) { setHave(avail); setN(avail); } }, [manual, eo, avail]);
   const [q, setQ] = useState("");
   // Extra votes: bonus cards (played with the vote) and any others by hand.
   const played = playedBonuses(d, faction);
@@ -192,8 +195,8 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
       {manual ? (
         <div className={kit.section} role="group" aria-label="Votes available">
           <p className={kit.label}>Votes {faction === seat ? "you have" : `${short(faction)} has`}</p>
-          <Stepper value={have} min={0} max={99} less="One fewer vote available" more="One more vote available" onChange={setHave} />
-          {have !== max ? (
+          <Stepper value={have} min={0} max={99} less="One fewer vote available" more="One more vote available" onChange={(v) => { setHave(v); if (eo) setN(n === have ? v : Math.min(n, v)); }} />
+          {!eo && have !== max ? (
             <Button block disabled={w.pending} onClick={async () => {
               await w.write([Events.ManualVoteUpdateEvent(faction, have - max)], `${short(faction)} has ${have} vote${s(have)} available`, faction);
             }}>Save: {have} available</Button>
@@ -223,13 +226,13 @@ function VoteForm({ d, ctx, faction, onDone }: { d: AgendaData; ctx: Ctx; factio
       </Button>
       <Button block disabled={w.pending} onClick={() => cast(0)}>Abstain</Button>
       <p className={kit.sub}>
-        {d.repGov ? "Representative Government: one vote each." : manual ? "This game doesn't track planets, so each player sets the votes they have." : "The influence of your planets, less votes spent on the first agenda."}
+        {eo ? "Executive Order: set the votes each player has. Only the vote itself is recorded." : d.repGov ? "Representative Government: one vote each." : manual ? "This game doesn't track planets, so each player sets the votes they have." : "The influence of your planets, less votes spent on the first agenda."}
       </p>
     </>
   );
 }
 
-function VotesCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionId[] }) {
+export function VotesCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionId[] }) {
   const { factions, short, open } = ctx;
   const tally = computeVotes(d.agenda, d.currentTurn, d.numFactions, d.repGov);
   const eligible = order.filter((id) => canVote(d, ctx, id));
@@ -264,7 +267,7 @@ function leadersOf(tally: Record<string, number>) {
   return max ? Object.keys(tally).filter((t) => tally[t] === max) : [];
 }
 
-function ResolveCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionId[] }) {
+export function ResolveCard({ d, ctx, order }: { d: AgendaData; ctx: Ctx; order: FactionId[] }) {
   const { short, open, w, seat } = ctx;
   const tally = computeVotes(d.agenda, d.currentTurn, d.numFactions, d.repGov);
   const leaders = leadersOf(tally);

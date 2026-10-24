@@ -58,7 +58,7 @@ function useTiles(ctx: Ctx, component: string) {
   const onMap = new Set(mapString.split(" "));
   const planetsOf = (t: string) => (baseSystems[t]?.planets ?? []).map((p) => basePlanets[p]?.name ?? p);
   const name = (t: string) => { const p = planetsOf(t); return p.length ? `${t} (${p.join(", ")})` : `${t} (no planets)`; };
-  return { mapString, ordered, spots, unused: unused.filter((t) => !onMap.has(t) && baseSystems[t]), name };
+  return { mapString, tiles, baseSystems, ordered, spots, unused: unused.filter((t) => !onMap.has(t) && baseSystems[t]), name };
 }
 
 function placed(currentTurn: ActionLog) {
@@ -69,6 +69,7 @@ export function MapTileFollowUp({ played, active, ctx }: { played: string; activ
   const currentTurn = useCurrentTurn();
   const t = useTiles(ctx, played);
   const done = placed(currentTurn);
+  if (RIFTWALKER.has(played)) return <RiftwalkerFollowUp played={played} active={active} ctx={ctx} />;
   if (!t) return <p className={kit.sub}>This game has no map string, so there's no map to add a system to.</p>;
   if (done) {
     const tile = done.newItem.systemNumber;
@@ -83,7 +84,11 @@ export function MapTileFollowUp({ played, active, ctx }: { played: string; activ
   return <Rows label="Map"><RowLink onClick={() => ctx.open({ kind: "mapTile", component: played, faction: active })} title="Add a system to the map" detail={`${t.spots.length} open spots next to at least 2 systems`} /></Rows>;
 }
 
-export function MapTileSheet({ component, faction, close, ctx }: { component: string; faction: FactionId; close: () => void; ctx: Ctx }) {
+export function MapTileSheet(p: { component: string; faction: FactionId; close: () => void; ctx: Ctx }) {
+  return RIFTWALKER.has(p.component) ? <RiftwalkerSheet {...p} /> : <AddTileSheet {...p} />;
+}
+
+function AddTileSheet({ component, faction, close, ctx }: { component: string; faction: FactionId; close: () => void; ctx: Ctx }) {
   const { w, short } = ctx;
   const options = useOptions();
   const planets = usePlanets();
@@ -131,6 +136,83 @@ export function MapTileSheet({ component, faction, close, ctx }: { component: st
             if (await w.write([Events.SwapMapTilesEvent({ systemNumber: "-1", index: s!.index }, { systemNumber: tile!, index: -1 })],
               `${short(faction)} added system ${tile} to the map (${component})`, faction)) close();
           }}>Add system {tile}</Button>
+        </>
+      ) : null}
+    </KitSheet>
+  );
+}
+
+// ---------- Riftwalker Meian / Changing the Ways: swap two systems ----------
+// Upstream's RiftwalkerMeian.tsx drags one tile onto another in its map builder
+// (hyperlanes stay put) and sends SWAP_MAP_TILES; a second swap in the same turn
+// replaces the first in the log, so sending the same pair again takes it back.
+const RIFTWALKER = new Set(["Riftwalker Meian", "Changing the Ways"]);
+
+function useSwappable(ctx: Ctx, component: string) {
+  const t = useTiles(ctx, component);
+  if (!t) return undefined;
+  const home = (tile: string) => { const f = t.ordered.find((x) => getFactionSystemNumber(x) === tile); return f ? `${ctx.short(f.id)}'s home system (${tile})` : undefined; };
+  const label = (tile: string) => (isFactionHomeSystem(tile) ? home(tile) : undefined) ?? t.name(tile);
+  const list = t.tiles.map((tile, index) => ({ tile, index })).filter(({ tile }) => tile && tile !== "-1" && tile !== "0" && t.baseSystems[tile] && t.baseSystems[tile]!.type !== "HYPERLANE");
+  return { ...t, label, list };
+}
+
+function RiftwalkerFollowUp({ played, active, ctx }: { played: string; active: FactionId; ctx: Ctx }) {
+  const currentTurn = useCurrentTurn();
+  const t = useSwappable(ctx, played);
+  const done = placed(currentTurn);
+  if (!t) return <p className={kit.sub}>This game has no map string, so there's no map to change.</p>;
+  if (done) {
+    return (
+      <Rows label="Map">
+        <RowAction verb="Take back" disabled={ctx.w.pending} title={`Swapped ${t.label(done.oldItem.systemNumber)} and ${t.label(done.newItem.systemNumber)}`} detail="The Map tab shows it"
+          onClick={() => ctx.w.write([Events.SwapMapTilesEvent(done.oldItem, done.newItem)], `${ctx.short(active)} took back swapping systems`, active)} />
+      </Rows>
+    );
+  }
+  return <Rows label="Map"><RowLink onClick={() => ctx.open({ kind: "mapTile", component: played, faction: active })} title="Swap two systems" detail="Not hyperlanes" /></Rows>;
+}
+
+function RiftwalkerSheet({ component, faction, close, ctx }: { component: string; faction: FactionId; close: () => void; ctx: Ctx }) {
+  const { w, short } = ctx;
+  const options = useOptions();
+  const planets = usePlanets();
+  const t = useSwappable(ctx, component);
+  const [a, setA] = useState<Optional<string>>();
+  const [b, setB] = useState<Optional<string>>();
+  const [q, setQ] = useState("");
+  if (!t) return null;
+  const pick = (i: Optional<string>) => t.list.find((x) => String(x.index) === i);
+  const first = pick(a), second = pick(b);
+  const shown = t.list.filter((x) => String(x.index) !== a && (!q || t.label(x.tile).toLowerCase().includes(q.toLowerCase())));
+  // The map as it would be, for the preview.
+  const preview = first && second ? (() => { const arr = t.tiles.slice(); arr[first.index] = second.tile; arr[second.index] = first.tile; return arr.join(" "); })() : undefined;
+  return (
+    <KitSheet title={`${component}: swap two systems`} close={close}>
+      <input className={kit.search} type="search" placeholder="Find a tile or planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a tile or planet" />
+      <Choices label={first ? "Swap it with" : "Which system first?"} list value={first ? b : a} onChange={(v) => (first ? setB(v) : setA(v))}
+        options={shown.slice(0, 60).map((x) => ({ value: String(x.index), label: t.label(x.tile) }))} />
+      {first ? (
+        <div className={kit.section}>
+          <div className={kit.line} style={{ justifyContent: "space-between" }}>
+            <b>{t.label(first.tile)}</b>
+            <Button size="small" onClick={() => { setA(undefined); setB(undefined); }}>Change</Button>
+          </div>
+        </div>
+      ) : null}
+      {preview ? (
+        <>
+          <div className={styles.board} style={{ overflow: "visible", contain: "paint" }}>
+            <div className={styles.boardInner}>
+              <GameMap mapString={preview} mapStyle={options["map-style"] ?? "standard"} factions={t.ordered} hideLegend hideFracture planets={planets}
+                expansions={options.expansions} wormholeNexus={getWormholeNexusSystemNumber(options, planets, ctx.factions)} />
+            </div>
+          </div>
+          <p className={kit.confirm}>Swap {t.label(first!.tile)} and {t.label(second!.tile)}?</p>
+          <Button kind="primary" block disabled={w.pending} onClick={async () => {
+            if (await w.write([Events.SwapMapTilesEvent({ systemNumber: first!.tile, index: first!.index }, { systemNumber: second!.tile, index: second!.index })],
+              `${short(faction)} swapped systems ${first!.tile} and ${second!.tile} (${component})`, faction)) close();
+          }}>Swap the systems</Button>
         </>
       ) : null}
     </KitSheet>

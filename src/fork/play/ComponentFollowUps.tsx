@@ -12,6 +12,8 @@ import { hasTech } from "../../util/api/techs";
 import { getFactionSystemId } from "../../util/map";
 import { applyAllPlanetAttachments } from "../../util/planets";
 import { Optional } from "../../util/types/types";
+import { Dannel, PlanetaryRigs, Transpose, Unravel } from "./ComponentMore";
+import ExecutiveOrder from "./ExecutiveOrder";
 import { MapTileFollowUp, MAP_TILE_COMPONENTS } from "./MapTiles";
 import { CardControls } from "./NowCards";
 import type { Ctx } from "./ui";
@@ -21,7 +23,8 @@ export const FOLLOW_UPS = new Set([
   "Dynamis Core", "Industrial Initiative", "Mining Initiative", "Total War", "Book of Latvinia",
   "Share Knowledge", "Divert Funding", "Visionaria Select", "Vaults of the Heir", "Ta Zern",
   "Stellar Converter", "Conventions of War Abandoned", "Nano-Forge", "Terraform", "Z'eu",
-  "Overrule", "Mathis Mathinus", "Strategize", "The Silver Flame",
+  "Overrule", "Mathis Mathinus", "Sins of the Father", "Strategize", "The Silver Flame", "Executive Order",
+  "Planetary Rigs", "Dannel of the Tenth", "Blessing of the Yin", "Unravel", "Transpose", "Riftwalker Meian", "Changing the Ways",
   ...MAP_TILE_COMPONENTS,
 ]);
 
@@ -30,6 +33,7 @@ export const FOLLOW_UPS = new Set([
 const NEEDS: Record<string, AppSection> = {
   "Industrial Initiative": "PLANETS", "Mining Initiative": "PLANETS",
   "Share Knowledge": "TECHS", "Divert Funding": "TECHS", "Visionaria Select": "TECHS", "Vaults of the Heir": "TECHS", "Ta Zern": "TECHS",
+  "Planetary Rigs": "PLANETS",
   "Stellar Converter": "PLANETS", "Conventions of War Abandoned": "PLANETS", "Nano-Forge": "PLANETS", "Terraform": "PLANETS",
 };
 
@@ -45,11 +49,21 @@ export function ComponentFollowUp({ played, active, ctx }: { played: string; act
       return <PlanetFollowUp played={played} active={active} ctx={ctx} />;
     case "Z'eu":
       return <Zeu active={active} ctx={ctx} />;
-    case "Overrule": case "Mathis Mathinus": case "Strategize":
+    case "Overrule": case "Mathis Mathinus": case "Sins of the Father": case "Strategize":
       return <CardFollowUp played={played} active={active} ctx={ctx} />;
+    case "Executive Order":
+      return <ExecutiveOrder active={active} ctx={ctx} />;
+    case "Planetary Rigs":
+      return <PlanetaryRigs active={active} ctx={ctx} />;
+    case "Dannel of the Tenth": case "Blessing of the Yin":
+      return <Dannel active={active} ctx={ctx} />;
+    case "Unravel":
+      return <Unravel active={active} ctx={ctx} />;
+    case "Transpose":
+      return <Transpose active={active} ctx={ctx} />;
     case "The Silver Flame":
       return <SilverFlame active={active} ctx={ctx} />;
-    case "Star Chart": case "Azdel's Key": case "Age of Exploration":
+    case "Star Chart": case "Azdel's Key": case "Age of Exploration": case "Riftwalker Meian": case "Changing the Ways":
       return <MapTileFollowUp played={played} active={active} ctx={ctx} />;
   }
   return null;
@@ -221,7 +235,7 @@ function Zeu({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   );
 }
 
-// Overrule / Mathis Mathinus: play another strategy card's primary; Strategize:
+// Overrule / Mathis Mathinus / Sins of the Father (the last two take any card): play another strategy card's primary; Strategize:
 // its secondary (upstream: SELECT_SUB_COMPONENT, then that card's controls).
 function CardFollowUp({ played, active, ctx }: { played: string; active: FactionId; ctx: Ctx }) {
   const { short, w, open } = ctx;
@@ -230,7 +244,7 @@ function CardFollowUp({ played, active, ctx }: { played: string; active: Faction
   const options = useOptions();
   const sub = getLogEntries<SelectSubComponentData>(currentTurn, "SELECT_SUB_COMPONENT").map((e) => e.data.event.subComponent)[0];
   const card = sub && sub !== "None" ? (sub as StrategyCardId) : undefined;
-  const any = played === "Mathis Mathinus";
+  const any = played === "Mathis Mathinus" || played === "Sins of the Father";
   const cards = Object.values(strategyCards).filter((c): c is StrategyCard => !!c && (any || !c.used)).sort((a, b) => a.order - b.order);
   const secondary = played === "Strategize";
   if (!card) {

@@ -44,9 +44,10 @@ export function TfOwnedCards({ faction, ctx }: { faction: FactionId; ctx: Ctx })
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Gain (and optionally discard) cards for one player. `types` limits what can
-// be gained; `limit` counts what they've gained this turn against a target.
-export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, title, note, limit }: {
-  faction: FactionId; ctx: Ctx; close: () => void; types?: TfType[]; discard?: boolean; title?: string; note?: string;
+// be gained; `limit` counts what they've gained this turn against a target;
+// `from` shows only the cards that player holds (Transpose).
+export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, title, note, limit, from }: {
+  faction: FactionId; from?: FactionId; ctx: Ctx; close: () => void; types?: TfType[]; discard?: boolean; title?: string; note?: string;
   limit?: Partial<Record<TfType, number>>;
 }) {
   const { short, w } = ctx;
@@ -58,7 +59,7 @@ export function TfCardsSheet({ faction, ctx, close, types = ORDER, discard, titl
   const [taking, setTaking] = useState<Optional<{ id: string; owner: FactionId }>>();
   const gained = gainedIn(currentTurn, faction);
   const mine = ownedBy(byType, faction);
-  const pool = Object.values(byType[type]).filter((c): c is NonNullable<typeof c> => !!c && c.owner !== faction && (!q || c.name.toLowerCase().includes(q.toLowerCase())))
+  const pool = Object.values(byType[type]).filter((c): c is NonNullable<typeof c> => !!c && c.owner !== faction && (!from || c.owner === from) && (!q || c.name.toLowerCase().includes(q.toLowerCase())))
     .sort((a, b) => Number(!!a.owner) - Number(!!b.owner) || a.name.localeCompare(b.name));
   const gain = (id: string, owner: Optional<FactionId>) => w.write([Events.GainTFCardEvent(faction, cardEvent(type, id))],
     owner ? `${short(faction)} took ${name(type, id)} from ${short(owner)}` : `${short(faction)} gained ${name(type, id)}`, faction);

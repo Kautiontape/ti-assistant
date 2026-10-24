@@ -15,7 +15,7 @@ import { Button, kit, RowAction, Rows, Sheet as KitSheet } from "../ui/kit";
 // Upstream normalises names before sending them (ComponentAction.tsx, selectComponent).
 const normalise = (name: string) => name.replace(/\./g, "").replace(/,/g, "").replace(/ Ω/g, "");
 const RESEARCH = new Set(["Plagiarize", "Focused Research", "Enigmatic Device", "UNITDSGNFLAYESH"]);
-const RELIC = new Set(["Gain Relic", "Black Market Forgery", "Hesh and Prit", "Fabrication"]);
+const RELIC = new Set(["Gain Relic", "Black Market Forgery", "Hesh and Prit", "Fabrication", "Create", "Forge Legend"]);
 
 interface Usable { name: string; description: string; group: string; faded?: boolean }
 
