@@ -129,10 +129,12 @@ function RowBody({ title, detail, lead, end, mark }: RowProps & { mark: React.Re
   );
 }
 
-// Opens the next step: a sheet, or (with href) another page.
-export function RowLink({ onClick, href, external, ...row }: RowProps & { onClick?: () => void; href?: string; external?: boolean }) {
-  const mark = external ? <Away /> : <Chevron />;
+// Opens the next step: a sheet, or (with href) another page. With `download`,
+// href is a file to save (a plain link, since Next's Link is for pages).
+export function RowLink({ onClick, href, external, download, ...row }: RowProps & { onClick?: () => void; href?: string; external?: boolean; download?: string }) {
+  const mark = external || download ? <Away /> : <Chevron />;
   const cls = cx(kit.rowBtn, !row.lead && kit.noLead);
+  if (href && download) return <a className={cls} href={href} download={download} aria-label={row.label}><RowBody {...row} mark={mark} /></a>;
   if (href) return <Link className={cls} href={href} aria-label={row.label}><RowBody {...row} mark={mark} /></Link>;
   return <button type="button" className={cls} disabled={row.disabled} onClick={onClick} aria-label={row.label} aria-haspopup="dialog"><RowBody {...row} mark={mark} /></button>;
 }

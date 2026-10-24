@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import DBConnection from "../../data/DBConnection";
 import { useActionLog, useGameId, useViewOnly } from "../../context/dataHooks";
 import { useDataUpdate } from "../../util/api/dataUpdate";
+import { TURN_BOUNDARIES } from "../../util/api/actionLog";
 import { useUndo } from "../../util/api/undo";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Actor, groupKey, newestGroup } from "./logic";
@@ -19,9 +20,36 @@ function withActor(e: GameUpdateData, actor: Actor) {
   return (EVENT_ONLY.has(d.action) ? { ...d, actor, event: { ...d.event, actor } } : { ...d, actor }) as unknown as GameUpdateData;
 }
 
+// Where /play undoes an entry with something other than upstream's UNDO
+// (src/fork/actions/agendaUndo.ts): a resolve that had riders or a hidden agenda,
+// and the hidden agenda of a resolved Covert Legislation.
+function undoInstead(e: ActionLogEntry<GameUpdateData>, group: ActionLog, log: ActionLog): Optional<GameUpdateData> {
+  if (e.data.action === "RESOLVE_AGENDA" && e.data.event.phase !== "ACTION") {
+    // The turn before the resolve: entries back to the previous turn boundary.
+    // This phone's copy of its own entry can carry the phone's timestamp, so match the agenda.
+    const agendaId = e.data.event.agenda;
+    const at = log.findIndex((x) => x.data.action === "RESOLVE_AGENDA" && x.data.event.agenda === agendaId);
+    const before: ActionLog = [];
+    for (const x of at < 0 ? [] : log.slice(at + 1)) {
+      if (TURN_BOUNDARIES.includes(x.data.action)) break;
+      before.push(x);
+    }
+    const turn = before.filter((x) => x.data.action === "PLAY_RIDER" || x.data.action === "SELECT_SUB_AGENDA").map((x) => ({ action: x.data.action, event: (x.data as { event?: unknown }).event }));
+    if (!turn.length) return undefined;
+    const { agenda, target, prevSpeaker } = e.data.event;
+    return { action: "UNRESOLVE_AGENDA", event: { agenda, target, prevSpeaker, turn } } as unknown as GameUpdateData;
+  }
+  if (e.data.action !== "SELECT_SUB_AGENDA" || e.data.event.subAgenda === "None") return undefined;
+  const resolve = group.find((x) => x.data.action === "RESOLVE_AGENDA" && x.data.event.agenda === "Covert Legislation");
+  if (!resolve || resolve.data.action !== "RESOLVE_AGENDA") return undefined;
+  return { action: "UNREVEAL_SUB_AGENDA", event: { subAgenda: e.data.event.subAgenda, target: resolve.data.event.target } } as unknown as GameUpdateData;
+}
+
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
-export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false) {
+// `locked` runs instead of a write while the game is view-only (it has a password
+// this device hasn't entered); /play opens its password sheet.
+export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false, locked?: () => void) {
   const dataUpdate = useDataUpdate();
   const undo = useUndo();
   const gameId = useGameId();
@@ -33,10 +61,11 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
   const lastId = useRef<Optional<string>>(undefined);
 
   const show = (t: Omit<Toast, "id">) => setToast({ ...t, id: Date.now() });
+  const refuse = () => (locked ? locked() : show({ text: "This game has a password. Enter it to make changes.", tone: "error" }));
 
   async function write(events: GameUpdateData[], label: string, as?: FactionId) {
     if (viewOnly) {
-      show({ text: "This game has a password. Enter it on the game's page to make changes.", tone: "error" });
+      refuse();
       return false;
     }
     if (busy.current) return false;
@@ -79,6 +108,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
   // action; otherwise say what the newest action is and leave it.
   async function undoNewest(shown?: string) {
     const target = shown ?? lastId.current;
+    if (viewOnly) { refuse(); return; }
     if (!target || busy.current) return;
     busy.current = true;
     setPending(true);
@@ -95,7 +125,11 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
         show({ text: `Someone acted since. Newest: ${describe(group)}` });
         return "someone-else" as const;
       }
-      for (let i = 0; i < group.length; i++) await undo(gameId);
+      for (const e of group) {
+        const instead = undoInstead(e, group, log);
+        if (instead) await dataUpdate(instead);
+        else await undo(gameId);
+      }
       if (target === lastId.current) lastId.current = undefined;
       show({ text: `Undid: ${describe(group)}` });
     } finally {

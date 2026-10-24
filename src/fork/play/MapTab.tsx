@@ -116,7 +116,7 @@ export function SystemSheet({ system, close, ctx }: { system: string; close: () 
   const wormholes = (sys?.wormholes ?? []).map((x) => `${WORMHOLES[x] ?? x} wormhole`);
   // During your tactical action the sheet can take a planet, like "Take a planet" on Now.
   const taker = state.phase === "ACTION" && active && (active === seat || active === helping) && getSelectedActionFromLog(currentTurn) === "Tactical" ? active : undefined;
-  const takeable = taker ? claimablePlanets(planets, taker, currentTurn).map((p) => p.id) : [];
+  const takeable = taker && ctx.tracks("PLANETS") ? claimablePlanets(planets, taker, currentTurn).map((p) => p.id) : [];
   const title = inSystem.length ? inSystem.map((p) => p.name).join(" · ") : `System ${system}`;
   return (
     <KitSheet title={title} close={close} dock>

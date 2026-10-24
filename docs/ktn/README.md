@@ -48,8 +48,28 @@ constructors and data hooks:
   `getClaimedPlanets`, `getActiveAgenda` and `getAllVotes`
   (`src/util/actionLog.ts`); `getCurrentPhasePreviousLogEntries`
   (`src/util/api/actionLog.ts`); `sortStrategyCards`; `getStrategyCardsForFaction`.
+- `setupPhaseComplete` from the page file
+  `app/[locale]/game/[gameId]/main/phase/setup/SetupPhase.tsx`, for when the
+  game can start; the starting-technology choices are copied from
+  `StartingComponents.tsx` (`startingTechChoices` in `logic.ts`).
+- Upstream's timers: `TimerContext` (from `TimerProvider` in the shared
+  layout), `useSetGlobalPause` and the `timers` document. `/play` activates
+  the game timer and the active player's timer as upstream's `GameTimer` and
+  `FactionTimer` do (`src/fork/play/Clock.tsx`).
+- The results views (`src/fork/play/Results.tsx`) run upstream's replay worker,
+  `main/phase/results/game-log.worker.tsx`, by URL, with the starting state
+  built as `ResultsPhase.tsx` builds it (copied into `src/fork/play/results.ts`,
+  since that page doesn't export it). Turbopack's dev server can't start the
+  worker (upstream's results page fails there too); `next dev --webpack` and
+  production builds can.
 - `DBConnection` and `useUndo`, for undo's check against the server's newest
   entries.
+- `RepealAgendaHandler` (`src/util/model/resolveAgenda.ts`), which the fork
+  actions `UNRESOLVE_AGENDA` and `UNREVEAL_SUB_AGENDA`
+  (`src/fork/actions/agendaUndo.ts`) run when /play undoes a resolve that had
+  riders or Covert Legislation's hidden agenda. Upstream's own undo misses both
+  because `RESOLVE_AGENDA` is a turn boundary; if upstream fixes that, drop the
+  fork actions.
 - The Map tab draws upstream's `GameMap` (`src/components/Map/`) with the same
   inputs as the footer's map (`getMapString`, `getWormholeNexusSystemNumber`,
   `fracturePlanetsOwned`). It reads taps from the tile images' alt text
@@ -63,7 +83,8 @@ constructors and data hooks:
 - Some upstream rules are copied rather than imported, because upstream keeps
   them inline in components: the claim rule (`ActionPhase.tsx`), status-phase
   scoring and reveal (`StatusPhase.tsx`), Checks and Balances
-  (`StrategyPhase.tsx`) and the voting order (`VotingColumn.tsx`). Each copy in
+  (`StrategyPhase.tsx`), the voting order (`VotingColumn.tsx`) which bonus
+  votes a player is offered and which riders a player may play (`VoteBlock.tsx`). Each copy in
   `src/fork/play/logic.ts` names its source.
 
 ## Upstream internals `/draft` uses

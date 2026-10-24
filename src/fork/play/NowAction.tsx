@@ -1,6 +1,6 @@
 "use client";
 // Now, action phase.
-import { useActionLog, useCurrentTurn, usePlanets, useStrategyCards } from "../../context/dataHooks";
+import { useActionLog, useCurrentTurn, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOnDeckFactionId } from "../../context/gameDataHooks";
 import { getClaimedPlanets } from "../../util/actionLog";
@@ -12,6 +12,9 @@ import { CardControls, CARDS_WITH_CONTROLS, SecondariesCard } from "./NowCards";
 import { StartCombatButton } from "./Combat";
 import { ComponentControls } from "./NowComponent";
 import { ExpeditionButton } from "./NowExpedition";
+import { FrontierRow } from "./Frontier";
+import { BaalRow, SingularityRow } from "./TacticalExtras";
+import { OtherEndings, UnpassButton, useEndTurnBlock } from "./TurnControls";
 import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
@@ -27,6 +30,9 @@ export default function NowAction(ctx: Ctx) {
   const now = useNow();
   const combat = openCombat(log);
   const planets = usePlanets();
+  const te = useOptions().expansions.includes("THUNDERS EDGE");
+  // Hooks stay above the early return below.
+  const endBlock = useEndTurnBlock(getSelectedActionFromLog(currentTurn));
   if (!active) {
     return (
       <section className={kit.card} aria-label="Everyone has passed">
@@ -35,6 +41,7 @@ export default function NowAction(ctx: Ctx) {
         <p className={kit.sub}>The status phase is next: scoring, then cleanup.</p>
         <Button kind="primary" size="tall" block disabled={w.pending}
           onClick={() => (combat ? open({ kind: "endCombat", before: "the status phase starts" }) : w.write([Events.AdvancePhaseEvent()], "The status phase started"))}>Start the status phase</Button>
+        <UnpassButton ctx={ctx} />
       </section>
     );
   }
@@ -45,6 +52,8 @@ export default function NowAction(ctx: Ctx) {
   const cards = getStrategyCardsForFaction(strategyCards, active);
   const canPass = !passed.includes(active) && cards.every((c) => c.used);
   const isCard = selected && strategyCards[selected as StrategyCardId];
+  // Thunder's Edge's Warfare primary is a tactical action of its own (StrategicActions/Warfare.tsx).
+  const tactical = selected === "Tactical" || (selected === "Warfare" && te);
   const started = turnStartedAt(log);
   const steps = [...currentTurn].reverse()
     .filter((e) => e.data.action !== "SELECT_ACTION" && !(mine && e.data.action === "PLAY_COMPONENT"))
@@ -78,6 +87,7 @@ export default function NowAction(ctx: Ctx) {
                 ))}
                 <Button disabled={!canPass || w.pending} detail={canPass ? "Done for the round" : "Play your card first"} onClick={() => open({ kind: "pass", faction: active })}>Pass</Button>
               </div>
+              <Button kind="quiet" disabled={w.pending} onClick={() => open({ kind: "skip", faction: active })}>Skip this turn</Button>
             </>
           ) : (
             <>
@@ -87,17 +97,23 @@ export default function NowAction(ctx: Ctx) {
               {isCard ? <CardControls card={selected as StrategyCardId} active={active} ctx={ctx} /> : null}
               {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
               <Rows label="Record">
-                {selected === "Tactical" ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
+                {tactical && ctx.tracks("PLANETS") ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
                 {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
+                {tactical ? <FrontierRow active={active} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <SingularityRow active={active} ctx={ctx} /> : null}
+                {selected === "Tactical" ? <BaalRow active={active} ctx={ctx} /> : null}
+                {tactical && ctx.tracks("OBJECTIVES") ? <RowLink onClick={() => open({ kind: "score", faction: active, which: "secret", phase: "ACTION" })} title="Scored a secret?" detail="Action-phase secrets, up to 4 a turn" /> : null}
                 <ExpeditionButton active={active} ctx={ctx} />
                 <RowLink href={factionPage} external title="More controls" detail="Upstream's full page" />
               </Rows>
-              <Button kind="primary" size="tall" block disabled={w.pending}
+              {endBlock ? <p className={kit.sub}>{endBlock}</p> : null}
+              <Button kind="primary" size="tall" block disabled={w.pending || !!endBlock}
                 onClick={async () => {
                   if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
                   await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
                 }}>End turn</Button>
+              <OtherEndings active={active} selected={selected} ctx={ctx} />
             </>
           )}
         </section>
@@ -120,9 +136,9 @@ export default function NowAction(ctx: Ctx) {
           <h2 className={kit.title}>Follow the secondary?</h2>
           <p className={kit.sub}>{(isCard as StrategyCard).secondary}</p>
           <div className={kit.buttons}>
-            <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology"
+            <Button kind="primary" disabled={w.pending} onClick={() => selected === "Technology" && ctx.tracks("TECHS")
               ? open({ kind: "research", faction: seat!, follow: true })
-              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" ? "Follow and research" : "Follow"}</Button>
+              : w.write([Events.MarkSecondaryEvent(seat!, "DONE")], `${short(seat)} followed the secondary`)}>{selected === "Technology" && ctx.tracks("TECHS") ? "Follow and research" : "Follow"}</Button>
             <Button disabled={w.pending} onClick={() => w.write([Events.MarkSecondaryEvent(seat!, "SKIPPED")], `${short(seat)} skipped the secondary`)}>Skip</Button>
           </div>
         </section>

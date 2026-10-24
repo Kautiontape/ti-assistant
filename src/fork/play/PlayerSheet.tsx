@@ -10,7 +10,7 @@ import { combats, pointsBySource, SFTT } from "./logic";
 import styles from "./play.module.scss";
 import { playedActionCards } from "./NowActionCards";
 import type { Ctx } from "./ui";
-import { CardTag, Chip, Cite, kit, Section, Sheet, Tag, type Thing } from "../ui/kit";
+import { CardTag, Chip, Cite, kit, RowLink, Rows, Section, Sheet, Tag, type Thing } from "../ui/kit";
 
 const STATE: Record<string, string> = { readied: "Ready", exhausted: "Exhausted", locked: "Locked", purged: "Purged", used: "Used" };
 const TECH_COLOURS: [string, string][] = [["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Other"]];
@@ -91,7 +91,7 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         </Section>
       ) : null}
 
-      <Section title="Technology" count={myTechs.length}>
+      {ctx.tracks("TECHS") ? <Section title="Technology" count={myTechs.length}>
         {TECH_COLOURS.map(([type, label]) => {
           const group = myTechs.filter((t) => t.type === type);
           return group.length ? (
@@ -103,9 +103,10 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         })}
         {!myTechs.length ? <p className={kit.sub}>None</p> : null}
         {f.breakthrough?.name ? <Items items={[{ thing: { kind: "breakthrough", id }, name: `${f.breakthrough.name} (breakthrough)`, state: f.breakthrough.state ? STATE[f.breakthrough.state] : "Locked" }]} /> : null}
-      </Section>
+        <Rows><RowLink onClick={() => ctx.open({ kind: "techTree", faction: id })} title="Technology tree" detail="What they own and can research next" /></Rows>
+      </Section> : null}
 
-      {myRelics.length ? (
+      {myRelics.length && ctx.tracks("RELICS") ? (
         <Section title="Relics" count={myRelics.length}>
           <Items items={myRelics.map((r) => ({ thing: { kind: "relic", id: r.id }, name: r.name, state: r.state ? STATE[r.state] : undefined }))} />
         </Section>
@@ -133,15 +134,19 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
         </Section>
       ) : null}
 
-      <Section title="Planets" count={`${owned.length} · ${res} res · ${inf} inf`}>
-        <Items items={owned.map((p) => ({ thing: { kind: "planet", id: p.id }, name: p.attachments?.length ? `${p.name} (${p.attachments.length} attached)` : p.name }))} empty="None" />
-      </Section>
+      {ctx.tracks("PLANETS") ? (
+        <Section title="Planets" count={`${owned.length} · ${res} res · ${inf} inf`}>
+          <Items items={owned.map((p) => ({ thing: { kind: "planet", id: p.id }, name: p.attachments?.length ? `${p.name} (${p.attachments.length} attached)` : p.name }))} empty="None" />
+        </Section>
+      ) : null}
 
       {f.abilities?.length ? (
         <Section title="Faction abilities">
           <Items items={f.abilities.map((a) => ({ thing: { kind: "ability", id: `${id}|${a.name}` }, name: a.name }))} />
         </Section>
       ) : null}
+
+      <Rows><RowLink onClick={() => ctx.open({ kind: "playerEdit", faction: id })} title={`Change something for ${short(id)}`} detail={["Leaders", ctx.tracks("TECHS") && "technology", ctx.tracks("PLANETS") && "planets", ctx.tracks("RELICS") && "relics", "alliances"].filter(Boolean).join(", ")} /></Rows>
     </Sheet>
   );
 }

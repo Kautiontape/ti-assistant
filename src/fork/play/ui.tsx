@@ -7,6 +7,9 @@ import { pointsBySource } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Button, kit, Sheet as KitSheet } from "../ui/kit";
 import type { useWrite } from "./useWrite";
+import type { AgendaCardKind } from "./AgendaCards";
+import type { StatusAbility } from "./StatusAbilities";
+import type { StrategySwap } from "./StrategyAbilities";
 
 export { Chip, cx, pcolor, Swatch } from "../ui/kit";
 // Older name for the kit's Sheet.
@@ -16,8 +19,26 @@ export const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strat
 
 export type Sheet =
   | { kind: "seat" }
-  | { kind: "claim"; faction: FactionId }
+  | { kind: "unlock" }
+  | { kind: "setupChoice"; faction: FactionId }
+  | { kind: "agendaCard"; card: AgendaCardKind }
+  | { kind: "statusAbility"; ability: StatusAbility }
+  | { kind: "gift" }
+  | { kind: "law"; agenda: AgendaId }
+  | { kind: "playerEdit"; faction: FactionId }
+  | { kind: "techTree"; faction: FactionId }
+  | { kind: "frontier"; faction: FactionId }
+  | { kind: "skip"; faction: FactionId }
+  | { kind: "results" }
+  | { kind: "gameSettings" }
+  | { kind: "puppets"; faction: FactionId }
+  | ({ kind: "strategySwap" } & StrategySwap)
+  // peace: Xxcha's Peace Accords after Diplomacy (no Mecatol Rex, as upstream's Diplomacy.tsx).
+  | { kind: "claim"; faction: FactionId; peace?: boolean }
   | { kind: "pass"; faction: FactionId }
+  | { kind: "singularity" }
+  | { kind: "mapTile"; component: string; faction: FactionId }
+  | { kind: "baal" }
   | { kind: "player"; faction: FactionId }
   | { kind: "card"; card: StrategyCardId; pickFor?: FactionId }
   | { kind: "score"; faction: FactionId; which: "public" | "secret"; anyPhase?: boolean; phase?: string }
@@ -52,6 +73,9 @@ export type Ctx = {
   w: ReturnType<typeof useWrite>;
   open: (s: Sheet) => void;
   gameId: string;
+  // Whether the game tracks a section; setup can turn off technologies,
+  // planets, objectives and relics (options.hide), and upstream then hides them.
+  tracks: (s: AppSection) => boolean;
 };
 
 // Clocks and times render only in the browser: the server's clock and time zone differ.

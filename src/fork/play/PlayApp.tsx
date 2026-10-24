@@ -2,14 +2,14 @@
 // The fork's phone-first player screen (/[locale]/play/[gameId]). See the
 // "Interface design" note in Trilium and prototype/play for the design.
 // Strings are English and live in fork code, so upstream's message files stay untouched.
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useActionLog, useAgenda, useCurrentTurn, useGameId, useOptions, usePlanets, useStrategyCards } from "../../context/dataHooks";
 import { useFactions, usePassedFactionIds } from "../../context/factionDataHooks";
 import { useActiveFactionId, useOrderedFactionIds } from "../../context/gameDataHooks";
 import { useGameState } from "../../context/stateDataHooks";
 import { Events } from "../../util/api/events";
 import { getStrategyCardsForFaction } from "../../util/helpers";
-import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, sentence, subjectOf, turnOwners } from "./logic";
+import { actorOf, checksAndBalancesTargets, claimablePlanets, groupKey, newestGroup, roundsOf, sentence, subjectOf, turnOwners } from "./logic";
 import { ActionLog, Optional } from "../../util/types/types";
 import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
@@ -20,14 +20,29 @@ import { PointsButton, PointsSheet } from "./NowPoints";
 import { ExpeditionCard, ExpeditionSheet } from "./NowExpedition";
 import MapTab, { SystemSheet } from "./MapTab";
 import NowAgenda, { AgendaSheet } from "./NowAgenda";
+import { AgendaCardSheet } from "./AgendaCards";
+import { StatusAbilitySheet } from "./StatusAbilities";
+import { GiftSheet, SwapSheet } from "./StrategyAbilities";
+import { LawSheet, LawsCard } from "./Laws";
+import { PlayerEditSheet } from "./PlayerEdit";
+import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
+import { ResultsSheet } from "./Results";
+import { GameCard, GameSettingsSheet } from "./GameInfo";
+import { TechTreeSheet } from "./TechTreeSheet";
+import { FrontierSheet } from "./Frontier";
+import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
 import { ResearchSheet } from "./NowCards";
 import { ComponentSheet, RelicSheet } from "./NowComponent";
 import NowEnd, { GameEndBanner } from "./NowEnd";
 import { PlayerSheet } from "./PlayerSheet";
 import NowStatus, { StatusSheet } from "./NowStatus";
 import NowStrategy from "./NowStrategy";
+import NowSetup, { SetupChoiceSheet } from "./NowSetup";
 import { PHASES, useMounted, useRace, type Sheet, type Ctx } from "./ui";
 import { PlayPopouts } from "./things";
+import { LockedBanner, UnlockSheet } from "./NowLocked";
+import { BaalSheet, SingularitySheet } from "./TacticalExtras";
+import { MapTileSheet } from "./MapTiles";
 import { Button, CardTag, Chip, Choices, cx, DockContext, kit, pcolor, RowAction, RowLink, Rows, Sheet as KitSheet, Swatch, Tag, TextSizeChoice, rootAttrs, useDevicePrefs, useMedia, WIDE, type Prefs } from "../ui/kit";
 
 type Tab = "now" | "table" | "map" | "log";
@@ -70,7 +85,7 @@ export default function PlayApp() {
   };
   const { prefs, setPrefs } = useDevicePrefs();
   const table = prefs.always;
-  const w = useWrite(seat, describe, table);
+  const w = useWrite(seat, describe, table, () => setSheet({ kind: "unlock" }));
   const wide = useMedia(WIDE);
   const dockInfo = wide && prefs.dock === "beside";
 
@@ -82,6 +97,7 @@ export default function PlayApp() {
 
   const active = useActiveFactionId();
   const phase = state.phase;
+  useUpstreamTimers();
 
   // Helping lasts as long as what it was for: the phase, and in turn-based
   // phases the helped player's turn (they may end it from their own phone).
@@ -92,7 +108,9 @@ export default function PlayApp() {
     if ((phase === "ACTION" || phase === "STRATEGY") && helping && helping !== active) setHelping(undefined);
   }, [phase, active, helping]);
   const controls = (id: Optional<FactionId>) => !!id && (id === seat || id === helping || table);
-  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, table, controls, w, open: setSheet, gameId };
+  const hide = useOptions().hide;
+  const tracks = (s: AppSection) => !hide?.includes(s);
+  const ctx = { factions, short, isFaction, subject, describe, seat, helping, setHelping, table, controls, w, open: setSheet, gameId, tracks };
   const docked = !!sheet && dockInfo && INFO_SHEETS.has(sheet.kind);
 
   return (
@@ -118,9 +136,11 @@ export default function PlayApp() {
       {tab === "now" ? (
         <main className={cx(styles.main, styles.split)}>
           <div className={styles.col}>
+            <LockedBanner open={setSheet} />
+            <PausedBanner ctx={ctx} />
             {phase !== "END" ? <GameEndBanner {...ctx} /> : null}
             <CombatBanner ctx={ctx} />
-            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
+            {phase === "END" ? <NowEnd {...ctx} /> : phase === "ACTION" ? <NowAction {...ctx} /> : phase === "STRATEGY" ? <NowStrategy {...ctx} /> : phase === "STATUS" ? <NowStatus {...ctx} /> : phase === "AGENDA" ? <NowAgenda {...ctx} /> : phase === "SETUP" ? <NowSetup {...ctx} /> : <NotNativeYet phase={phase} gameId={gameId} seat={seat} />}
             {phase === "ACTION" || phase === "STATUS" || phase === "AGENDA" || phase === "STRATEGY" ? (
               <section className={kit.card} aria-label="Anything else">
                 <p className={kit.eyebrow}><span>Anything else?</span></p>
@@ -166,17 +186,8 @@ function NotNativeYet({ phase, gameId, seat }: { phase: string; gameId: string; 
   return (
     <section className={kit.card}>
       <p className={kit.eyebrow}><span>{PHASES[phase] ?? phase} phase</span></p>
-      {phase === "SETUP" ? (
-        <>
-          <h2 className={kit.title}>Setup is on the table screen</h2>
-          <p className={kit.sub}>Choose starting technologies and the like there, then start the game. This screen takes over from the first strategy phase.</p>
-        </>
-      ) : (
-        <>
-          <h2 className={kit.title}>This phase isn't on the new screen yet</h2>
-          <p className={kit.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
-        </>
-      )}
+      <h2 className={kit.title}>This phase isn't on the new screen yet</h2>
+      <p className={kit.sub}>Use the full screen for it. The score, the strategy cards and the log here stay up to date.</p>
       <Rows>
         {seat ? <RowLink href={`/game/${gameId}/${encodeURIComponent(seat)}`} external title="Your faction's full screen" detail="Upstream's page for your faction" /> : null}
         <RowLink href={`/game/${gameId}/main`} external title="The table screen" detail="Upstream's page for the whole table" />
@@ -283,6 +294,15 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <GameCard ctx={ctx} />
+    <section className={kit.card} aria-label="The game so far">
+      <Rows flush>
+        <RowLink onClick={() => open({ kind: "results" })} title="How the game went" detail="Points and technology by round, the map by round, time per player" />
+        <RowLink href={`/api/${ctx.gameId}/download`} download={`ti-game-${ctx.gameId}.json`} title="Download the game" detail="The setup, timers and full log as a JSON file" />
+      </Rows>
+    </section>
+    <LawsCard ctx={ctx} />
+    <ClockCard ctx={ctx} />
     <ExpeditionCard ctx={ctx} />
     </>
   );
@@ -293,6 +313,7 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
   const order = useOrderedFactionIds("SPEAKER");
   const group = newestGroup(log);
   const rows = log.filter((e) => sentence(e, ctx.short, ctx.isFaction) && (who === "everyone" || ctx.subject(e) === who)).slice(0, 300);
+  const roundOf = useMemo(() => roundsOf(log), [log]);
   return (
     <section className={kit.card} aria-label="Game log">
       <p className={kit.eyebrow}><span>Game log</span><span>Newest first</span></p>
@@ -304,7 +325,16 @@ function LogTab({ log, ...ctx }: Ctx & { log: ActionLog }) {
       ) : null}
       <Choices label="Show" value={who} onChange={setWho}
         options={[{ value: "everyone", label: "Everyone" }, ...order.map((id) => ({ value: id as string, label: ctx.short(id) }))]} />
-      <ul className={styles.feed}>{rows.map((e, i) => <FeedRow key={`${e.timestampMillis}-${i}`} e={e} {...ctx} />)}</ul>
+      <ul className={styles.feed}>{rows.map((e, i) => {
+        const r = roundOf.get(e);
+        const head = r !== undefined && (i === 0 || roundOf.get(rows[i - 1]!) !== r);
+        return (
+          <Fragment key={`${e.timestampMillis}-${i}`}>
+            {head ? <li className={styles.feedHead}><h3>{r === 0 ? "Setup" : `Round ${r}`}</h3></li> : null}
+            <FeedRow e={e} {...ctx} />
+          </Fragment>
+        );
+      })}</ul>
     </section>
   );
 }
@@ -393,14 +423,42 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "vote":
     case "resolve":
       return <AgendaSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "playerEdit":
+      return <PlayerEditSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "techTree":
+      return <TechTreeSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "frontier":
+      return <FrontierSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "mapTile":
+      return <MapTileSheet component={sheet.component} faction={sheet.faction} close={close} ctx={ctx} />;
+    case "singularity":
+      return <SingularitySheet close={close} ctx={ctx} />;
+    case "baal":
+      return <BaalSheet close={close} ctx={ctx} />;
+    case "law":
+      return <LawSheet agenda={sheet.agenda} close={close} ctx={ctx} />;
+    case "gift":
+      return <GiftSheet close={close} ctx={ctx} />;
+    case "strategySwap":
+      return <SwapSheet by={sheet.by} arbiter={sheet.arbiter} close={close} ctx={ctx} />;
+    case "statusAbility":
+      return <StatusAbilitySheet ability={sheet.ability} close={close} ctx={ctx} />;
+    case "agendaCard":
+      return <AgendaCardSheet card={sheet.card} close={close} ctx={ctx} />;
+    case "setupChoice":
+      return <SetupChoiceSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "unlock":
+      return <UnlockSheet close={close} ctx={ctx} />;
     case "seat":
       return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {
       const list = claimablePlanets(planets, sheet.faction, currentTurn)
+        .filter((p) => !sheet.peace || p.id !== "Mecatol Rex")
         .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(!!a.owner) - Number(!!b.owner) || a.name.localeCompare(b.name));
       return (
-        <KitSheet title={`${short(sheet.faction)} takes control of…`} close={close}>
+        <KitSheet title={sheet.peace ? `${short(sheet.faction)}: Peace Accords` : `${short(sheet.faction)} takes control of…`} close={close}>
+          {sheet.peace ? <p className={kit.sub}>A planet next to one Xxcha controls, other than Mecatol Rex.</p> : null}
           <input className={kit.search} id="play-planet-search" type="search" placeholder="Find a planet" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a planet" />
           <Rows>
             {list.slice(0, 80).map((p) => (
@@ -415,14 +473,15 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       );
     }
     case "pass":
-      return (
-        <KitSheet title="Pass for the round?" close={close}>
-          <p className={kit.confirm}>{short(sheet.faction)} passes and takes no more turns this round.</p>
-          <Button kind="primary" size="tall" block disabled={w.pending} onClick={async () => {
-            if (await w.write([Events.SelectActionEvent("Pass"), Events.EndTurnEvent({})], `${short(sheet.faction)} passed`, sheet.faction)) close();
-          }}>Pass</Button>
-        </KitSheet>
-      );
+      return <PassSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "gameSettings":
+      return <GameSettingsSheet close={close} ctx={ctx} />;
+    case "results":
+      return <ResultsSheet close={close} ctx={ctx} />;
+    case "skip":
+      return <SkipTurnSheet faction={sheet.faction} close={close} ctx={ctx} />;
+    case "puppets":
+      return <PuppetsSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "card": {
       const c = strategyCards[sheet.card];
       const picker = sheet.pickFor;

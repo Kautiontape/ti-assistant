@@ -40,7 +40,7 @@ export function PointsSheet({ phase, close, ctx }: { phase: string; close: () =>
           <div className={kit.section}>
             <p className={kit.label}>What happened?</p>
             <div className={kit.rows}>
-              {secretPhase ? (
+              {secretPhase && ctx.tracks("OBJECTIVES") ? (
                 <RowLink onClick={() => open({ kind: "score", faction: who, which: "secret", phase })}
                   title={`${short(who)} scored a secret`} detail={`${secrets} ${secretPhase}-phase secret${secrets === 1 ? "" : "s"} nobody has scored`} />
               ) : null}

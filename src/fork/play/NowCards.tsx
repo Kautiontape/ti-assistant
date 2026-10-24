@@ -17,7 +17,7 @@ import { ActionLog, Optional } from "../../util/types/types";
 import { scoredThisPhase } from "./logic";
 import styles from "./play.module.scss";
 import type { Ctx } from "./ui";
-import { Button, Chip, Choices, Cite, kit, RowAction, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
+import { Button, Chip, Choices, Cite, kit, RowAction, RowLink, Rows, Sheet as KitSheet, Tag } from "../ui/kit";
 
 const TECH_GROUPS: [TechType | "OTHER", string][] = [
   ["GREEN", "Biotic"], ["BLUE", "Propulsion"], ["YELLOW", "Cybernetic"], ["RED", "Warfare"], ["UPGRADE", "Unit upgrades"], ["OTHER", "Faction"],
@@ -49,7 +49,15 @@ export function CardControls({ card, active, ctx }: { card: StrategyCardId; acti
   if (card === "Technology") return <TechnologyPrimary active={active} ctx={ctx} />;
   if (card === "Politics") return <PoliticsPrimary active={active} ctx={ctx} />;
   if (card === "Imperial") return <ImperialPrimary active={active} ctx={ctx} />;
+  if (card === "Diplomacy") return <PeaceAccords xxcha={active} ctx={ctx} />;
   return null;
+}
+
+// Xxcha's Peace Accords: after resolving Diplomacy's primary or secondary, take
+// control of 1 planet next to one they control (upstream's Diplomacy.tsx).
+function PeaceAccords({ xxcha, ctx }: { xxcha: FactionId; ctx: Ctx }) {
+  if (xxcha !== "Xxcha Kingdom" || !ctx.factions[xxcha] || !ctx.tracks("PLANETS")) return null;
+  return <Rows><RowLink onClick={() => ctx.open({ kind: "claim", faction: xxcha, peace: true })} title={`${ctx.short(xxcha)}: Peace Accords`} detail="Take control of a planet next to one they control" /></Rows>;
 }
 
 function TechnologyPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
@@ -58,6 +66,7 @@ function TechnologyPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   const techs = useTechs();
   const researched = getResearchedTechs(currentTurn, active);
   if (active === "Nekro Virus") return <p className={kit.sub}>Nekro gains command tokens instead of researching.</p>;
+  if (!ctx.tracks("TECHS")) return <p className={kit.sub}>This game doesn't track technologies.</p>;
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {researched.map((id) => (
@@ -111,10 +120,12 @@ function ImperialPrimary({ active, ctx }: { active: FactionId; ctx: Ctx }) {
   const mecatol = planets["Mecatol Rex"]?.owner === active;
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <Button kind={scored.length ? "secondary" : "primary"} block disabled={w.pending} onClick={() => open({ kind: "score", faction: active, which: "public", anyPhase: true })}
-        detail={scored.length ? "Change it" : "If they meet its requirements"}>
-        {scored.length ? `Scored ${scored.map((id) => objectives[id]?.name ?? id).join(", ")}` : "Score a public objective"}
-      </Button>
+      {ctx.tracks("OBJECTIVES") ? (
+        <Button kind={scored.length ? "secondary" : "primary"} block disabled={w.pending} onClick={() => open({ kind: "score", faction: active, which: "public", anyPhase: true })}
+          detail={scored.length ? "Change it" : "If they meet its requirements"}>
+          {scored.length ? `Scored ${scored.map((id) => objectives[id]?.name ?? id).join(", ")}` : "Score a public objective"}
+        </Button>
+      ) : null}
       <p className={kit.sub}>
         {mecatol ? `${short(active)} controls Mecatol Rex, so the Imperial point was added when Imperial was chosen.` : `${short(active)} doesn't control Mecatol Rex, so they draw a secret objective instead of the Imperial point.`}
       </p>
@@ -148,13 +159,13 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
               {state === "PENDING" ? (
                 <>
                   <Button size="small" forOther={id !== seat} disabled={w.pending}
-                    onClick={() => (card.id === "Technology" && id !== "Nekro Virus" ? open({ kind: "research", faction: id, follow: true }) : mark(id, "DONE"))}>Follow</Button>
+                    onClick={() => (card.id === "Technology" && id !== "Nekro Virus" && ctx.tracks("TECHS") ? open({ kind: "research", faction: id, follow: true }) : mark(id, "DONE"))}>Follow</Button>
                   <Button size="small" disabled={w.pending} onClick={() => mark(id, "SKIPPED")}>Skip</Button>
                 </>
               ) : (
                 <>
                   {/* Jol-Nar's Brilliant: following Technology may resolve the primary, so a second technology. */}
-                  {card.id === "Technology" && id === BRILLIANT && state === "DONE" && getResearchedTechs(currentTurn, id).length === 1 ? (
+                  {card.id === "Technology" && id === BRILLIANT && state === "DONE" && ctx.tracks("TECHS") && getResearchedTechs(currentTurn, id).length === 1 ? (
                     <Button size="small" forOther={id !== seat} disabled={w.pending} onClick={() => open({ kind: "research", faction: id })}>2nd tech</Button>
                   ) : null}
                   <Tag tone="done">{state === "DONE" ? "Followed" : "Skipped"}</Tag>
@@ -165,6 +176,7 @@ export function SecondariesCard({ card, active, ctx }: { card: StrategyCard; act
           );
         })}
       </ul>
+      {card.id === "Diplomacy" && active !== "Xxcha Kingdom" ? <PeaceAccords xxcha="Xxcha Kingdom" ctx={ctx} /> : null}
       <p className={kit.sub}>Each player usually marks their own. Change opens one again.</p>
     </section>
   );

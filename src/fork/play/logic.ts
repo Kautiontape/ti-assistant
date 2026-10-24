@@ -1,6 +1,7 @@
 // Pure helpers for the fork's /play screens. Upstream's rules stay upstream;
 // these only read game data and the action log.
-import { getClaimedPlanets } from "../../util/actionLog";
+import { getActionCardTargets, getClaimedPlanets, getFactionVotes, getPlayedRiders, getPromissoryTargets } from "../../util/actionLog";
+import { canResearchTech, getFactionPreReqs } from "../../util/techs";
 import { ActionLog, Optional } from "../../util/types/types";
 
 export type NameOf = (id: Optional<string>) => string;
@@ -19,7 +20,7 @@ export function actorOf(e: Optional<Entry>): Optional<Actor> {
   return d?.actor ?? d?.event?.actor;
 }
 
-const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "CONTINUE_GAME", "SWAP_MAP_TILES"]);
+const TABLE_EVENTS = new Set(["REVEAL_OBJECTIVE", "REVEAL_AGENDA", "START_VOTING", "RESOLVE_AGENDA", "REPEAL_AGENDA", "HIDE_AGENDA", "ADVANCE_PHASE", "END_GAME", "CONTINUE_GAME", "SWAP_MAP_TILES"]);
 
 // The faction an entry is about, if any. `turn` is whose turn the entry fell in
 // (see turnOwners), for entries such as SELECT_ACTION that name no faction.
@@ -65,7 +66,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       if (ev.action === "Component") return "took a component action";
       return `played ${ev.action}`;
     case "UNSELECT_ACTION": return `changed their mind about ${ev.action === "Tactical" || ev.action === "Component" ? `a ${String(ev.action).toLowerCase()} action` : ev.action}`;
-    case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ""}`;
+    // The first to take Mecatol Rex gets the Custodians token's point (upstream's TacticalAction).
+    case "CLAIM_PLANET": return `took control of ${ev.planet}${ev.prevOwner ? ` from ${name(ev.prevOwner)}` : ev.planet === "Mecatol Rex" ? " and the Custodians token (+1 point)" : ""}`;
     case "UNCLAIM_PLANET": return `lost ${ev.planet}`;
     case "ADD_ATTACHMENT": return `attached ${ev.attachment} to ${ev.planet}`;
     case "REMOVE_ATTACHMENT": return `removed ${ev.attachment} from ${ev.planet}`;
@@ -76,6 +78,8 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "UNSCORE_OBJECTIVE":
       return ev.objective === "Support for the Throne" && ev.key ? `lost ${name(ev.key)}'s Support for the Throne` : `took back ${ev.objective}`;
     case "REVEAL_OBJECTIVE": return `Objective revealed: ${ev.objective}`;
+    case "CHOOSE_STARTING_TECH": return `chose ${ev.tech} as a starting technology`;
+    case "CHOOSE_SUB_FACTION": return `took the ${ev.subFaction} home system`;
     case "ASSIGN_STRATEGY_CARD":
       return ev.pickedBy && ev.pickedBy !== ev.assignedTo ? `gave ${ev.id} to ${name(ev.assignedTo)}` : `picked ${ev.id}`;
     case "ADVANCE_PHASE": return ev.state?.phase ? `The ${String(ev.state.phase).toLowerCase()} phase ended` : "The game moved to the next phase";
@@ -91,11 +95,28 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
       return ev.votes ? `cast ${n} vote${n === 1 ? "" : "s"} for ${who(ev.target)}` : "abstained";
     }
     case "RESOLVE_AGENDA": return `${ev.agenda}: ${who(ev.target)}`;
+    case "REPEAL_AGENDA": return `Law repealed: ${ev.agenda}`;
     case "START_VOTING": return "Voting started";
+    case "HIDE_AGENDA": return ev.veto ? `Agenda vetoed: ${ev.agenda}` : null;
+    case "PLAY_RIDER": return ev.outcome ? `played ${ev.rider}, predicting ${who(ev.outcome)}` : `played ${ev.rider}`;
+    case "PLAY_RELIC": return ev.relic === "Maw of Worlds" && ev.tech ? `used Maw of Worlds and gained ${ev.tech}`
+      : ev.relic === "The Crown of Emphidia" ? "purged The Crown of Emphidia for 1 point" : `used ${ev.relic}`;
+    case "PLAY_LEADER": return `used ${ev.leader}`;
+    case "SELECT_SUB_COMPONENT": return ev.subComponent && ev.subComponent !== "None" ? `chose ${ev.subComponent}` : null;
+    case "SELECT_FACTION": return ev.faction && ev.faction !== "None" ? `chose ${name(ev.faction)}` : null;
+    case "PURGE_TECH": return `purged ${ev.techId}`;
+    case "UNPURGE_TECH": return null;
+    case "PURGE_SYSTEM": return `purged system ${ev.systemId}`;
+    case "UPDATE_PLANET_STATE": return ev.state === "PURGED" ? `purged ${ev.planet}` : null;
+    case "GIFT_OF_PRESCIENCE": return ev.faction === "Naalu Collective" ? "Naalu kept the 0 token" : `Naalu gave the 0 token to ${name(ev.faction)}`;
+    case "SWAP_STRATEGY_CARDS": return `${ev.cardOne} and ${ev.cardTwo} were swapped${ev.imperialArbiter ? " (Imperial Arbiter)" : ""}`;
+    case "SELECT_ELIGIBLE_OUTCOMES": return ev.outcomes && ev.outcomes !== "None" ? `Covert Legislation's outcomes: ${ev.outcomes}` : null;
+    case "SELECT_SUB_AGENDA": return ev.subAgenda && ev.subAgenda !== "None" ? `Covert Legislation was ${ev.subAgenda}` : null;
     case "SPEAKER_TIE_BREAK": return ev.tieBreak && ev.tieBreak !== "None" ? `broke the tie: ${who(ev.tieBreak)}` : null;
     case "PLAY_PROMISSORY_NOTE": return `played ${ev.card}`;
     case "PLAY_ACTION_CARD": return `played ${ev.card}`;
     case "MANUAL_VP_UPDATE": return `${ev.vps > 0 ? "gained" : "lost"} ${Math.abs(ev.vps)} point${Math.abs(ev.vps) === 1 ? "" : "s"} by hand`;
+    case "MANUAL_VOTE_UPDATE": return `${ev.votes > 0 ? "has" : "lost"} ${Math.abs(ev.votes)} ${ev.votes > 0 ? "more " : ""}vote${Math.abs(ev.votes) === 1 ? "" : "s"} available, set by hand`;
     case "END_GAME": return "The game ended";
     case "START_COMBAT": return `started a ${ev.kind} combat with ${name(ev.defender)}${ev.planet ? ` on ${ev.planet}` : ""}`;
     case "END_COMBAT":
@@ -104,6 +125,22 @@ export function sentence(e: Entry, name: NameOf, isFaction: (id: string) => bool
     case "CONTINUE_GAME": return "The game continued";
     default: return null;
   }
+}
+
+// The round each entry falls in (0 for setup). ADVANCE_PHASE records the phase
+// and round it ends; a round ends with the agenda phase, or with the status
+// phase when the agenda phase is skipped.
+export function roundsOf(log: ActionLog): WeakMap<Entry, number> {
+  const out = new WeakMap<Entry, number>();
+  let round = 0;
+  for (const e of [...log].reverse()) {
+    out.set(e, round);
+    if (e.data.action !== "ADVANCE_PHASE") continue;
+    const ev = (e.data as { event?: { state?: { phase?: string; round?: number }; skipAgenda?: boolean } }).event;
+    const phase = ev?.state?.phase, r = ev?.state?.round ?? round;
+    round = phase === "SETUP" ? 1 : phase === "AGENDA" || (phase === "STATUS" && ev?.skipAgenda) ? r + 1 : r;
+  }
+  return out;
 }
 
 // Undo groups: the newest entries that share one action id.
@@ -274,10 +311,97 @@ export function throneHolder(objectives: Objectives, giver: FactionId): Optional
 // ---------- agenda phase: upstream's rules (agenda/components/VotingColumn.tsx) ----------
 
 // Argent Flight first, then from the player after the speaker round to the speaker.
-export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speaker: FactionId): FactionId[] {
+// Hack Election reverses the order, still with the Argent Flight first and the
+// speaker last (AgendaPhase.tsx sorts `electionHacked ? b.order - a.order : ...`).
+export function votingOrder(factions: Partial<Record<FactionId, Faction>>, speaker: FactionId, hacked = false): FactionId[] {
   const speakerOrder = factions[speaker]?.order ?? 1;
   const rank = (f: Faction) => (f.id === "Argent Flight" ? -1 : f.order === speakerOrder ? 1000 : f.order > speakerOrder ? f.order : f.order + 100);
-  return Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+  const order = Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => rank(a) - rank(b)).map((f) => f.id);
+  if (!hacked) return order;
+  const first = order.filter((id) => id === "Argent Flight" && id !== speaker);
+  const middle = order.filter((id) => id !== "Argent Flight" && id !== speaker).reverse();
+  return [...first, ...middle, ...order.filter((id) => id === speaker)];
+}
+
+// ---------- agenda phase: riders (copied from VoteBlock.tsx's PredictionSection) ----------
+export const RIDERS = ["Galactic Threat", "Leadership Rider", "Diplomacy Rider", "Politics Rider", "Construction Rider", "Trade Rider",
+  "Warfare Rider", "Technology Rider", "Imperial Rider", "Sanction", "Keleres Rider"];
+
+// The riders `faction` may still play this agenda: each rider once, Keleres Rider
+// only with the Keleres in the game (and not by them), Galactic Threat only by the
+// Nekro Virus, Sanction with Codex I.
+export function ridersFor(faction: FactionId, currentTurn: ActionLog, factions: Partial<Record<FactionId, Faction>>, options: Options) {
+  const played = getPlayedRiders(currentTurn);
+  const secrets = getPromissoryTargets(currentTurn, "Political Secret");
+  return RIDERS.filter((rider) => {
+    if (rider === "Keleres Rider" && (faction === "Council Keleres" || !factions["Council Keleres"])) return false;
+    if (rider === "Galactic Threat" && (faction !== "Nekro Virus" || secrets.includes("Nekro Virus"))) return false;
+    if (rider === "Sanction" && !options.expansions.includes("CODEX ONE")) return false;
+    return !played.some((p) => p.rider === rider);
+  });
+}
+
+// ---------- setup: starting technology choices ----------
+// Copied from StartingComponents.tsx (inline there): which technologies a faction
+// may still choose at setup, and how many. Deepwrought Scholarate chooses from
+// everything it could research; Edyn Mandate takes one of each colour.
+const TECH_ORDER: TechType[] = ["GREEN", "BLUE", "YELLOW", "RED", "UPGRADE"];
+const byTechOrder = (a: Tech, b: Tech) => TECH_ORDER.indexOf(a.type) - TECH_ORDER.indexOf(b.type) || a.prereqs.length - b.prereqs.length || a.name.localeCompare(b.name);
+
+export function startingTechChoices(faction: Faction, techs: Partial<Record<TechId, Tech>>, options: Options) {
+  const startswith = faction.startswith ?? { units: {} };
+  const chosen = (startswith.techs ?? []).map((id) => techs[id]).filter((t): t is Tech => !!t).sort(byTechOrder);
+  if (!startswith.choice) return { chosen, choices: [] as Tech[], left: 0 };
+  let ids = startswith.choice.options ?? [];
+  if (faction.id === "Deepwrought Scholarate") {
+    const prereqs = getFactionPreReqs(faction, techs, options, [], {});
+    ids = Object.values(techs).filter((t): t is Tech => !!t && canResearchTech(t, options, prereqs, faction, false, techs) && (!t.faction || t.faction === faction.id)).map((t) => t.id);
+  }
+  const takenTypes = chosen.map((t) => t.type);
+  const choices = ids.filter((id) => !(startswith.techs ?? []).includes(id)).map((id) => techs[id]).filter((t): t is Tech => !!t)
+    .filter((t) => faction.id !== "Edyn Mandate" || !takenTypes.includes(t.type))
+    .filter((t) => !t.faction || t.faction === faction.id)
+    .sort(byTechOrder);
+  const required = faction.id === "Deepwrought Scholarate" ? 2 : startswith.choice.select;
+  return { chosen, choices, left: Math.min(Math.max(0, required - chosen.length), choices.length) };
+}
+
+// ---------- votes: bonus votes ----------
+// The cards that add votes when played this agenda. Upstream's tally
+// (computeVotes in AgendaPhase.tsx) adds them when they're in the log, so a vote
+// sends the plays and leaves them out of extraVotes. Which ones a player is
+// offered is copied from VoteBlock.tsx (VotingSection, canUseBloodPact and
+// hasCouncilPreserve, which aren't exported).
+export type VoteBonus = { id: string; votes: number; note: string; promissory?: boolean };
+export const VOTE_BONUSES: VoteBonus[] = [
+  { id: "Distinguished Councilor", votes: 5, note: "action card" },
+  { id: "Predictive Intelligence", votes: 3, note: "technology" },
+  { id: "Council Preserve", votes: 5, note: "planet attachment" },
+  { id: "Blood Pact", votes: 4, note: "Empyrean promissory note, voting with the Empyrean", promissory: true },
+];
+
+export function bonusPlayed(currentTurn: ActionLog, b: VoteBonus, faction: FactionId) {
+  return (b.promissory ? getPromissoryTargets(currentTurn, b.id) : getActionCardTargets(currentTurn, b.id)).includes(faction);
+}
+
+// Whether `faction`, voting for `target`, can use the bonus this agenda.
+export function bonusOffered(b: VoteBonus, faction: FactionId, target: Optional<string>, currentTurn: ActionLog, has: { predictive: boolean; planets: Partial<Record<PlanetId, Planet>> }) {
+  switch (b.id) {
+    case "Distinguished Councilor": {
+      const user = getActionCardTargets(currentTurn, b.id)[0];
+      return !user || user === faction;
+    }
+    case "Predictive Intelligence": return has.predictive;
+    case "Council Preserve": return Object.values(has.planets).some((p) => p?.owner === faction && p.attachments?.includes("Council Preserve"));
+    case "Blood Pact": {
+      if (faction === "Empyrean" || !target || target === "Abstain") return false;
+      const empyrean = getFactionVotes(currentTurn, "Empyrean");
+      if (!empyrean?.target || empyrean.target !== target) return false;
+      const user = getPromissoryTargets(currentTurn, b.id)[0];
+      return !user || user === faction;
+    }
+  }
+  return false;
 }
 
 // ---------- combat (fork actions, src/fork/actions) ----------
