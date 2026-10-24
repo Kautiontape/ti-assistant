@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 196 | Works in `/play`. |
-| Partial | 9 | Works in `/play`, with the gap named in Notes. |
+| Native | 201 | Works in `/play`. |
+| Partial | 4 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
@@ -124,7 +124,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Promissory note actions & Support for the Throne / alliances | src/components/PromissoryMenu | Native | Notes with component actions appear in the component sheet; Support for the Throne moves in any phase from "Points changed?" on Now; alliances change in PlayerEdit.tsx and show on the player sheet. Checks: points-check.cjs, parity-player-check.cjs |
 | Exhaust/ready techs, leaders (agent/commander/hero) and relics when used | FactionPanel l.675 UpdateLeaderStateEvent; component handlers | Native | Leaders (ready, exhaust, unlock, purge) and relics (purge) by hand in PlayerEdit.tsx. Upstream has no event to exhaust a technology, so neither does /play. Check: parity-player-check.cjs |
 | Breakthrough state (locked/readied/exhausted/purged) | FactionPanel FactionBreakthrough l.1132 | Native | PlayerEdit.tsx: lock and unlock, as upstream's faction panel |
-| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Partial | Section 8: the cards appear with other components and splices are native; using a genome isn't recorded. |
+| Twilight's Fall splice/genome/paradigm cards (Coerce, Elevate, Evolve, Genophage, Helix, Irradiate, Mutate, Devour World, Witching Hour...) | ComponentAction l.240-360; src/components/Splice | Native | Section 8: the cards appear with other components and splices are native. Upstream's only recorded genome use, Research Genome, is in the splice sheet. |
 | Unravel (purge relic) / Repeal Law | ComponentAction l.354 | Native | Repeal in Laws.tsx, relic purge in PlayerEdit.tsx. Unravel (a Twilight's Fall component) lists every owned relic to purge, with the point for one another player holds, and can take it back. Check: parity-laws-check.cjs, exec-check.cjs |
 
 ### 3d. Strategic actions
@@ -304,7 +304,7 @@ Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones agains
 | Strategy picks with the 8 cards | SP | Native | Lux to Aeterna in their colours (checked: Magus purple, Aeterna magenta). |
 | Noctis, Calamitas, Magus: the splice | `StrategicActions/{Noctis,Calamitas,Magus}.tsx`, `src/components/Splice/SpliceModal.tsx` | Native | Splice sheet (`NowSplice.tsx`): who joins, Magus' extra card, Engineer and Reverse, the cards turned face up, picks in order, a King technology instead. Pick order copied from SpliceModal. |
 | Joining a splice from the secondary | `AllSecondaries` in the same files | Native | Follow on Noctis, Calamitas or Magus also joins the splice. Players pick on their own phones from a splice card on the Now tab. |
-| Thieve and Research Genome in a splice | `SpliceModal.tsx` | Partial | Counted when played on the table screen; no buttons in /play. |
+| Thieve and Research Genome in a splice | `SpliceModal.tsx` | Native | Splice sheet (`NowSplice.tsx`): "Research Genome was used" (USE_GENOME, 3 more cards; off again with UNDO_GENOME) next to Engineer and Reverse, also in the Splice edict, and a Thieve section after the last pick: pick who played it (PLAY_ACTION_CARD), then they take one more card. Upstream keeps offering the thief picks; here it ends after one card. Check: tfsplice-check.cjs |
 | Tyrannus | `StrategicActions/Tyrannus.tsx` | Native | New speaker and new tyrant, each with a confirm sentence. |
 | Aeterna | `StrategicActions/Aeterna.tsx` | Native | Score a public objective, or draw a paradigm. Upstream adds the point for holding Mecatol Rex when Aeterna is chosen. |
 | Lux, Civitas, Amicus | None | Not needed | Their effects happen on the board. |
@@ -316,7 +316,7 @@ Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones agains
 | Arise, Bless, Censure, Execute, Foretell | None | Not needed | Text only, as upstream. |
 | The tyrant | `Footer.tsx` | Native | A card on the Table tab. |
 | Thunder's Edge expeditions | Disabled in Twilight's Fall | Native | Hidden, as upstream. |
-| Using a genome, and component actions from cards | `GenomeRow`, components | Partial | Component-action cards appear with other components; genome use isn't recorded in /play. Not run on a phone. |
+| Using a genome, and component actions from cards | `GenomeRow`, components | Native | Upstream records one genome use only, Research Genome in a splice (see above); `GenomeRow` just lists and discards. Component-action cards appear with other components, and the log says "used Research Genome". Not run on a phone beyond tfsplice-check.cjs. |
 
 ## Biggest gaps
 
@@ -324,4 +324,4 @@ What's left, by the rows above that aren't Native or Not needed:
 
 1. Component actions still recorded without their effect: the Twilight's Fall splice cards (Coerce, Elevate and the like, see the Twilight's Fall row), and Riftwalker Meian's Mallice tile.
 2. Read-only views: no free edit of objectives.
-3. Twilight's Fall: Thieve and Research Genome in a splice, and recording a genome's use.
+3. Twilight's Fall: none left (Thieve, Research Genome and genome use are done; section 8).

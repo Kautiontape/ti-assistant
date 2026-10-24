@@ -4,7 +4,7 @@
 // face up at the table; this records which, then who takes each in pick order.
 // Upstream's version is src/components/Splice/SpliceModal.tsx.
 import { useState } from "react";
-import { useActionLog, useCurrentTurn, useTechs } from "../../context/dataHooks";
+import { useActionLog, useCurrentTurn, useGenomes, useTechs } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { Events } from "../../util/api/events";
 import { getAntimatterForFaction, getWavelengthForFaction } from "../../util/techs";
@@ -20,6 +20,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
   const order = useOrderedFactionIds("SPEAKER", undefined, initiator);
   const techs = useTechs();
   const { byType, name } = useTfCards();
+  const researchGenome = useGenomes()["Research Genome"];
   const [revealing, setRevealing] = useState(false);
   const [q, setQ] = useState("");
   const s = spliceState(currentTurn, type, initiator, order, !!allPlayers);
@@ -35,6 +36,14 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
   const log = useActionLog();
   const newest = newestGroup(log);
   const newestAction = newest[0]?.data.action;
+  // Thieve: a player who isn't in the splice takes one more card once everyone has picked.
+  const thieves = order.filter((id) => id !== initiator && !s.participants.includes(id));
+  const thiefDone = !!s.thief && Object.values(s.takenBy).includes(s.thief);
+  // Research Genome is recorded as used (not as a played card); upstream's ResearchGenomeButton.
+  const genomeSwitch = researchGenome?.owner ? (
+    <Switch label="Research Genome was used" detail={`${short(researchGenome.owner)} turns 3 more cards face up`} checked={s.genome}
+      onChange={(on) => w.write([on ? Events.UseGenomeEvent("Research Genome") : Events.UndoGenomeEvent("Research Genome")], on ? "Research Genome: 3 more cards in the splice" : "Research Genome taken back", researchGenome.owner)} />
+  ) : null;
   const canUndo = !!newestAction && ["GAIN_TF_CARD", "REVEAL_TF_CARD", "ADD_TECH"].includes(newestAction) && s.revealed.length > 0;
 
   return (
@@ -48,7 +57,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
           {s.pickers.map((id, i) => {
             const took = Object.entries(s.takenBy).filter(([, f]) => f === id).map(([c]) => c);
             const tech = s.techs.filter((t) => t.faction === id).map((t) => techs[t.tech]?.name ?? t.tech);
-            const done = i < s.pickers.indexOf(current as FactionId) || !current;
+            const done = i < s.pickers.indexOf(current as FactionId) || !current || current === s.thief;
             return (
               <li key={`${id}-${i}`} className={kit.line} style={{ minHeight: 44, gap: 8 }}>
                 <Chip faction={id} factions={factions} short={short} small player={false} />
@@ -57,6 +66,13 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
               </li>
             );
           })}
+          {s.thief ? (
+            <li className={kit.line} style={{ minHeight: 44, gap: 8 }}>
+              <Chip faction={s.thief} factions={factions} short={short} small player={false} />
+              <span className={kit.grow} />
+              {s.thief === current ? <Tag tone="now">Picking (Thieve)</Tag> : <span className={kit.sub}>Thieve{thiefDone ? `: ${Object.entries(s.takenBy).filter(([, f]) => f === s.thief).map(([c]) => name(type, c)).join(", ")}` : ""}</span>}
+            </li>
+          ) : null}
         </ul>
       </Section>
 
@@ -70,12 +86,15 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
             <Switch label={`${short(initiator)} takes an extra card`} detail="Magus: 3 resources or influence; picks last instead of first" checked={s.participants.includes(initiator)}
               onChange={(on) => w.write([on ? Events.JoinSpliceEvent(initiator) : Events.LeaveSpliceEvent(initiator)], on ? `${short(initiator)} will take an extra ability` : `${short(initiator)} won't take an extra ability`, initiator)} />
           ) : null}
+          {genomeSwitch}
           <Switch label="Engineer was played" detail="Turn 2 more cards face up" checked={s.engineer}
             onChange={(on) => w.write([on ? Events.PlayActionCardEvent("Engineer", initiator) : Events.UnplayActionCardEvent("Engineer", initiator)], on ? "Engineer: 2 more cards in the splice" : "Engineer taken back", initiator)} />
           <Switch label="Reverse was played" detail="Picks go clockwise instead" checked={s.reverse}
             onChange={(on) => w.write([on ? Events.PlayActionCardEvent("Reverse", "None") : Events.UnplayActionCardEvent("Reverse", "None")], on ? "Reverse: picks go clockwise" : "Reverse taken back", initiator)} />
         </Section>
       ) : null}
+
+      {allPlayers && !started && genomeSwitch ? <Section title="Before the cards go up">{genomeSwitch}</Section> : null}
 
       <Section title="Face up" count={`${s.revealed.length} of ${s.total}`}>
         {Object.keys(s.takenBy).length ? (
@@ -113,7 +132,28 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
         ) : null}
       </Section>
 
-      {current && s.revealed.length >= s.total && kingTechs.length ? (
+      {!allPlayers && s.finished && s.revealed.length >= s.total && !thiefDone && thieves.length ? (
+        <Section title="Thieve">
+          {s.thief ? (
+            <>
+              <p className={kit.confirm}>{short(s.thief)} played Thieve and takes one more card.</p>
+              <Button disabled={w.pending} onClick={() => w.write([Events.UnplayActionCardEvent("Thieve", s.thief as FactionId)], "Thieve taken back", s.thief)}>Take Thieve back</Button>
+            </>
+          ) : (
+            <>
+              <p className={kit.sub}>Someone who isn&apos;t in the splice can play Thieve to take one more card after everyone has picked.</p>
+              <Rows>
+                {thieves.map((id) => (
+                  <RowAction key={id} verb="Played it" disabled={w.pending} title={short(id)}
+                    onClick={() => w.write([Events.PlayActionCardEvent("Thieve", id)], `${short(id)} played Thieve`, id)} />
+                ))}
+              </Rows>
+            </>
+          )}
+        </Section>
+      ) : null}
+
+      {current && current !== s.thief && s.revealed.length >= s.total && kingTechs.length ? (
         <Section title={`Or ${short(current)} takes a King technology instead`}>
           <Rows>
             {kingTechs.map((id) => (

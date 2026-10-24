@@ -57,6 +57,9 @@ export interface SpliceState {
   total: number; // cards to reveal
   engineer: boolean;
   reverse: boolean;
+  genome: boolean; // Research Genome was used: 3 more cards
+  thief?: FactionId; // Thieve was played for this player (they pick after everyone)
+  finished: boolean; // every regular pick is made (Thieve may follow)
 }
 
 // Upstream's SpliceModalContent (src/components/Splice/SpliceModal.tsx): reveal
@@ -81,11 +84,16 @@ export function spliceState(currentTurn: ActionLog, type: SpliceType, initiator:
   const total = joined.size + 2 + (engineer && index === 0 ? 2 : 0) + (genome ? 3 : 0);
   const pickers = [initiator, ...local.filter((id) => joined.has(id))];
   if (joined.has(initiator)) { pickers.shift(); pickers.push(initiator); }
+  // Thieve: after the last pick, the thief takes one more card. Upstream keeps
+  // offering the thief the pick; here it ends after their one card.
+  const thieve = allPlayers ? undefined : getActionCardTargets(currentTurn, "Thieve")[0];
+  const thief = thieve && thieve !== "None" ? (thieve as FactionId) : undefined;
   const takenBy: Record<string, FactionId> = {};
   for (const e of gained) takenBy[cardId(e.data.event)] = e.data.event.faction;
   return {
     participants: [initiator, ...local.filter((id) => joined.has(id) && id !== initiator)],
-    pickers, current: pickers[index], revealed: revealedEntries.map((e) => cardId(e.data.event)), takenBy, techs, total, engineer, reverse,
+    pickers, current: pickers[index] ?? (index === pickers.length ? thief : undefined), revealed: revealedEntries.map((e) => cardId(e.data.event)), takenBy, techs, total, engineer, reverse,
+    genome, thief, finished: index >= pickers.length,
   };
 }
 
@@ -107,6 +115,8 @@ export function tfSentence(data: GameUpdateData, name: (id: string) => string): 
     case "HIDE_TF_CARD": return `${cardId(ev as CardEvent)} went back from the splice`;
     case "JOIN_SPLICE": return `${name(ev.factionId)} joined the splice`;
     case "LEAVE_SPLICE": return `${name(ev.factionId)} left the splice`;
+    case "USE_GENOME": return `used ${ev.genomeId}`;
+    case "UNDO_GENOME": return null;
     case "CHOOSE_EDICT": return `resolved the edict ${ev.edictId}`;
     case "HIDE_EDICT": return `took back the edict ${ev.edictId}`;
     case "SET_TYRANT": return ev.newTyrant ? `${name(ev.newTyrant)} is the tyrant` : "Nobody is the tyrant";
