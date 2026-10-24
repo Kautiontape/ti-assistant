@@ -38,7 +38,13 @@ export default class DBConnection {
         "1:881312315045:web:d43e66019ce64ecf623f4c",
     };
 
-    const isDev = !!process && process.env.NODE_ENV !== "production";
+    // A production build made with an explicit emulator address (local
+    // end-to-end runs) uses the emulator too; deployed builds never set it.
+    const isDev =
+      (!!process && process.env.NODE_ENV !== "production") ||
+      !["", "off", undefined].includes(
+        process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST,
+      );
     if (isDev) {
       firebaseConfig.projectId =
         process.env.NEXT_PUBLIC_TI_PROJECT ?? firebaseConfig.projectId;
