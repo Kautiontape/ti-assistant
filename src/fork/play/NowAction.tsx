@@ -100,8 +100,8 @@ export default function NowAction(ctx: Ctx) {
               {selected === "Component" ? <ComponentControls active={active} ctx={ctx} /> : null}
               <Rows label="Record">
                 {tactical && ctx.tracks("PLANETS") ? <RowLink onClick={() => open({ kind: "claim", faction: active })} title="Take a planet" detail="Took control of one this turn" /> : null}
-                {selected === "Tactical" ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
-                {selected === "Tactical" ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
+                {tactical ? <AttachButton active={active} currentTurn={currentTurn} planets={planets} ctx={ctx} /> : null}
+                {tactical ? <StartCombatButton attacker={active} ctx={ctx} /> : null}
                 {tactical ? <FrontierRow active={active} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <SingularityRow active={active} ctx={ctx} /> : null}
                 {selected === "Tactical" ? <BaalRow active={active} ctx={ctx} /> : null}
