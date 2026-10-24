@@ -1,5 +1,6 @@
 import { getForkHandler } from "../../../../src/fork/actions/registry"; // ktn seam S4
 import { forkAfterUpdate } from "../../../../src/fork/server/afterUpdate"; // ktn seam S9
+import { ForkConflict, forkGuard } from "../../../../src/fork/server/guard"; // ktn seam S9
 import {
   DocumentData,
   DocumentReference,
@@ -226,6 +227,7 @@ export async function POST(
       throw new Error("Could not complete transaction.");
     }
   } catch (e) {
+    if (e instanceof ForkConflict) return NextResponse.json({ message: e.message, conflict: true }, { status: 409 }); // ktn seam S9
     console.log("Transaction failed", e);
     return NextResponse.error();
   }
@@ -398,6 +400,7 @@ function updateInTransaction(
       t,
       gameData.state.phase,
     );
+    await forkGuard(t, gameRef, gameData, data); // ktn seam S9
     const timers = await getTimersInTransaction(timerRef, t);
 
     // TODO: Validate actions.

@@ -1,14 +1,21 @@
 "use client";
 // The fork's layer around upstream's useDataUpdate: every event carries who did it,
 // one action can send several events, a second tap waits for the first, a failed
-// write says so, and undo only reverses the action the phone showed.
+// write says so, and undo only reverses the action the phone showed. Turn-flow
+// writes say what the phone saw (`expect`, src/fork/server/guard.ts), so the same
+// tap on two phones at once happens once.
 import { collection, getDocsFromServer, limit, orderBy, query } from "firebase/firestore";
-import { useRef, useState } from "react";
 import DBConnection from "../../data/DBConnection";
+import { use, useRef, useState } from "react";
+import { DatabaseFnsContext } from "../../context/contexts";
 import { useActionLog, useGameId, useViewOnly } from "../../context/dataHooks";
+import { useGameState } from "../../context/stateDataHooks";
 import { useDataUpdate } from "../../util/api/dataUpdate";
-import { TURN_BOUNDARIES } from "../../util/api/actionLog";
-import { useUndo } from "../../util/api/undo";
+import { ACTION_TURN_BOUNDARIES, TURN_BOUNDARIES } from "../../util/api/actionLog";
+import { updateGameData } from "../../util/api/handler";
+import { getOppositeHandler } from "../../util/api/opposite";
+import { updateActionLog } from "../../util/api/update";
+import { poster } from "../../util/api/util";
 import { ActionLog, Optional } from "../../util/types/types";
 import { Actor, groupKey, newestGroup } from "./logic";
 
@@ -45,13 +52,59 @@ function undoInstead(e: ActionLogEntry<GameUpdateData>, group: ActionLog, log: A
   return { action: "UNREVEAL_SUB_AGENDA", event: { subAgenda: e.data.event.subAgenda, target: resolve.data.event.target } } as unknown as GameUpdateData;
 }
 
+// What the phone saw when it was tapped, for the writes two phones tend to make
+// together (the server refuses a write whose game has moved on).
+function expectFor(e: GameUpdateData, state: GameState, log: ActionLog) {
+  const turn: ActionLog = [];
+  for (const x of log) { if (ACTION_TURN_BOUNDARIES.includes(x.data.action)) break; turn.push(x); }
+  switch (e.action) {
+    case "ADVANCE_PHASE":
+      return { phase: state.phase, round: state.round };
+    case "END_TURN":
+    case "PASS":
+      return { phase: state.phase, active: state.activeplayer };
+    case "SELECT_ACTION":
+      // Changing the action (one is already shown) replaces it, so only the first pick is guarded.
+      return { phase: state.phase, active: state.activeplayer, ...(turn.some((x) => x.data.action === "SELECT_ACTION") ? {} : { noAction: true }) };
+    case "START_COMBAT":
+      return { noCombat: true };
+  }
+  return undefined;
+}
+
+// Upstream's useUndo (src/util/api/undo.ts), with the server time of the entry
+// it means to undo, so two phones undoing at once undo it once.
+function useCheckedUndo() {
+  const databaseFns = use(DatabaseFnsContext);
+  return async (gameId: string, newest: number) => {
+    const now = Date.now();
+    const gameTime: number = databaseFns.getValue("timers.game") ?? 0;
+    const updatePromise = poster(`/api/${gameId}/dataUpdate`, { action: "UNDO", expect: { newest } }, now, gameTime);
+    databaseFns.update((stored) => {
+      const entry = (stored.actionLog ?? [])[0];
+      const handler = entry ? getOppositeHandler(stored, entry.data) : undefined;
+      if (!handler || !handler.validate()) return stored;
+      updateGameData(stored, handler.getUpdates());
+      updateActionLog(stored, handler, now, stored.timers?.game ?? 0);
+      if (stored.timers) stored.timers.paused = false;
+      return stored;
+    }, "CLIENT");
+    try {
+      return await updatePromise;
+    } catch {
+      databaseFns.reset();
+    }
+  };
+}
+
 export interface Toast { id: number; text: string; undo?: boolean; tone?: "error" }
 
 // `locked` runs instead of a write while the game is view-only (it has a password
 // this device hasn't entered); /play opens its password sheet.
 export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLog) => string, table = false, locked?: () => void) {
   const dataUpdate = useDataUpdate();
-  const undo = useUndo();
+  const undo = useCheckedUndo();
+  const state = useGameState();
   const gameId = useGameId();
   const viewOnly = useViewOnly();
   const log = useActionLog();
@@ -74,7 +127,8 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     const actor: Actor = { seat, as: as && as !== seat ? as : undefined, id: `${seat ?? "nobody"}:${Date.now()}`, ...(table ? { table: true } : {}) };
     let ok = true;
     for (const event of events) {
-      const res = await dataUpdate(withActor(event, actor));
+      const expect = expectFor(event, state, log);
+      const res = await dataUpdate(withActor((expect ? { ...event, expect } : event) as GameUpdateData, actor));
       if (res === undefined) { ok = false; break; }
     }
     if (ok) {
@@ -89,7 +143,7 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     busy.current = false;
     setPending(false);
     if (!ok) {
-      show({ text: `Not saved: ${label}. Check the connection and try again.`, tone: "error" });
+      show({ text: `Not saved: ${label}. Someone may have just done it, or the connection dropped; check and try again.`, tone: "error" });
     }
     return ok;
   }
@@ -97,10 +151,14 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
   // The newest entries as the server has them. Upstream's UNDO removes the
   // server's newest entry, which can be newer than what this phone has shown.
   async function serverNewest(): Promise<ActionLog> {
+    return (await serverNewestWithTimes()).entries;
+  }
+  async function serverNewestWithTimes() {
     const snap = await getDocsFromServer(query(collection(DBConnection.get(), "games", gameId, "actionLog"), orderBy("timestampMillis", "desc"), limit(10)));
     const fresh = snap.docs.map((d) => d.data() as ActionLogEntry<GameUpdateData>);
-    // Prefer the store's copies, which other helpers (whose turn it was) know.
-    return fresh.map((e) => log.find((l) => l.timestampMillis === e.timestampMillis && l.data.action === e.data.action) ?? e);
+    // Prefer the store's copies, which other helpers (whose turn it was) know;
+    // `times` keeps the server's own times, which a store copy may not have.
+    return { entries: fresh.map((e) => log.find((l) => l.timestampMillis === e.timestampMillis && l.data.action === e.data.action) ?? e), times: fresh.map((e) => e.timestampMillis) };
   }
 
   // Undo this phone's last action (from the toast), or the action a button was
@@ -114,8 +172,11 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
     setPending(true);
     try {
       let group: ActionLog;
+      let times: number[];
       try {
-        group = newestGroup(await serverNewest());
+        const newest = await serverNewestWithTimes();
+        group = newestGroup(newest.entries);
+        times = newest.times;
       } catch {
         show({ text: "Couldn't check the game for newer changes, so nothing was undone. Try again.", tone: "error" });
         return;
@@ -125,10 +186,13 @@ export function useWrite(seat: Optional<FactionId>, describe: (entries: ActionLo
         show({ text: `Someone acted since. Newest: ${describe(group)}` });
         return "someone-else" as const;
       }
-      for (const e of group) {
+      for (const [i, e] of group.entries()) {
         const instead = undoInstead(e, group, log);
-        if (instead) await dataUpdate(instead);
-        else await undo(gameId);
+        const res = instead ? await dataUpdate(instead) : await undo(gameId, times[i]!);
+        if (res === undefined) {
+          show({ text: "Not undone: someone may have just undone it, or the connection dropped. Check the log.", tone: "error" });
+          return;
+        }
       }
       if (target === lastId.current) lastId.current = undefined;
       show({ text: `Undid: ${describe(group)}` });

@@ -1,6 +1,7 @@
 "use client";
 // The end of the game: a banner when someone reaches the target, and the
 // game-over screen (results, points by source, time per player).
+import { useState } from "react";
 import { useActionLog, useOptions } from "../../context/dataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
@@ -22,27 +23,38 @@ export function useReachedTarget(factions: Ctx["factions"]) {
   const objectives = useObjectives();
   const target = options["victory-points"] ?? 10;
   const alliance = options["game-variant"]?.startsWith("alliance");
+  const points = (id: FactionId) => computeVPs(factions, id, objectives);
   const reached = Object.values(factions)
-    .filter((f): f is Faction => !!f && computeVPs(factions, f.id, objectives) >= target)
-    .map((f) => f.id);
-  return { target, reached, alliance };
+    .filter((f): f is Faction => !!f && points(f.id) >= target)
+    .map((f) => f.id)
+    .sort((a, b) => points(b) - points(a));
+  return { target, reached, alliance, points };
 }
 
 export function GameEndBanner(ctx: Ctx) {
   const { factions, short, w, gameId } = ctx;
-  const { target, reached, alliance } = useReachedTarget(factions);
+  const { target, reached, alliance, points } = useReachedTarget(factions);
+  const [asking, setAsking] = useState(false);
   if (!reached.length) return null;
   const who = reached.map((id) => short(id)).join(" and ");
+  const top = points(reached[0]!);
   return (
     <section className={cx(kit.card, styles.hero)} aria-label="Game end">
       <p className={kit.eyebrow}><span>{target} points</span></p>
-      <h2 className={kit.title}>{who} {reached.length > 1 ? "have" : "has"} {target} points</h2>
+      <h2 className={kit.title}>{reached.length > 1 ? `${who} have ${target} points or more` : `${who} has ${top} point${top === 1 ? "" : "s"}`}</h2>
       <p className={kit.sub}>The game ends when someone reaches {target}. If a score was a mistake, fix it and keep playing.</p>
       {alliance ? (
         <Rows><RowLink href={`/game/${gameId}/main`} external title="End the game on the table screen" /></Rows>
       ) : (
-        <Button kind="primary" size="tall" block disabled={w.pending}
-          onClick={() => w.write([Events.EndGameEvent()], "The game ended")}>End the game</Button>
+        asking ? (
+          <>
+            <p className={kit.confirm}>End the game with {short(reached[0]!)} the winner on {top} points?</p>
+            <div className={kit.buttons}>
+              <Button kind="primary" disabled={w.pending} onClick={() => w.write([Events.EndGameEvent()], "The game ended")}>End the game</Button>
+              <Button onClick={() => setAsking(false)}>Keep playing</Button>
+            </div>
+          </>
+        ) : <Button kind="primary" size="tall" block disabled={w.pending} onClick={() => setAsking(true)}>End the game</Button>
       )}
     </section>
   );
