@@ -25,6 +25,8 @@ import NowAgenda, { AgendaSheet } from "./NowAgenda";
 import { AgendaCardSheet } from "./AgendaCards";
 import { StatusAbilitySheet } from "./StatusAbilities";
 import { GiftSheet, SwapSheet } from "./StrategyAbilities";
+import { ObjectivesCard, ObjectivesSheet } from "./Objectives";
+import { TurnOrderCard } from "./TurnOrder";
 import { LawSheet, LawsCard } from "./Laws";
 import { PlayerEditSheet } from "./PlayerEdit";
 import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
@@ -304,6 +306,8 @@ function TableTab(ctx: Ctx) {
         ))}
       </Rows>
     </section>
+    <TurnOrderCard ctx={ctx} />
+    <ObjectivesCard ctx={ctx} />
     <GameCard ctx={ctx} />
     <section className={kit.card} aria-label="The game so far">
       <Rows flush>
@@ -413,6 +417,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
     case "give":
     case "reveal":
       return <StatusSheet sheet={sheet} close={close} ctx={ctx} />;
+    case "objectives":
+      return <ObjectivesSheet close={close} ctx={ctx} />;
     case "research":
       return <ResearchSheet faction={sheet.faction} follow={sheet.follow} close={close} ctx={ctx} />;
     case "combat":

@@ -30,6 +30,7 @@ export type Sheet =
   | { kind: "frontier"; faction: FactionId }
   | { kind: "skip"; faction: FactionId }
   | { kind: "results" }
+  | { kind: "objectives" }
   | { kind: "gameSettings" }
   | { kind: "photo"; id: string }
   | { kind: "puppets"; faction: FactionId }

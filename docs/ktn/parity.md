@@ -4,8 +4,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 
 | Status | Rows | Meaning |
 |---|---|---|
-| Native | 193 | Works in `/play`. |
-| Partial | 12 | Works in `/play`, with the gap named in Notes. |
+| Native | 196 | Works in `/play`. |
+| Partial | 9 | Works in `/play`, with the gap named in Notes. |
 | Table screen | 0 | `/play` links to upstream's table screen (`/game/<id>/main`) for it. |
 | Via More controls | 0 | `/play`'s "More controls" row opens upstream's faction page, which has it, but only on that player's turn. |
 | Missing | 0 | No way to do it from `/play`. |
@@ -248,15 +248,15 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Game log with per-entry list | src/components/GameLog/GameLog.tsx | Native | LogTab (filter by player, newest first, 300 entries) |
 | Undo (latest action or grouped actions) | src/components/UndoButton | Native | Toast Undo and LogTab Undo (undoNewest) |
 | Revert/edit arbitrary older log entries | GameLog.tsx | Not needed | Upstream can't either: its game log (GameLog.tsx) has no edit or undo controls, and its Undo takes back only the newest entry, as /play's does |
-| Objectives page (all objectives, reveal/hide/score by anyone) | objectives/objective-page.tsx, ObjectiveModal | Partial | Score/reveal for the current step only; no full objectives browser, no scorers list per objective |
+| Objectives page (all objectives, reveal/hide/score by anyone) | objectives/objective-page.tsx, ObjectiveModal | Native | Objectives.tsx: an "Objectives" row on the Table tab opens a sheet with Stage I, Stage II, Secrets (by player) and Other points. Each objective shows who scored it; anyone can reveal, hide (when unscored), score or take back for any player, with a confirming sentence. Hidden when OBJECTIVES is off. Check: views-check.cjs |
 | Per-faction page: Phase section (what this faction does now) | (faction)/[factionId]/elements/PhaseSection.tsx | Native | Now tab is seat-based |
 | Faction page: Techs tab (add/remove, tech tree) | elements/TechTab.tsx, src/components/TechTree | Native | TechTreeSheet.tsx: each colour by prerequisites, owned / can research / missing; add and remove via PlayerEdit. Check: parity-player-check.cjs |
 | Faction page: Planets tab (claim, exhaust, attach) | elements/PlanetTab.tsx | Native | Claim and lose in PlayerEdit / claim sheet; attachments via MapTab. Planet exhaustion isn't tracked (Shawn, 2026-10-18) |
-| Faction page: Objectives tab | elements/ObjectiveTab.tsx | Partial | PlayerSheet "Points"; no per-objective scoring list |
+| Faction page: Objectives tab | elements/ObjectiveTab.tsx | Native | The Objectives sheet's Secrets tab lists each player's scored secrets (score or take back); public objectives list their scorers. Check: views-check.cjs |
 | Faction page: leaders, abilities, units, promissories | FactionContent / FactionPanel | Partial | PlayerSheet shows leaders and abilities; hero play via NowComponent; no unit stats, no promissory tracking beyond component sheet |
 | Faction links nav (switch faction) | FactionLinks.tsx | Native | Race / Table tab to PlayerSheet |
 | Summary column (speaker order, scores, faction summaries) | main/summary-column/SummaryColumn.tsx | Native | Race card, Table tab |
-| Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Partial | Speaker tag in Table tab; no separate initiative/voting order views |
+| Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Native | TurnOrder.tsx: a "Turn order" card on the Table tab, opening on the phase's order (speaker, initiative or voting) with the others a tap away. Voting order uses logic.ts votingOrder, Hack Election included. Check: views-check.cjs |
 | Change speaker | Footer.tsx | Native | NowCards (Politics) SetSpeaker; no free-form change otherwise |
 | Tyrant (Twilight's Fall) | Footer.tsx | Native | A card on the Table tab (section 8). |
 | Update techs / objectives / planets / other (global modals) | Footer.tsx modals | Partial | Planet claim, research, relic, expedition in sheets; no free-edit modal for objectives or planets |
