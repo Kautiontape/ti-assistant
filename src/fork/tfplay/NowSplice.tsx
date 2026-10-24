@@ -4,6 +4,7 @@
 // face up at the table; this records which, then who takes each in pick order.
 // Upstream's version is src/components/Splice/SpliceModal.tsx.
 import { useState } from "react";
+import { Optional } from "../../util/types/types";
 import { useActionLog, useCurrentTurn, useGenomes, useTechs } from "../../context/dataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
 import { Events } from "../../util/api/events";
@@ -83,7 +84,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
               onChange={(on) => w.write([on ? Events.JoinSpliceEvent(id) : Events.LeaveSpliceEvent(id)], on ? `${short(id)} joined the splice` : `${short(id)} left the splice`, id)} />
           ))}
           {type === "ABILITY" ? (
-            <Switch label={`${short(initiator)} takes an extra card`} detail="Magus: 3 resources or influence; picks last instead of first" checked={s.participants.includes(initiator)}
+            <Switch label={`${short(initiator)} takes an extra ability`} detail="Magus: spend 3 resources and 3 influence to turn one more ability up; after everyone has chosen, it passes back for another" checked={s.extra}
               onChange={(on) => w.write([on ? Events.JoinSpliceEvent(initiator) : Events.LeaveSpliceEvent(initiator)], on ? `${short(initiator)} will take an extra ability` : `${short(initiator)} won't take an extra ability`, initiator)} />
           ) : null}
           {genomeSwitch}
@@ -214,4 +215,53 @@ export function SpliceStatus({ card, active, ctx }: { card: string; active: Fact
       {open ? <SpliceSheet type={type} initiator={active} ctx={ctx} close={() => setOpen(false)} /> : null}
     </section>
   );
+}
+
+// Ending the turn (or going again, or passing) while the splice has picks left
+// would strand them: the sheet goes away with the turn. Call check() before
+// the write; when it returns true the guard sheet (render `node`) is showing
+// and the write waits for "End the turn anyway".
+export function useSpliceGuard(active: Optional<FactionId>, selected: Optional<string>, ctx: Ctx) {
+  const currentTurn = useCurrentTurn();
+  const order = useOrderedFactionIds("SPEAKER", undefined, active);
+  const [ask, setAsk] = useState<{ verb: string; go: () => void }>();
+  const [sure, setSure] = useState(false);
+  const [splice, setSplice] = useState(false);
+  const type = selected ? SPLICE_CARDS[selected] : undefined;
+  const s = type && active ? spliceState(currentTurn, type, active, order, false) : undefined;
+  // Not started is fine (nothing is stranded); started with picks left is not.
+  const left = s && s.revealed.length > 0 ? s.left : [];
+  const { short } = ctx;
+  const done = () => { setAsk(undefined); setSure(false); };
+  const one = type ? TYPE_NAMES[type].one : "";
+  const a = /^[aeiou]/.test(one) ? "an" : "a";
+  const node = type && active ? (
+    <>
+      {ask && !splice ? (
+        <Sheet title="The splice isn't finished" close={done}>
+          <p className={kit.confirm}>{left.map((id, i) => <span key={i}>{i ? " " : ""}{short(id)} still picks {a} {one}.</span>)}</p>
+          {sure ? (
+            <>
+              <p className={kit.sub}>{left.length > 1 ? "They" : short(left[0])} won&apos;t pick, and the cards nobody took go back. Do this only if the table is dropping the splice.</p>
+              <Button kind="primary" block disabled={ctx.w.pending} onClick={() => { const go = ask.go; done(); go(); }}>{ask.verb} without finishing it</Button>
+              <Button block onClick={() => setSure(false)}>Keep going with the splice</Button>
+            </>
+          ) : (
+            <>
+              <Button kind="primary" size="tall" block onClick={() => setSplice(true)}>Open the splice</Button>
+              <Button kind="quiet" block onClick={() => setSure(true)}>{ask.verb} anyway</Button>
+            </>
+          )}
+        </Sheet>
+      ) : null}
+      {splice ? <SpliceSheet type={type} initiator={active} ctx={ctx} close={() => { setSplice(false); done(); }} /> : null}
+    </>
+  ) : null;
+  // verb: what the button does ("End the turn", "Go again", "Pass").
+  const check = (verb: string, go: () => void) => {
+    if (!left.length) return false;
+    setAsk({ verb, go });
+    return true;
+  };
+  return { check, node, left };
 }

@@ -4,7 +4,8 @@
 // change the chosen action, take another action, Puppets on a String, Ral Nel's
 // unpass, and the extras recorded when passing.
 import { useState } from "react";
-import { useActionCard, useLeader, usePlanets } from "../../context/dataHooks";
+import { useActionCard, useCurrentTurn, useLeader, usePlanets } from "../../context/dataHooks";
+import { getSelectedActionFromLog } from "../../util/api/data";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useNewSpeaker } from "../../context/actionLogDataHooks";
 import { useOrderedFactionIds } from "../../context/gameDataHooks";
@@ -13,6 +14,7 @@ import { Events } from "../../util/api/events";
 import { Optional } from "../../util/types/types";
 import { useOpenCombat } from "./Combat";
 import type { Ctx } from "./ui";
+import { useSpliceGuard } from "../tfplay/NowSplice";
 import { Button, Chip, Choices, kit, RowAction, RowLink, Rows, Sheet as KitSheet, Switch } from "../ui/kit";
 
 // Ending a turn can need the speaker first: Politics' primary picks a new one
@@ -30,7 +32,10 @@ export function OtherEndings({ active, selected, ctx }: { active: FactionId; sel
   const block = useEndTurnBlock(selected);
   // Like End turn: an open combat gets its result first.
   const combat = useOpenCombat();
+  const spliceGuard = useSpliceGuard(active, selected, ctx); // an unfinished splice (tfall)
+  const again = () => w.write([Events.EndTurnEvent({ samePlayer: true })], `${short(active)} took another action`, active);
   return (
+    <>
     <Rows label="Other ways to end the turn">
       {selected !== "Pass" ? (
         <RowAction verb="Change" disabled={w.pending} title="Change the action" detail={`Undo choosing ${selected === "Tactical" || selected === "Component" ? `a ${selected.toLowerCase()} action` : selected}`}
@@ -38,10 +43,12 @@ export function OtherEndings({ active, selected, ctx }: { active: FactionId; sel
       ) : null}
       {selected !== "Pass" ? (
         <RowAction verb="Go again" disabled={w.pending || !!block} title="Take another action" detail="This action is done; they take another before the next player"
-          onClick={() => (combat ? open({ kind: "endCombat", before: "they go again" }) : w.write([Events.EndTurnEvent({ samePlayer: true })], `${short(active)} took another action`, active))} />
+          onClick={() => (combat ? open({ kind: "endCombat", before: "they go again" }) : spliceGuard.check("Go again", again) || again())} />
       ) : null}
       {puppets && passed.length ? <RowLink onClick={() => open({ kind: "puppets", faction: active })} title="Puppets on a String" detail="A passed player takes the next turn" /> : null}
     </Rows>
+    {spliceGuard.node}
+    </>
   );
 }
 
@@ -103,8 +110,10 @@ export function PassSheet({ faction: id, close, ctx }: { faction: FactionId; clo
   const faunusTargets = hasFaunus ? Object.values(planets).filter((p): p is Planet => !!p && !p.home && !p.attributes.includes("legendary") && !(p.attachments ?? []).length && p.owner !== id)
     .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)) : [];
   const combat = useOpenCombat();
-  const pass = async () => {
+  const spliceGuard = useSpliceGuard(id, getSelectedActionFromLog(useCurrentTurn()), ctx); // a splice they started (tfall)
+  const pass = async (skipGuard?: boolean) => {
     if (combat) { ctx.open({ kind: "endCombat", before: "they pass" }); return; }
+    if (!skipGuard && spliceGuard.check("Pass", () => pass(true))) return;
     const events: GameUpdateData[] = [Events.SelectActionEvent("Pass")];
     if (faunus) events.push(Events.ClaimPlanetEvent(id, faunus as PlanetId));
     if (prove) events.push(Events.ScoreObjectiveEvent(id, "Prove Endurance"));
@@ -124,7 +133,8 @@ export function PassSheet({ faction: id, close, ctx }: { faction: FactionId; clo
             options={[{ value: "none", label: "No planet" }, ...faunusTargets.slice(0, 30).map((p) => ({ value: p.id as string, label: p.name, note: p.owner ? `${short(p.owner)}'s` : undefined }))]} />
         </div>
       ) : null}
-      <Button kind="primary" size="tall" block disabled={w.pending} onClick={pass}>Pass</Button>
+      <Button kind="primary" size="tall" block disabled={w.pending} onClick={() => pass()}>Pass</Button>
+      {spliceGuard.node}
     </KitSheet>
   );
 }

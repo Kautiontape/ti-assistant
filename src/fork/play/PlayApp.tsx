@@ -15,6 +15,7 @@ import styles from "./play.module.scss";
 import { useWrite } from "./useWrite";
 import NowEdict from "../tfplay/NowEdict"; // Twilight's Fall (tfall)
 import { TfSetupCard, TyrantCard } from "../tfplay/TfTable";
+import { useRegisterTfNames } from "../tfplay/TfThings";
 import NowAction from "./NowAction";
 import { CombatBanner, EndCombatSheet, StartCombatSheet } from "./Combat";
 import { ActionCardButton, ActionCardSheet } from "./NowActionCards";
@@ -85,6 +86,7 @@ export default function PlayApp() {
   const isFaction = (id: string) => !!factions[id as FactionId];
   const owners = useMemo(() => turnOwners(log, state.activeplayer, state.phase), [log, state.activeplayer, state.phase]);
   const subject = (e: ActionLogEntry<GameUpdateData>) => subjectOf(e, owners.get(e));
+  useRegisterTfNames(); // log and Undo text use card names, not ids (tfall)
   const describe = (entries: ActionLog) => {
     const parts = [...entries].reverse().map((e) => {
       const s = sentence(e, short, isFaction);

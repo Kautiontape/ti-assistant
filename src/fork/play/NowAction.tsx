@@ -19,7 +19,7 @@ import styles from "./play.module.scss";
 import { useNow, HelpBanner, type Ctx } from "./ui";
 import { Button, CardTag, Chip, cx, kit, pcolor, RowLink, Rows, Swatch } from "../ui/kit";
 import { followEvents } from "../tfplay/tf";
-import { SpliceStatus } from "../tfplay/NowSplice";
+import { SpliceStatus, useSpliceGuard } from "../tfplay/NowSplice";
 
 export default function NowAction(ctx: Ctx) {
   const { factions, short, seat, helping, setHelping, w, open } = ctx;
@@ -35,6 +35,7 @@ export default function NowAction(ctx: Ctx) {
   const te = useOptions().expansions.includes("THUNDERS EDGE");
   // Hooks stay above the early return below.
   const endBlock = useEndTurnBlock(getSelectedActionFromLog(currentTurn));
+  const spliceGuard = useSpliceGuard(active, getSelectedActionFromLog(currentTurn), ctx); // an unfinished splice (tfall)
   if (!active) {
     return (
       <section className={kit.card} aria-label="Everyone has passed">
@@ -113,8 +114,11 @@ export default function NowAction(ctx: Ctx) {
               <Button kind="primary" size="tall" block disabled={w.pending || !!endBlock}
                 onClick={async () => {
                   if (combat) { open({ kind: "endCombat", before: "the turn ends" }); return; }
-                  await w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
+                  const end = () => w.write([Events.EndTurnEvent({})], `${short(active)} ended their turn`, active);
+                  if (spliceGuard.check("End the turn", end)) return;
+                  await end();
                 }}>End turn</Button>
+              {spliceGuard.node}
               <OtherEndings active={active} selected={selected} ctx={ctx} />
             </>
           )}

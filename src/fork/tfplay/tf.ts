@@ -48,7 +48,9 @@ export function cardEvent(type: TfType, id: string): CardEvent {
 }
 
 export interface SpliceState {
-  participants: FactionId[]; // everyone in the splice, the initiator first
+  participants: FactionId[]; // everyone in the splice, the initiator first (always listed; use `extra` for Magus)
+  extra: boolean; // Magus' extra card: upstream records it as the initiator joining (JOIN_SPLICE); they pick first and again last
+  left: FactionId[]; // who still has a pick to make, in order (Thieve's thief last)
   pickers: FactionId[]; // pick order
   current?: FactionId; // who picks now
   revealed: string[]; // cards turned face up, in order
@@ -65,8 +67,8 @@ export interface SpliceState {
 // Upstream's SpliceModalContent (src/components/Splice/SpliceModal.tsx): reveal
 // participants + 2 cards (2 more with Engineer, 3 more with Research Genome);
 // the initiator picks first, then the others counter-clockwise (clockwise after
-// Reverse). With Magus' extra card the initiator also joins, and picks last
-// instead of first. `speakerOrder` is useOrderedFactionIds("SPEAKER", undefined, initiator).
+// Reverse). With Magus' extra card the initiator also joins: one more card is
+// turned up, and after everyone has picked it passes back to them for another. `speakerOrder` is useOrderedFactionIds("SPEAKER", undefined, initiator).
 export function spliceState(currentTurn: ActionLog, type: SpliceType, initiator: FactionId, speakerOrder: FactionId[], allPlayers: boolean): SpliceState {
   let joined = new Set(getSpliceParticipants(currentTurn));
   if (allPlayers) { joined = new Set(speakerOrder); joined.delete(initiator); }
@@ -82,8 +84,9 @@ export function spliceState(currentTurn: ActionLog, type: SpliceType, initiator:
   const techs = getLogEntries<AddTechData>(currentTurn, "ADD_TECH").map((e) => ({ faction: e.data.event.faction, tech: e.data.event.tech }));
   const index = gained.length + techs.length;
   const total = joined.size + 2 + (engineer && index === 0 ? 2 : 0) + (genome ? 3 : 0);
+  const extra = joined.has(initiator);
   const pickers = [initiator, ...local.filter((id) => joined.has(id))];
-  if (joined.has(initiator)) { pickers.shift(); pickers.push(initiator); }
+  if (extra) { pickers.shift(); pickers.push(initiator); }
   // Thieve: after the last pick, the thief takes one more card. Upstream keeps
   // offering the thief the pick; here it ends after their one card.
   const thieve = allPlayers ? undefined : getActionCardTargets(currentTurn, "Thieve")[0];
@@ -91,7 +94,8 @@ export function spliceState(currentTurn: ActionLog, type: SpliceType, initiator:
   const takenBy: Record<string, FactionId> = {};
   for (const e of gained) takenBy[cardId(e.data.event)] = e.data.event.faction;
   return {
-    participants: [initiator, ...local.filter((id) => joined.has(id) && id !== initiator)],
+    participants: [initiator, ...local.filter((id) => joined.has(id) && id !== initiator)], extra,
+    left: [...pickers, ...(thief ? [thief] : [])].slice(index),
     pickers, current: pickers[index] ?? (index === pickers.length ? thief : undefined), revealed: revealedEntries.map((e) => cardId(e.data.event)), takenBy, techs, total, engineer, reverse,
     genome, thief, finished: index >= pickers.length,
   };
@@ -104,21 +108,26 @@ export function gainedIn(log: ActionLog, faction: FactionId) {
 
 export const ownerOf = (cards: Partial<Record<string, { owner?: FactionId }>>, id: string): Optional<FactionId> => cards[id]?.owner;
 
+// Card and edict names by id, filled by useRegisterTfNames (TfThings.tsx) so log
+// sentences read "E-Res Siphons", not the internal id "ERes Siphons".
+export const tfNames = new Map<string, string>();
+const nm = (id: string) => tfNames.get(id) ?? id;
+
 // Log sentences for Twilight's Fall actions, after the player's name (/play's
 // sentence() in src/fork/play/logic.ts falls back to this). Card ids are names.
 export function tfSentence(data: GameUpdateData, name: (id: string) => string): string | null {
   const ev = ((data as { event?: Record<string, unknown> }).event ?? {}) as Record<string, any>;
   switch (data.action) {
-    case "GAIN_TF_CARD": return ev.prevFaction ? `took ${cardId(ev as CardEvent)} from ${name(ev.prevFaction)}` : `gained ${cardId(ev as CardEvent)}`;
-    case "LOSE_TF_CARD": return `discarded ${cardId(ev as CardEvent)}`;
-    case "REVEAL_TF_CARD": return `${cardId(ev as CardEvent)} turned up for a splice`;
-    case "HIDE_TF_CARD": return `${cardId(ev as CardEvent)} went back from the splice`;
+    case "GAIN_TF_CARD": return ev.prevFaction ? `took ${nm(cardId(ev as CardEvent))} from ${name(ev.prevFaction)}` : `gained ${nm(cardId(ev as CardEvent))}`;
+    case "LOSE_TF_CARD": return `discarded ${nm(cardId(ev as CardEvent))}`;
+    case "REVEAL_TF_CARD": return `${nm(cardId(ev as CardEvent))} turned up for a splice`;
+    case "HIDE_TF_CARD": return `${nm(cardId(ev as CardEvent))} went back from the splice`;
     case "JOIN_SPLICE": return `${name(ev.factionId)} joined the splice`;
     case "LEAVE_SPLICE": return `${name(ev.factionId)} left the splice`;
-    case "USE_GENOME": return `used ${ev.genomeId}`;
+    case "USE_GENOME": return `used ${nm(ev.genomeId)}`;
     case "UNDO_GENOME": return null;
-    case "CHOOSE_EDICT": return `resolved the edict ${ev.edictId}`;
-    case "HIDE_EDICT": return `took back the edict ${ev.edictId}`;
+    case "CHOOSE_EDICT": return `resolved the edict ${nm(ev.edictId)}`;
+    case "HIDE_EDICT": return `took back the edict ${nm(ev.edictId)}`;
     case "SET_TYRANT": return ev.newTyrant ? `${name(ev.newTyrant)} is the tyrant` : "Nobody is the tyrant";
     case "CHOOSE_TF_FACTION": return ev.subFaction ? `${name(ev.factionId)} uses ${ev.type === "Planet" ? `the ${ev.subFaction} home system` : `the ${ev.subFaction} starting units`}` : null;
     default: return null;

@@ -6,7 +6,7 @@ import { useAbilities, useEdicts, useGenomes, useParadigms, useUpgrades } from "
 import { useFactions } from "../../context/factionDataHooks";
 import { Optional } from "../../util/types/types";
 import { kit, type Thing } from "../ui/kit";
-import type { TfType } from "./tf";
+import { tfNames, type TfType } from "./tf";
 
 export const THING_KIND: Record<TfType, string> = { ABILITY: "tfAbility", GENOME: "tfGenome", UNIT_UPGRADE: "tfUpgrade", PARADIGM: "tfParadigm" };
 const TECH_COLOUR: Record<string, string> = { GREEN: "Biotic", BLUE: "Propulsion", YELLOW: "Cybernetic", RED: "Warfare" };
@@ -29,6 +29,12 @@ export function useTfCards() {
   const byType = { ABILITY: abilities, GENOME: genomes, UNIT_UPGRADE: upgrades, PARADIGM: paradigms } as Record<TfType, Partial<Record<string, { id: string; name: string; owner?: FactionId; origin?: FactionId }>>>;
   const name = (type: TfType, id: string) => byType[type][id]?.name ?? id;
   return { byType, name };
+}
+
+// Teaches log sentences (tfSentence) the cards' and edicts' names; call once, high up.
+export function useRegisterTfNames() {
+  const lists = [useAbilities(), useGenomes(), useUpgrades(), useParadigms(), useEdicts()] as Record<string, { id: string; name: string } | undefined>[];
+  for (const l of lists) for (const c of Object.values(l)) if (c?.name) tfNames.set(c.id, c.name);
 }
 
 export function useTfThingRender() {
