@@ -33,6 +33,9 @@ import { PassSheet, PuppetsSheet, SkipTurnSheet } from "./TurnControls";
 import { ResultsSheet } from "./Results";
 import { GameCard, GameSettingsSheet } from "./GameInfo";
 import { PhotoReminder, PhotosCard, PhotoSheet } from "./Photos";
+import { NotesCard, NotesSheet } from "../notes/NotesSheet";
+import { SeatPanel } from "../notes/SeatPanel";
+import { useSeatKey } from "../notes/seatClient";
 import { TechTreeSheet } from "./TechTreeSheet";
 import { FrontierSheet } from "./Frontier";
 import { ClockCard, PausedBanner, useUpstreamTimers } from "./Clock";
@@ -308,6 +311,7 @@ function TableTab(ctx: Ctx) {
     </section>
     <TurnOrderCard ctx={ctx} />
     <ObjectivesCard ctx={ctx} />
+    <NotesCard ctx={ctx} />
     <GameCard ctx={ctx} />
     <section className={kit.card} aria-label="The game so far">
       <Rows flush>
@@ -376,11 +380,13 @@ function DeviceSheet({ close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & De
   const { factions, short } = ctx;
   const order = useOrderedFactionIds("SPEAKER");
   const [theme, setTheme] = useTheme();
+  const seatKey = useSeatKey(ctx.gameId, ctx.seat); // claims the seat on the server; acting never waits for it
   return (
     <KitSheet title="This device" close={close}>
       <Choices label="Whose phone is this?" value={ctx.seat ?? "watching"} onChange={(v) => setSeat(v === "watching" ? undefined : v as FactionId)}
         options={[...order.map((id) => ({ value: id as string, label: <Chip faction={id} factions={factions} short={short} small /> })), { value: "watching", label: "Nobody's: just watching" }]} />
-      <p className={kit.sub}>Your seat decides what this phone leads with. It doesn't limit what you can do.</p>
+      <p className={kit.sub}>Your seat decides what this phone leads with and whose private notes it can read. It doesn't limit what you can do.</p>
+      {ctx.seat ? <SeatPanel seatKey={seatKey} short={short} seat={ctx.seat} /> : null}
       <div className={kit.section}>
         <Choices label="Show actions" value={prefs.always ? "always" : "seat"} onChange={(v) => setPrefs({ always: v === "always" })}
           options={[{ value: "seat", label: "For this seat's turn", note: "others tap “Do it for…”" }, { value: "always", label: "Always, for whoever is up", note: "a shared iPad or laptop" }]} />
@@ -467,6 +473,8 @@ function Sheets({ sheet, close, setSeat, prefs, setPrefs, wide, ...ctx }: Ctx & 
       return <SetupChoiceSheet faction={sheet.faction} close={close} ctx={ctx} />;
     case "unlock":
       return <UnlockSheet close={close} ctx={ctx} />;
+    case "notes":
+      return <NotesSheet close={close} ctx={ctx} />;
     case "seat":
       return <DeviceSheet close={close} setSeat={setSeat} prefs={prefs} setPrefs={setPrefs} wide={wide} {...ctx} />;
     case "claim": {

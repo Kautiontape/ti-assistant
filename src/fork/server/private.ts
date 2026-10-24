@@ -5,6 +5,7 @@ import "server-only";
 // same TTL policy as games; setup-ttl.sh).
 import { Timestamp } from "firebase-admin/firestore";
 import { getFirestoreAdmin } from "../../util/server";
+import type { SeatRecord } from "../notes/model";
 
 export type DiscordEvent = "scoreboard" | "phase" | "objectives" | "agenda" | "combat" | "photos" | "final";
 export const DISCORD_EVENTS: DiscordEvent[] = ["scoreboard", "phase", "objectives", "agenda", "combat", "photos", "final"];
@@ -27,6 +28,7 @@ export type GamePrivate = {
   deleteAt?: Timestamp;
   discord?: DiscordState;
   exportedAt?: number;
+  seats?: Record<string, SeatRecord>; // factionId -> who holds the seat (seats.ts); hashes only
   exportedUpdate?: number; // the game's lastUpdate when it was exported
 };
 

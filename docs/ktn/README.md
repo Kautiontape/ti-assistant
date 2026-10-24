@@ -3,7 +3,8 @@
 This is the Kautiontape fork of [ti-assistant/ti-assistant](https://github.com/ti-assistant/ti-assistant),
 served at https://ti.kautiontape.com from ktn. `ktn` is the deployed (default)
 branch; `main` is an exact mirror of upstream. Build, deploy and sync are in
-[ci-cd.md](ci-cd.md).
+[ci-cd.md](ci-cd.md). Seat keys and private notes (`app/api/fork/seat/`,
+`app/api/fork/notes/`, `src/fork/notes/`) are in [seats-and-notes.md](seats-and-notes.md).
 
 ## The rule
 
