@@ -1,11 +1,12 @@
 "use client";
 // What a popout shows for each game thing a Cite or CardTag names: its kind,
 // name and text, from upstream's data hooks.
-import { useActionCards, useAgendas, useAllPlanets, useAttachments, useComponents, useLeaders, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
+import { useActionCards, useAgendas, useAllPlanets, useAttachments, useComponents, useLeaders, useRelics, useStrategyCards, useTechs, useUpgrades } from "../../context/dataHooks";
 import { useFactions } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Optional } from "../../util/types/types";
 import { kit, PopoutProvider, type Thing } from "../ui/kit";
+import { abilityText, statText, unitRows } from "./units";
 import { useTfThingRender } from "../tfplay/TfThings";
 
 const TECH_KIND: Record<string, string> = { GREEN: "Biotic technology", BLUE: "Propulsion technology", YELLOW: "Cybernetic technology", RED: "Warfare technology", UPGRADE: "Unit upgrade" };
@@ -32,6 +33,7 @@ export function useThingRender() {
   const planets = useAllPlanets();
   const factions = useFactions();
   const components = useComponents();
+  const upgrades = useUpgrades();
   return (t: Thing): Info => {
     switch (t.kind) {
       case "strategyCard": {
@@ -88,6 +90,22 @@ export function useThingRender() {
         const [fid, name] = t.id.split("|");
         const a = factions[fid as FactionId]?.abilities?.find((x) => x.name === name);
         return a ? { kind: "Faction ability", title: a.name, body: <Text>{a.description}</Text> } : undefined;
+      }
+      case "unit": {
+        // id is "faction|unit or upgrade key"
+        const [fid, key] = t.id.split("|");
+        const f = factions[fid as FactionId];
+        const u = f && unitRows(f, techs, (n) => upgrades[n as TFUnitUpgradeId]?.owner === fid).find((r) => r.key === key);
+        if (!u) return;
+        const st = u.stats;
+        return { kind: `${u.source === "upgrade" ? "Unit upgrade" : u.upgraded ? "Upgraded faction unit" : "Faction unit"} · ${u.type}`, title: u.name,
+          body: <><Facts items={[`Cost ${statText(st.cost)}`, `Combat ${statText(st.combat)}`, st.move ? `Move ${st.move}` : undefined, st.capacity ? `Capacity ${st.capacity}` : undefined]} />
+            {u.abilities.length ? <Text>{u.abilities.map(abilityText).join("\n")}</Text> : null}{u.text ? <Text>{u.text}</Text> : null}</> };
+      }
+      case "promissory": {
+        const [fid, name] = t.id.split("|");
+        const n = factions[fid as FactionId]?.promissories?.find((x) => x.name === name);
+        return n ? { kind: "Promissory note", title: n.name, body: <Text>{n.description}</Text> } : undefined;
       }
       case "breakthrough": {
         const b = factions[t.id as FactionId]?.breakthrough;

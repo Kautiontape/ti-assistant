@@ -152,8 +152,8 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Feature | Upstream file | /play status | Notes |
 |---|---|---|---|
 | Faction panel: leaders (agent/commander/hero) with ready/exhaust/purge | src/components/FactionPanel.tsx l.566-740 | Native | PlayerEdit.tsx "Leaders": exhaust and ready agents, unlock commanders and heroes, purge and unpurge heroes. Check: parity-player-check.cjs |
-| Faction techs, unit upgrades, unit stats | FactionPanel l.756, 1023, 1097 | Partial | PlayerSheet lists techs by colour (cite popouts). Tech add/remove: ResearchSheet / Undo only. No unit stat blocks. |
-| Faction abilities, promissory notes, genomes, paradigms | FactionPanel l.794-977 | Partial | Abilities listed in PlayerSheet (popout text), and Twilight's Fall genomes and paradigms (section 8); promissory notes not shown. |
+| Faction techs, unit upgrades, unit stats | FactionPanel l.756, 1023, 1097 | Native | PlayerSheet lists techs by colour (cite popouts) and a Units table (units.ts): faction units and researched unit upgrades with cost, combat, move and capacity, each name opening its abilities. Twilight's Fall upgrades that change a unique unit (Echo of Ascension, Eidolon, Valefar Prime) are applied. Upstream has no data for the standard units, so those are not listed. Tech add/remove: ResearchSheet / Undo. Check: units-check.cjs, units-logic-check.mjs |
+| Faction abilities, promissory notes, genomes, paradigms | FactionPanel l.794-977 | Native | Abilities and the faction's own promissory notes listed in PlayerSheet (popout text), and Twilight's Fall genomes and paradigms (section 8). Check: units-check.cjs |
 | Planets owned with resources/influence totals, attachments, exhaust | Sidebars; PlanetRow; PlanetTab | Native | PlayerSheet lists planets and totals; the map tab shows owners and attachments. Exhausting planets and structures is not tracked (Shawn, 2026-10-18) |
 | Add / remove tech manually | TechTab l.73, 104 | Native | PlayerEdit.tsx "Technology": add (research sheet) and remove. Check: parity-player-check.cjs |
 | Claim/unclaim planet manually | PlanetTab l.51, 80; PlanetPanel | Native | Take from the claim sheet or map; lose in PlayerEdit.tsx "Planets". Check: parity-player-check.cjs |
@@ -253,7 +253,7 @@ This lists what a player can do or see in upstream TI Assistant, and whether the
 | Faction page: Techs tab (add/remove, tech tree) | elements/TechTab.tsx, src/components/TechTree | Native | TechTreeSheet.tsx: each colour by prerequisites, owned / can research / missing; add and remove via PlayerEdit. Check: parity-player-check.cjs |
 | Faction page: Planets tab (claim, exhaust, attach) | elements/PlanetTab.tsx | Native | Claim and lose in PlayerEdit / claim sheet; attachments via MapTab. Planet exhaustion isn't tracked (Shawn, 2026-10-18) |
 | Faction page: Objectives tab | elements/ObjectiveTab.tsx | Native | The Objectives sheet's Secrets tab lists each player's scored secrets (score or take back); public objectives list their scorers. Check: views-check.cjs |
-| Faction page: leaders, abilities, units, promissories | FactionContent / FactionPanel | Partial | PlayerSheet shows leaders and abilities; hero play via NowComponent; no unit stats, no promissory tracking beyond component sheet |
+| Faction page: leaders, abilities, units, promissories | FactionContent / FactionPanel | Native | PlayerSheet shows leaders, abilities, units and the faction's promissory notes; hero play via NowComponent. Upstream records only Alliance, Support for the Throne and Political Secret for other players' notes, so only those show as held (in their play area). |
 | Faction links nav (switch faction) | FactionLinks.tsx | Native | Race / Table tab to PlayerSheet |
 | Summary column (speaker order, scores, faction summaries) | main/summary-column/SummaryColumn.tsx | Native | Race card, Table tab |
 | Speaker / initiative / voting order display | src/components/Footer/Footer.tsx | Native | TurnOrder.tsx: a "Turn order" card on the Table tab, opening on the phase's order (speaker, initiative or voting) with the others a tap away. Voting order uses logic.ts votingOrder, Hack Election included. Check: views-check.cjs |
@@ -323,5 +323,5 @@ Built on branch `draft/twilights-fall` (2026-10-20) and checked on phones agains
 What's left, by the rows above that aren't Native or Not needed:
 
 1. Component actions still recorded without their effect: Executive Order, Planetary Rigs, Sins of the Father, Dannel of the Tenth / Blessing of the Yin, Riftwalker Meian / Changing the Ways, Transpose, Create / Fabrication / Forge Legend, Unravel.
-2. Read-only views: no unit stats or promissory notes in the player sheet, no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
+2. Read-only views: no browser of every objective with its scorers, no initiative or voting-order view, no free edit of objectives.
 3. Twilight's Fall: Thieve and Research Genome in a splice, and recording a genome's use.

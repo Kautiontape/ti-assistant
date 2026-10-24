@@ -1,11 +1,12 @@
 "use client";
 // A player's sheet: what they hold and how they got their points, from data
 // upstream already tracks. Each component's name opens its text in a popout.
-import { useActionCards, useActionLog, useAgendas, useLeaders, usePlanets, useRelics, useStrategyCards, useTechs } from "../../context/dataHooks";
+import { useActionCards, useActionLog, useAgendas, useLeaders, usePlanets, useRelics, useStrategyCards, useTechs, useUpgrades } from "../../context/dataHooks";
 import { usePassedFactionIds } from "../../context/factionDataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { useSpeaker } from "../../context/stateDataHooks";
 import { getStrategyCardsForFaction } from "../../util/helpers";
+import { statText, unitRows } from "./units";
 import { combats, pointsBySource, SFTT } from "./logic";
 import { TfOwnedCards } from "../tfplay/TfCards";
 import styles from "./play.module.scss";
@@ -41,6 +42,7 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const passed = usePassedFactionIds();
   const actionCards = useActionCards();
   const log = useActionLog();
+  const upgrades = useUpgrades();
   const f = factions[id];
   if (!f) return null;
 
@@ -59,6 +61,8 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
   const won = fought.filter((c) => c.winner === id).length;
   const played = playedActionCards(log, id, new Set(Object.values(actionCards).map((c) => c?.name ?? "")));
   const playArea = [...throneFrom.map((g) => `${short(g)}'s Support for the Throne`), ...alliances.map((a) => `${short(a)}'s Alliance`)];
+  // Upgrades are technologies: hidden with them when the game doesn't track technology.
+  const units = unitRows(f, techs, (n) => upgrades[n as TFUnitUpgradeId]?.owner === id).filter((u) => u.source !== "upgrade" || ctx.tracks("TECHS"));
   const cardIdByName = (name: string) => Object.values(actionCards).find((c) => c?.name === name)?.id ?? name;
 
   return (
@@ -140,6 +144,30 @@ export function PlayerSheet({ faction: id, close, ctx }: { faction: FactionId; c
       {ctx.tracks("PLANETS") ? (
         <Section title="Planets" count={`${owned.length} · ${res} res · ${inf} inf`}>
           <Items items={owned.map((p) => ({ thing: { kind: "planet", id: p.id }, name: p.attachments?.length ? `${p.name} (${p.attachments.length} attached)` : p.name }))} empty="None" />
+        </Section>
+      ) : null}
+
+      {units.length ? (
+        <Section title="Units" count={units.length}>
+          <div style={{ overflowX: "auto" }}>
+              <table className={styles.table}>
+                <thead><tr><th scope="col">Unit</th><th scope="col">Cost</th><th scope="col">Combat</th><th scope="col">Move</th><th scope="col">Cap.</th></tr></thead>
+                <tbody>{units.map((u) => (
+                  <tr key={u.key}>
+                    <th scope="row" style={{ whiteSpace: "nowrap" }}><Cite thing={{ kind: "unit", id: `${id}|${u.key}` }}>{u.name}</Cite>{u.upgraded ? <> <Tag>Upgraded</Tag></> : null}</th>
+                    <td>{statText(u.stats.cost)}</td><td>{statText(u.stats.combat)}</td><td>{statText(u.stats.move)}</td><td>{statText(u.stats.capacity)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+          </div>
+          <p className={kit.sub}>Their faction units and unit upgrades. Tap a name for its abilities. Other units use the standard stats.</p>
+        </Section>
+      ) : null}
+
+      {f.promissories?.length ? (
+        <Section title="Promissory notes" count={f.promissories.length}>
+          <Items items={f.promissories.map((n) => ({ thing: { kind: "promissory", id: `${id}|${n.name}` }, name: n.name }))} />
+          <p className={kit.sub}>Their own notes. Alliances and Support for the Throne held by them show under their play area.</p>
         </Section>
       ) : null}
 
