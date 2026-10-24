@@ -18,7 +18,7 @@ export const DISCORD_EVENTS: [DiscordEvent, string, string?][] = [
 ];
 
 export type DiscordChoice = { on: boolean; events: DiscordEvent[]; webhook?: string };
-type Status = { on: boolean; events: DiscordEvent[]; ownWebhook: boolean; serverWebhook: boolean; ready: boolean };
+type Status = { on: boolean; events: DiscordEvent[]; ownWebhook: boolean; serverWebhook: boolean; ready: boolean; error?: string };
 
 export const WEBHOOK = /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api(?:\/v\d+)?\/webhooks\/\d{5,25}\/[\w-]{20,100}\/?$/;
 
@@ -93,6 +93,7 @@ export function DiscordSection({ gameId, onSaved, onLocked, onError }: { gameId:
   return (
     <div className={kit.section}>
       <p className={kit.label}>Discord</p>
+      {status.error ? <p className={kit.sub} role="alert">{status.error}</p> : null}
       <DiscordFields value={choice} onChange={setChoice} serverWebhook={status.serverWebhook} ownWebhook={status.ownWebhook} />
       {changed ? <Button kind="primary" block disabled={busy || invalid} onClick={save}>Save the Discord settings</Button> : null}
     </div>

@@ -15,13 +15,20 @@ const THUMB = 480;
 
 export class NotAPhoto extends Error {}
 
-export async function makePhotos(input: Buffer) {
-  let img: sharp.Sharp;
+// One photo at a time in the whole process: sharp.concurrency only limits
+// libvips' threads, and each decode can take a couple of hundred MB.
+let queue: Promise<unknown> = Promise.resolve();
+export function makePhotos(input: Buffer) {
+  const job = queue.catch(() => {}).then(() => convert(input));
+  queue = job;
+  return job;
+}
+
+async function convert(input: Buffer) {
   let meta: sharp.Metadata;
   try {
-    // Refuse decompression bombs: 50 megapixels is well past any phone camera.
-    img = sharp(input, { failOn: "error", limitInputPixels: 50_000_000 }).rotate();
-    meta = await img.metadata();
+    // Refuse decompression bombs: 25 megapixels is past any phone camera's JPEG.
+    meta = await sharp(input, { failOn: "error", limitInputPixels: 25_000_000 }).metadata();
   } catch {
     throw new NotAPhoto("The server couldn't read that file as a photo.");
   }
@@ -29,8 +36,11 @@ export async function makePhotos(input: Buffer) {
     throw new NotAPhoto("That file isn't a photo the server can read.");
   }
   try {
-    const { data: full, info } = await img.clone().resize({ width: FULL, height: FULL, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 84, mozjpeg: true }).toBuffer({ resolveWithObject: true });
-    const thumb = await img.clone().resize({ width: THUMB, height: THUMB, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 78 }).toBuffer();
+    const { data: full, info } = await sharp(input, { failOn: "error", limitInputPixels: 25_000_000, sequentialRead: true })
+      .rotate().resize({ width: FULL, height: FULL, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 84, mozjpeg: true }).toBuffer({ resolveWithObject: true });
+    // From the 2048px copy, so the original is decoded once.
+    const thumb = await sharp(full).resize({ width: THUMB, height: THUMB, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 78 }).toBuffer();
     return { full, thumb, width: info.width, height: info.height };
   } catch {
     // e.g. an HEIC photo: sharp's prebuilt binaries can't decode HEVC.

@@ -9,7 +9,7 @@ import { getFirestoreAdmin } from "../../util/server";
 export type DiscordEvent = "scoreboard" | "phase" | "objectives" | "agenda" | "combat" | "photos" | "final";
 export const DISCORD_EVENTS: DiscordEvent[] = ["scoreboard", "phase", "objectives", "agenda", "combat", "photos", "final"];
 
-export type Posted = { m: string; t: number }; // Discord message id; when its log entry was written
+export type Posted = { m: string; t: number; h?: string }; // Discord message id; when its log entry was written; a digest of the entry
 
 export type DiscordState = {
   on: boolean;
@@ -17,7 +17,10 @@ export type DiscordState = {
   webhook?: string; // the game's own webhook; otherwise the server's FORK_DISCORD_WEBHOOK
   threadId?: string; // "" when the webhook's channel can't hold threads
   seenMillis?: number; // newest log entry already looked at
+  fromMillis?: number; // when posts were turned on or the webhook changed: nothing older is posted
+  seen?: Record<string, string>; // recent log entries already handled -> digest of their data
   posted?: Record<string, Posted>; // "log:<entry id>" or "photo:<id>" -> message
+  error?: string; // Discord said the webhook is gone; posts stop until settings change
 };
 
 export type GamePrivate = {

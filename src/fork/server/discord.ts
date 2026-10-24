@@ -9,6 +9,7 @@ import "server-only";
 // entries it hasn't seen yet and posts the ones the game asked for; a post
 // whose entry has since been undone is deleted from Discord. Saves for one
 // game reconcile one at a time (this server runs as a single process).
+import { createHash } from "crypto";
 import { buildCompleteGameData } from "../../data/gameDataBuilder";
 import { getBaseData } from "../../data/baseData";
 import { computeVPs } from "../../util/factions";
@@ -50,7 +51,8 @@ class DiscordError extends Error {
 }
 
 // One request at a time per webhook, spaced out, honouring 429s.
-const queues = new Map<string, Promise<unknown>>();
+const gq = globalThis as typeof globalThis & { __forkDiscordQueues?: Map<string, Promise<unknown>> };
+const queues = (gq.__forkDiscordQueues ??= new Map());
 function queued<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const prev = queues.get(key) ?? Promise.resolve();
   const next = prev.catch(() => {}).then(async () => {
@@ -122,7 +124,8 @@ const PHASES: Record<string, string> = { SETUP: "Setup", STRATEGY: "Strategy pha
 const BASE = () => (process.env.NEXT_PUBLIC_BASE_URL || "https://ti.kautiontape.com").replace(/\/$/, "");
 
 let baseDataCache: Promise<BaseData> | undefined;
-const baseData = () => (baseDataCache ??= getIntl("en").then((intl) => getBaseData(intl)));
+const baseData = () =>
+  (baseDataCache ??= getIntl("en").then((intl) => getBaseData(intl)).catch((e) => { baseDataCache = undefined; throw e; }));
 
 type View = Awaited<ReturnType<typeof gameView>>;
 async function gameView(gameId: string) {
@@ -220,7 +223,9 @@ function describe(entry: ActionLogEntry<GameUpdateData>, v: NonNullable<View>, e
 
 // ---------- keeping Discord in step with the log ----------
 
-const locks = new Map<string, Promise<unknown>>();
+// One promise chain per game, shared by every route bundle in the process.
+const g = globalThis as typeof globalThis & { __forkDiscordLocks?: Map<string, Promise<unknown>> };
+const locks = (g.__forkDiscordLocks ??= new Map());
 export function withGameLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
   const prev = locks.get(id) ?? Promise.resolve();
   const next = prev.catch(() => {}).then(fn);
@@ -232,6 +237,12 @@ export function withGameLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
 async function save(id: string, st: DiscordState) {
   await writePrivate(id, { discord: st });
 }
+
+// A failure worth trying again on the next save: Discord or the network was
+// down, or still rate-limiting after three waits.
+const transient = (e: unknown) => !(e instanceof DiscordError) || e.status === 429 || e.status >= 500;
+// The webhook or its thread is gone: no later post can succeed either.
+const gone = (e: unknown) => e instanceof DiscordError && e.status === 404 && /"code":\s*(10003|10015)\b/.test(e.body);
 
 // Posts the game's opening message, making its thread. A webhook whose
 // channel isn't a forum can't make threads: the posts then go in the channel.
@@ -245,7 +256,26 @@ async function ensureThread(id: string, st: DiscordState, base: string, v: NonNu
     await send(base, opener(id, v), {});
     st.threadId = "";
   }
+  await save(id, st);
 }
+
+// Deletes a post; true once it's gone (already deleted in Discord counts).
+async function unpost(base: string, st: DiscordState, key: string) {
+  const p = st.posted?.[key];
+  if (!p) return true;
+  try {
+    await remove(base, p.m, st.threadId);
+  } catch (e) {
+    console.log(`discord: delete ${key} failed`, e);
+    return false;
+  }
+  delete st.posted![key];
+  return true;
+}
+
+const digest = (data: unknown) => createHash("sha1").update(JSON.stringify(data)).digest("base64").slice(0, 10);
+const OVERLAP = 30 * 1000; // two saves can commit in the other order than their timestamps
+const UNDO_WINDOW = 12 * 3600 * 1000;
 
 export function reconcile(id: string) {
   return withGameLock(id, () => reconcileNow(id));
@@ -255,46 +285,66 @@ async function reconcileNow(id: string) {
   const priv = await readPrivate(id);
   const st = discordState(priv.discord);
   const base = webhookUrl(st);
-  if (!st.on || !base) return;
+  if (!st.on || !base || st.error) return;
   const db = await getFirestoreAdmin();
   const logRef = db.collection("games").doc(id).collection("actionLog");
+  const now = Date.now();
   // A game that never had Discord set up starts from the save that called this.
-  const since = st.seenMillis ?? Date.now() - 15000;
-  const fresh = await logRef.where("timestampMillis", ">", since).orderBy("timestampMillis").limit(100).get();
+  const since = Math.max((st.seenMillis ?? now - 15000) - OVERLAP, st.fromMillis ?? 0);
+  const fresh = (await logRef.where("timestampMillis", ">", since).orderBy("timestampMillis").limit(200).get()).docs;
   st.posted ??= {};
-  const recent = Object.entries(st.posted).filter(([k, p]) => k.startsWith("log:") && p.t > Date.now() - 12 * 3600 * 1000);
-  if (!fresh.size && !recent.length && st.threadId !== undefined) return;
+  st.seen ??= {};
+  // Entries already handled, unless upstream rewrote one since (REPLACE keeps its id).
+  const todo = fresh.filter((d) => st.seen![d.id] !== digest(d.get("data")));
+  const recent = Object.entries(st.posted).filter(([k, p]) => k.startsWith("log:") && p.t > now - UNDO_WINDOW);
+  if (!todo.length && !recent.length && st.threadId !== undefined) return;
 
   const v = await gameView(id);
   if (!v) return;
-  await ensureThread(id, st, base, v);
+  try {
+    await ensureThread(id, st, base, v);
 
-  // Undone: the entry a post was about is gone from the log.
-  if (recent.length) {
-    const docs = await db.getAll(...recent.map(([k]) => logRef.doc(k.slice(4))));
-    for (const doc of docs) {
-      if (doc.exists) continue;
-      const key = `log:${doc.id}`;
-      await remove(base, st.posted[key]!.m, st.threadId).catch((e) => console.log("discord delete failed", e));
-      delete st.posted[key];
+    // Undone: the entry a post was about is gone from the log.
+    if (recent.length) {
+      const docs = await db.getAll(...recent.map(([k]) => logRef.doc(k.slice(4))));
+      for (const doc of docs) if (!doc.exists && (await unpost(base, st, `log:${doc.id}`))) await save(id, st);
     }
-  }
 
-  const events = new Set(st.events);
-  const lastPhase = fresh.docs.map((d) => d.get("data.action")).lastIndexOf("ADVANCE_PHASE");
-  for (const [i, doc] of fresh.docs.entries()) {
-    const entry = doc.data() as ActionLogEntry<GameUpdateData>;
-    st.seenMillis = Math.max(st.seenMillis ?? 0, entry.timestampMillis);
-    const key = `log:${doc.id}`;
-    if (st.posted[key]) continue;
-    const msg = describe(entry, v, events, i === lastPhase);
-    if (!msg) continue;
-    const m = await send(base, msg, { threadId: st.threadId });
-    st.posted[key] = { m: m.id, t: entry.timestampMillis };
+    const events = new Set(st.events);
+    const lastPhase = todo.map((d) => d.get("data.action")).lastIndexOf("ADVANCE_PHASE");
+    for (const [i, doc] of todo.entries()) {
+      const entry = doc.data() as ActionLogEntry<GameUpdateData>;
+      const key = `log:${doc.id}`;
+      const hash = digest(entry.data);
+      // A rewritten entry: its old post goes, and the new text is posted.
+      if (st.posted[key] && st.posted[key].h !== hash && !(await unpost(base, st, key))) break;
+      if (!st.posted[key]) {
+        try {
+          const msg = describe(entry, v, events, i === lastPhase);
+          if (msg) st.posted[key] = { m: (await send(base, msg, { threadId: st.threadId })).id, t: entry.timestampMillis, h: hash };
+        } catch (e) {
+          if (transient(e) || gone(e)) throw e;
+          // Discord refused this one post (too long, say): skip it, not the game.
+          console.log(`discord: ${id} skipped ${key}`, e);
+        }
+      }
+      st.seen[doc.id] = hash;
+      st.seenMillis = Math.max(st.seenMillis ?? 0, entry.timestampMillis);
+      await save(id, st);
+    }
+  } catch (e) {
+    if (gone(e)) {
+      // A deleted thread gets a new one; a deleted webhook stops posts until settings change.
+      if (st.threadId && /"code":\s*10003\b/.test((e as DiscordError).body)) delete st.threadId;
+      else st.error = "Discord says this webhook no longer exists. Paste a new one in game settings.";
+    }
+    console.log(`discord: ${id}`, e);
   }
-  st.seenMillis ??= Date.now();
-  // Forget posts too old to be undone, so the document stays small.
-  for (const [k, p] of Object.entries(st.posted)) if (p.t < Date.now() - 2 * 24 * 3600 * 1000) delete st.posted[k];
+  st.seenMillis ??= now;
+  // Forget what's too old to be undone or rewritten, so the document stays small.
+  for (const [k, p] of Object.entries(st.posted)) if (k.startsWith("log:") && p.t < now - 2 * 24 * 3600 * 1000) delete st.posted[k];
+  const keep = new Set(fresh.map((d) => d.id));
+  for (const k of Object.keys(st.seen)) if (!keep.has(k)) delete st.seen[k];
   await save(id, st);
 }
 
@@ -302,7 +352,7 @@ async function reconcileNow(id: string) {
 
 export async function discordSettings(id: string) {
   const st = discordState((await readPrivate(id)).discord);
-  return { on: st.on, events: st.events, ownWebhook: !!st.webhook, serverWebhook: serverWebhook(), ready: !!webhookUrl(st), thread: !!st.threadId };
+  return { on: st.on, events: st.events, ownWebhook: !!st.webhook, serverWebhook: serverWebhook(), ready: !!webhookUrl(st), thread: !!st.threadId, error: st.error };
 }
 
 export async function changeDiscord(id: string, change: { on?: boolean; events?: DiscordEvent[]; webhook?: string | null }) {
@@ -314,15 +364,20 @@ export async function changeDiscord(id: string, change: { on?: boolean; events?:
     if (change.webhook !== undefined) {
       const next = change.webhook?.trim() || undefined;
       if (next !== st.webhook) {
-        st.webhook = next;
-        // A new webhook is a new channel: start a new thread there.
+        // Firestore refuses undefined inside a map, so an empty webhook is deleted.
+        if (next) st.webhook = next;
+        else delete st.webhook;
+        // A new webhook is a new channel: start a new thread there, from now on.
         delete st.threadId;
-        st.posted = {};
+        delete st.error;
+        st.posted = Object.fromEntries(Object.entries(st.posted ?? {}).filter(([k]) => !k.startsWith("log:")));
+        st.seenMillis = st.fromMillis = Date.now();
       }
     }
     if (change.on !== undefined) st.on = change.on;
+    if (change.on) delete st.error;
     // Turning posts on doesn't replay the game so far.
-    if (st.on && !wasOn) st.seenMillis = Date.now();
+    if (st.on && !wasOn) st.seenMillis = st.fromMillis = Date.now();
     await save(id, st);
   });
 }
@@ -332,6 +387,7 @@ export async function postPhoto(id: string, meta: PhotoMeta, jpeg: Buffer) {
     const st = discordState((await readPrivate(id)).discord);
     const base = webhookUrl(st);
     if (!st.on || !base || !st.events.includes("photos")) return;
+    if (st.error) return;
     const v = await gameView(id);
     if (!v) return;
     await ensureThread(id, st, base, v);
@@ -347,11 +403,8 @@ export async function unpostPhoto(id: string, photoId: string) {
   return withGameLock(id, async () => {
     const st = discordState((await readPrivate(id)).discord);
     const base = webhookUrl(st);
-    const p = st.posted?.[`photo:${photoId}`];
-    if (!base || !p) return;
-    await remove(base, p.m, st.threadId);
-    delete st.posted![`photo:${photoId}`];
-    await save(id, st);
+    if (!base || !st.posted?.[`photo:${photoId}`]) return;
+    if (await unpost(base, st, `photo:${photoId}`)) await save(id, st);
   });
 }
 

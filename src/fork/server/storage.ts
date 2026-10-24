@@ -37,6 +37,10 @@ export type PhotoMeta = {
   height: number;
 };
 
+// Game ids are upstream's six letters and digits; checks and tests use longer ones.
+export const validGameId = (id: string) => /^[A-Za-z0-9_-]{1,64}$/.test(id);
+export const MAX_PHOTOS = 200;
+
 export const photoPath = (gameId: string, id: string, thumb = false) =>
   `games/${gameId}/photos/${id}${thumb ? "-thumb" : ""}.jpg`;
 
@@ -45,10 +49,9 @@ export const exportPath = (gameId: string) => `exports/${gameId}.json`;
 export async function savePhoto(gameId: string, meta: PhotoMeta, full: Buffer, thumb: Buffer) {
   const b = getBucket();
   const metadata = { contentType: "image/jpeg", cacheControl: "private, max-age=31536000, immutable", metadata: { meta: JSON.stringify(meta) } };
-  await Promise.all([
-    b.file(photoPath(gameId, meta.id)).save(full, { resumable: false, metadata }),
-    b.file(photoPath(gameId, meta.id, true)).save(thumb, { resumable: false, metadata }),
-  ]);
+  // The thumbnail first: the list is made from full-size photos, so one never shows without it.
+  await b.file(photoPath(gameId, meta.id, true)).save(thumb, { resumable: false, metadata });
+  await b.file(photoPath(gameId, meta.id)).save(full, { resumable: false, metadata });
 }
 
 // Oldest first. The list lives in the bucket itself, so it outlives the game's

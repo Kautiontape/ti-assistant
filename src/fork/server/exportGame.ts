@@ -41,11 +41,13 @@ export async function exportGame(gameId: string) {
 }
 
 // Games changed since their last export (or never exported). The daily job
-// runs this, so a game is saved within a day of its last change.
+// runs this, so a game is saved within a day of its last change. It looks back
+// 25 days (games expire after 30), so a few days with the job or the bucket
+// down still catch up. lastUpdate comes from the phones' clocks, hence the margin.
 export async function exportChangedGames() {
   if (!storageReady()) return { exported: 0, failed: 0 };
   const db = await getFirestoreAdmin();
-  const since = Date.now() - 2 * 24 * 60 * 60 * 1000;
+  const since = Date.now() - 25 * 24 * 60 * 60 * 1000;
   const games = await db.collection("games").where("lastUpdate", ">=", since).select("lastUpdate").get();
   let exported = 0, failed = 0;
   for (const g of games.docs) {

@@ -71,7 +71,10 @@ async function readAdminCredential() {
 // Read once, and before getApps(), so two first requests can't both
 // initialize the app.
 function getAdminCredential() {
-  adminCredential ??= readAdminCredential();
+  adminCredential ??= readAdminCredential().catch((e) => {
+    adminCredential = undefined;
+    throw e;
+  });
   return adminCredential;
 }
 
