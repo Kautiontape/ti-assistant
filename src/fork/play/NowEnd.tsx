@@ -6,6 +6,7 @@ import { useActionLog, useOptions } from "../../context/dataHooks";
 import { useObjectives } from "../../context/objectiveDataHooks";
 import { Events } from "../../util/api/events";
 import { computeVPs } from "../../util/factions";
+import { useCompleteOrderedFactionIds } from "../../context/gameDataHooks";
 import { combats as combatsOf, fmtDuration, timeByPlayer } from "./logic";
 import styles from "./play.module.scss";
 import { useRace, type Ctx } from "./ui";
@@ -24,10 +25,13 @@ export function useReachedTarget(factions: Ctx["factions"]) {
   const target = options["victory-points"] ?? 10;
   const alliance = options["game-variant"]?.startsWith("alliance");
   const points = (id: FactionId) => computeVPs(factions, id, objectives);
+  // Most points first; a tie goes to the earliest in initiative order (TI4's rule
+  // for players reaching the target together).
+  const initiative = useCompleteOrderedFactionIds("INITIATIVE");
   const reached = Object.values(factions)
     .filter((f): f is Faction => !!f && points(f.id) >= target)
     .map((f) => f.id)
-    .sort((a, b) => points(b) - points(a));
+    .sort((a, b) => points(b) - points(a) || initiative.indexOf(a) - initiative.indexOf(b));
   return { target, reached, alliance, points };
 }
 
@@ -48,7 +52,7 @@ export function GameEndBanner(ctx: Ctx) {
       ) : (
         asking ? (
           <>
-            <p className={kit.confirm}>End the game with {short(reached[0]!)} the winner on {top} points?</p>
+            <p className={kit.confirm}>End the game with {short(reached[0]!)} the winner on {top} points{reached.length > 1 && points(reached[1]!) === top ? `, ahead of ${short(reached[1]!)} on initiative` : ""}?</p>
             <div className={kit.buttons}>
               <Button kind="primary" disabled={w.pending} onClick={() => w.write([Events.EndGameEvent()], "The game ended")}>End the game</Button>
               <Button onClick={() => setAsking(false)}>Keep playing</Button>
@@ -71,13 +75,15 @@ export default function NowEnd(ctx: Ctx) {
     return `${fmtDuration(t * 1000)} on turns and decisions${c ? ` · ${fmtDuration(c * 1000)} in combat` : ""}`;
   };
   const top = rows[0]?.total ?? 0;
-  const winners = rows.filter((r) => r.total === top && top > 0);
+  const initiative = useCompleteOrderedFactionIds("INITIATIVE");
+  // Tied on points: the earliest in initiative order wins, as when ending the game.
+  const winners = rows.filter((r) => r.total === top && top > 0).sort((a, b) => initiative.indexOf(a.id) - initiative.indexOf(b.id));
   return (
     <>
       <section className={cx(kit.card, styles.hero)} style={winners[0] ? { ["--c" as string]: pcolor(factions[winners[0].id]?.color) } : undefined} aria-label="Game over">
         <p className={kit.eyebrow}><span>Game over</span></p>
         <h2 className={kit.title}>
-          {winners.length === 1 ? `${short(winners[0]!.id)} wins with ${top} points` : winners.length ? `${winners.map((r) => short(r.id)).join(" and ")} tie with ${top} points` : "No points scored"}
+          {winners.length === 1 ? `${short(winners[0]!.id)} wins with ${top} points` : winners.length ? `${short(winners[0]!.id)} wins on initiative, tied with ${winners.slice(1).map((r) => short(r.id)).join(" and ")} on ${top} points` : "No points scored"}
         </h2>
       </section>
       <section className={kit.card} aria-label="Results">
