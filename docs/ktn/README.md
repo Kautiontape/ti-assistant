@@ -151,3 +151,12 @@ breaks it, look at:
 Same as upstream's README (Firestore emulator on port 8020). On a machine with a
 system libvips (Arch has one), install with `SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm ci`
 or sharp tries to compile itself and fails.
+
+A production build against the emulator (for end-to-end runs on a small bundle):
+build with `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST=127.0.0.1:8020 NEXT_PUBLIC_TI_PROJECT=demo-ti npm run build`,
+then start with `FIRESTORE_EMULATOR_HOST=127.0.0.1:8020 NEXT_PUBLIC_TI_PROJECT=demo-ti GOOGLE_CLOUD_PROJECT=demo-ti
+GOOGLE_APPLICATION_CREDENTIALS=<file> npx next start -p 3000`. In production the server always loads a credential
+(S1), so `<file>` is a stand-in such as
+`{"type":"authorized_user","client_id":"x","client_secret":"x","refresh_token":"x"}`; nothing is sent with it
+while the emulator is set. The build writes `build/` beside `next dev`'s `build/dev`, so stop the dev server first
+only to save memory.
