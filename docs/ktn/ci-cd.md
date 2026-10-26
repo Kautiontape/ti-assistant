@@ -61,6 +61,8 @@ upstream's App Engine setting. ktn is short on RAM.
 
 Merge the PR with a merge commit, never a rebase. Merging into `ktn` deploys it.
 
+What upstream had as of 2026-10-26, and the order to merge in: [upstream-merge-plan.md](upstream-merge-plan.md).
+
 ## Firebase project (one-time)
 
 The project, the service account in the vault, the rules, the index and the TTL
