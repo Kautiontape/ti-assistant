@@ -1,3 +1,4 @@
+import { getForkOpposite } from "../../fork/actions/registry"; // ktn seam S4
 import {
   AddAttachmentHandler,
   RemoveAttachmentHandler,
@@ -665,4 +666,5 @@ export function getOppositeHandler(
         event: data.event,
       });
   }
+  return getForkOpposite(gameData, data); // ktn seam S4
 }

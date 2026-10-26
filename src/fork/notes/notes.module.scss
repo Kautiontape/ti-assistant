@@ -1,0 +1,21 @@
+// Private notes (NotesSheet.tsx) and the seat key panel (SeatPanel.tsx).
+// Colours come from the kit's tokens, so both themes work.
+.panel { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.pin { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: calc(var(--fs) * 1.9); letter-spacing: 0.18em; color: var(--ink); }
+.bad { margin: 0; color: var(--p-red); font-size: calc(var(--fs) * 0.9); }
+
+.text {
+  width: 100%; min-height: 180px; resize: vertical; box-sizing: border-box;
+  border-radius: 12px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink);
+  padding: 12px 14px; font: inherit; font-size: max(16px, var(--fs)); line-height: 1.4;
+}
+
+.status { margin: 0; font-size: calc(var(--fs) * 0.85); color: var(--muted); min-height: 1.4em; }
+.status[data-state="saved"] { color: var(--p-green); }
+.status[data-state="offline"], .status[data-state="refused"] { color: var(--p-red); }
+
+// The page a sketch is drawn on: a square, 1000 units wide inside the SVG.
+.page { position: relative; width: 100%; max-width: 640px; aspect-ratio: 1; margin: 0 auto; border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.map { position: absolute; inset: 0; pointer-events: none; user-select: none; }
+.ink { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.pen { display: inline-block; width: 16px; height: 16px; border-radius: 8px; border: 1px solid var(--line-strong); }

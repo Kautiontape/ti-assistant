@@ -1,3 +1,5 @@
+import ForkLogEntry from "../fork/actions/ForkLogEntry"; // ktn seam S4
+import { isForkAction } from "../fork/actions/registry"; // ktn seam S4
 import { FormattedMessage } from "react-intl";
 import { AgendaRow } from "../AgendaRow";
 import {
@@ -72,6 +74,7 @@ export function LogEntryElement({
   const upgrades = useUpgrades();
   const paradigms = useParadigms();
 
+  if (isForkAction(logEntry.data.action)) return <ForkLogEntry logEntry={logEntry} />; // ktn seam S4
   switch (logEntry.data.action) {
     case "ADD_ATTACHMENT": {
       return (

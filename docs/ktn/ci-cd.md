@@ -23,7 +23,11 @@ come from the repo's Actions **variables** (`NEXT_PUBLIC_FIREBASE_*`,
 
 In `/opt/services/ti-assistant/`, next to the synced compose file:
 
-- `.env`: `GOOGLE_CLOUD_PROJECT=<project-id>`
+- `.env`: `GOOGLE_CLOUD_PROJECT=<project-id>`, and for photos, exports and
+  Discord (see [storage-and-discord.md](storage-and-discord.md)):
+  `FORK_STORAGE_BUCKET=<project-id>.firebasestorage.app` and
+  `FORK_DISCORD_WEBHOOK=<the forum channel's webhook>`. Leaving either out
+  turns that feature off.
 - `firebase-sa.json`: the service account key, mode 0600, owned by shawn
   (uid 1000, the same as the container's `node` user). It comes from the vault:
 
@@ -57,6 +61,8 @@ upstream's App Engine setting. ktn is short on RAM.
 
 Merge the PR with a merge commit, never a rebase. Merging into `ktn` deploys it.
 
+What upstream had as of 2026-10-26, and the order to merge in: [upstream-merge-plan.md](upstream-merge-plan.md).
+
 ## Firebase project (one-time)
 
 The project, the service account in the vault, the rules, the index and the TTL
@@ -68,11 +74,16 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <pr
 ```
 
 - **Rules:** browsers can read single game and timer documents and their action
-  logs, and nothing else. Passwords, sessions and fork data stay server-only. All
-  writes go through the app's API, which isn't subject to the rules.
+  logs, and single drafts (`forkDrafts`, for `/draft`), and nothing else.
+  Passwords, sessions and other fork data stay server-only. All writes go
+  through the app's API, which isn't subject to the rules. Redeploy the rules
+  whenever `firestore.rules` changes; the draft rule was added on 2026-10-18
+  and isn't deployed until someone runs the command above.
 - **Index:** the `actionLog` query the server uses to find the current turn.
 - **Auto-delete (TTL):** live games, timers, passwords and log entries go after
-  30 days, sessions after 14, same as upstream. The daily cron copies finished
+  30 days, sessions after 14, same as upstream. Drafts go after 30 days once
+  `setup-ttl.sh` has been run again for `forkDrafts`; the same goes for
+  `forkPrivate` (each game's Discord settings and export time). The daily cron copies finished
   games to `archive` first.
 - **Plan:** Blaze with a budget alert. Every phone re-downloads the action log
   when it connects, and the free Spark quota (50k reads a day) can run out mid
@@ -82,5 +93,5 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <pr
 
 - `https://ti.kautiontape.com` loads. A game opened on two phones stays in sync.
 - `curl -H 'X-Appengine-Cron: 1' https://ti.kautiontape.com/api/process-games`
-  returns 404.
+  and `…/api/fork/export` return 404.
 - `ssh ktn docker stats --no-stream ti-assistant` shows memory well under the cap.

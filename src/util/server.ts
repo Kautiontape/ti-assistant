@@ -56,7 +56,8 @@ const SERVICE_ACCOUNT_PATH = path.join(
   "twilight-imperium-360307-ea7cce25efeb.json",
 );
 
-async function getAdminCredential() {
+let adminCredential: ReturnType<typeof readAdminCredential> | undefined;
+async function readAdminCredential() {
   // Lets other deployments supply their own service account key.
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     return applicationDefault();
@@ -67,18 +68,29 @@ async function getAdminCredential() {
   );
   return cert(serviceAccount);
 }
+// Read once, and before getApps(), so two first requests can't both
+// initialize the app.
+function getAdminCredential() {
+  adminCredential ??= readAdminCredential().catch((e) => {
+    adminCredential = undefined;
+    throw e;
+  });
+  return adminCredential;
+}
 
 export async function getFirestoreAdmin() {
+  const env = process.env.NODE_ENV;
+  const emulator = process.env.FIRESTORE_EMULATOR_HOST;
+  const credential =
+    env === "production" || !emulator ? await getAdminCredential() : undefined;
   const apps = getApps();
   if (apps.length > 0) {
     return getFirestore();
   }
-  const env = process.env.NODE_ENV;
-  const emulator = process.env.FIRESTORE_EMULATOR_HOST;
   const projectId = process.env.NEXT_PUBLIC_TI_PROJECT;
-  if (env === "production" || !emulator) {
+  if (credential) {
     initializeApp({
-      credential: await getAdminCredential(),
+      credential,
     });
   } else {
     initializeApp({ projectId });
