@@ -25,7 +25,9 @@ export interface RoundInfo {
   victoryPoints: Partial<Record<FactionId, Record<ObjectiveType, number>>>;
 }
 export interface TimerData { longestTurn: number; numTurns: number }
-export interface Replay { rounds: Record<number, RoundInfo>; timerData: Partial<Record<FactionId, TimerData>> }
+// done: false while the worker is still sending rounds (a few seconds for a 6-round game;
+// the first time in `next dev`, longer, since webpack compiles the worker then).
+export interface Replay { rounds: Record<number, RoundInfo>; timerData: Partial<Record<FactionId, TimerData>>; done: boolean }
 
 function setupData(gameData: GameData) {
   const actionLog = (gameData.actionLog ?? []) as ActionLog;
@@ -92,7 +94,16 @@ export function useReplay(enabled: boolean): { replay?: Replay; failed?: boolean
       setState({ failed: true });
       return;
     }
-    worker.onmessage = (e) => setState({ replay: e.data as Replay });
+    // The worker posts every 25 replayed entries and once more at the end, with
+    // the same shape. The last post is the one whose entry count isn't a multiple
+    // of 25, or that repeats the previous count.
+    let count = -1;
+    worker.onmessage = (e) => {
+      const n = (e.data.annotatedLog as unknown[]).length;
+      const done = n % 25 !== 0 || n === count;
+      count = n;
+      setState({ replay: { rounds: e.data.rounds, timerData: e.data.timerData, done } });
+    };
     worker.onerror = () => setState((s) => (s.replay ? s : { failed: true }));
     worker.postMessage({ reversedActionLog: reversed, initialGameData: initial, baseData: getBaseData(intl) });
     return () => worker?.terminate();

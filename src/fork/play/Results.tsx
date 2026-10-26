@@ -15,6 +15,7 @@ import type { Ctx } from "./ui";
 import { Button, Choices, cx, kit, pcolor, Sheet as KitSheet, Swatch } from "../ui/kit";
 
 type View = "points" | "techs" | "map" | "time";
+// last is -1 while the replay is still coming in, so no round is called the end yet.
 const roundName = (r: number, last: number) => (r === 0 ? "Start" : r === last ? "End" : `Round ${r}`);
 
 export function ResultsSheet({ close, ctx }: { close: () => void; ctx: Ctx }) {
@@ -27,11 +28,20 @@ export function ResultsSheet({ close, ctx }: { close: () => void; ctx: Ctx }) {
       {view === "time" ? <TimeView replay={replay} ctx={ctx} />
         : failed ? <p className={kit.sub}>The replay couldn't run in this browser, so the rounds can't be shown.</p>
         : !replay ? <p className={kit.sub} role="status" aria-live="polite">Replaying the game…</p>
-        : view === "points" ? <ByRound replay={replay} ctx={ctx} what="points" />
-        : view === "techs" ? <ByRound replay={replay} ctx={ctx} what="techs" />
-        : <MapByRound replay={replay} ctx={ctx} />}
+        : <>
+          {replay.done ? null : <Progress replay={replay} />}
+          {view === "points" ? <ByRound replay={replay} ctx={ctx} what="points" />
+            : view === "techs" ? <ByRound replay={replay} ctx={ctx} what="techs" />
+            : <MapByRound replay={replay} ctx={ctx} />}
+        </>}
     </KitSheet>
   );
+}
+
+// While the worker is still replaying, the rounds shown so far aren't the whole game.
+function Progress({ replay }: { replay: Replay }) {
+  const rounds = Object.keys(replay.rounds).map(Number).filter((r) => r > 0);
+  return <p className={kit.sub} role="status" aria-live="polite">Still replaying the game{rounds.length ? `: up to round ${Math.max(...rounds)} so far` : ""}.</p>;
 }
 
 // Totals per player per round, as a line chart, a legend that highlights a
@@ -41,10 +51,11 @@ function ByRound({ replay, ctx, what }: { replay: Replay; ctx: Ctx; what: "point
   const [focus, setFocus] = useState<Optional<FactionId>>();
   const [table, setTable] = useState(false);
   const rounds = Object.keys(replay.rounds).map(Number).sort((a, b) => a - b);
-  const last = rounds.at(-1) ?? 0;
+  const newest = rounds.at(-1) ?? 0;
+  const last = replay.done ? newest : -1;
   // The replay arrives round by round; until someone picks a round, show the newest.
   const [chosen, setAt] = useState<Optional<number>>();
-  const at = chosen ?? last;
+  const at = chosen ?? newest;
   const ids = Object.values(factions).filter((f): f is Faction => !!f).sort((a, b) => a.mapPosition - b.mapPosition).map((f) => f.id);
   const value = (r: number, id: FactionId) => {
     const round = replay.rounds[r];
@@ -84,7 +95,7 @@ function ByRound({ replay, ctx, what }: { replay: Replay; ctx: Ctx; what: "point
               <polyline points={pts} className={styles.line} />
               <circle cx={x(at)} cy={y(value(at, id))} r={4} className={styles.dot} />
               {/* Player colours are the game's and some sit close (blue, purple), so the highlighted line also carries its name. */}
-              {focus === id ? <text x={x(last) - 4} y={y(value(last, id)) - 8} className={styles.axis} textAnchor="end">{short(id)}</text> : null}
+              {focus === id ? <text x={x(newest) - 4} y={y(value(newest, id)) - 8} className={styles.axis} textAnchor="end">{short(id)}</text> : null}
             </g>
           );
         })}
@@ -112,9 +123,10 @@ function ByRound({ replay, ctx, what }: { replay: Replay; ctx: Ctx; what: "point
 function MapByRound({ replay, ctx }: { replay: Replay; ctx: Ctx }) {
   const options = useOptions();
   const rounds = Object.keys(replay.rounds).map(Number).sort((a, b) => a - b);
-  const last = rounds.at(-1) ?? 0;
+  const newest = rounds.at(-1) ?? 0;
+  const last = replay.done ? newest : -1;
   const [chosen, setAt] = useState<Optional<number>>();
-  const at = chosen ?? last;
+  const at = chosen ?? newest;
   const round = replay.rounds[at];
   const ordered = Object.values(ctx.factions).filter((f): f is Faction => !!f).sort((a, b) => a.mapPosition - b.mapPosition);
   return (
