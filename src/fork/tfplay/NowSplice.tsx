@@ -26,6 +26,8 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
   const [q, setQ] = useState("");
   const s = spliceState(currentTurn, type, initiator, order, !!allPlayers);
   const started = s.revealed.length > 0;
+  // Once someone has picked, the total no longer counts Engineer's 2 (upstream counts them for the first pick only).
+  const picking = Object.keys(s.takenBy).length + s.techs.length > 0;
   const one = TYPE_NAMES[type].one;
   const kind = THING_KIND[type];
   const toReveal = Math.max(0, s.total - s.revealed.length);
@@ -50,7 +52,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
   return (
     <Sheet title={`${cap(one)} splice`} close={close}>
       <p className={kit.sub}>
-        {allPlayers ? `${short(initiator)}'s Splice edict: everyone takes part.` : `${short(initiator)} started it.`} {started ? `${s.revealed.length} ${TYPE_NAMES[type].many} face up` : `Turn ${s.total} ${TYPE_NAMES[type].many} face up`}; then each player takes one, in the order below.{s.engineer && Object.keys(s.takenBy).length + s.techs.length > 0 ? " Engineer's 2 extra cards were for the first pick only, as upstream counts them." : ""}
+        {allPlayers ? `${short(initiator)}'s Splice edict: everyone takes part.` : `${short(initiator)} started it.`} {picking ? `${s.revealed.length} ${TYPE_NAMES[type].many} face up` : `Turn ${s.total} ${TYPE_NAMES[type].many} face up`}; then each player takes one, in the order below.{s.engineer && picking ? " Engineer's 2 extra cards were for the first pick only, as upstream counts them." : ""}
       </p>
 
       <Section title="Pick order" count={s.pickers.length}>
@@ -97,7 +99,7 @@ export function SpliceSheet({ type, initiator, allPlayers, close, ctx }: { type:
 
       {allPlayers && !started && genomeSwitch ? <Section title="Before the cards go up">{genomeSwitch}</Section> : null}
 
-      <Section title="Face up" count={started ? `${s.revealed.length}` : `${s.revealed.length} of ${s.total}`}>
+      <Section title="Face up" count={picking ? `${s.revealed.length}` : `${s.revealed.length} of ${s.total}`}>
         {Object.keys(s.takenBy).length ? (
           <ul className={kit.rows} style={{ listStyle: "none", margin: 0, padding: "0 12px" }} aria-label="Taken">
             {s.revealed.filter((id) => s.takenBy[id]).map((id) => (
