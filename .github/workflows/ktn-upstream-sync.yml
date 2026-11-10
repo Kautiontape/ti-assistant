@@ -1,7 +1,7 @@
 # Weekly: keeps main an exact mirror of upstream and opens a PR merging it into ktn.
 # See docs/ktn/ci-cd.md.
 # Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and
-# approve pull requests".
+# approve pull requests", and Settings -> General -> Features -> Issues on.
 name: Upstream sync
 
 on:
@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      # gh prefers the `upstream` remote over `origin`; pin it to this fork.
+      GH_REPO: ${{ github.repository }}
       SYNC_BRANCH: sync/upstream
       BASE_BRANCH: ktn
     steps:
